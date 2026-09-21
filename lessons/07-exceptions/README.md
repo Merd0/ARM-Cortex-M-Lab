@@ -288,7 +288,7 @@ değil.)
 
 ### Tanınabilir işaretler
 
-Frame'in gerçekten o sekiz register'ı taşıdığını kanıtlamak için `SVC`'den
+Frame'in bu sekiz register'ı taşıdığını kontrol etmek için `SVC`'den
 önce bilinen değerler yükleniyor:
 
 ```c
@@ -413,7 +413,7 @@ Altı gözlem, sırayla:
 
 ## Observe in GDB
 
-Her durakta tek soru: **hangi mimari geçişi kanıtlıyoruz?**
+Her durakta ilgili mimari geçişi GDB ile inceleyeceğiz.
 
 ```bash
 cmake --build --preset debug --target debug-07-exceptions
@@ -450,7 +450,7 @@ r1  = 0x22222222
 r12 = 0xcccccccc
 ```
 
-**Ne kanıtlıyoruz:** Başlangıç durumu — Thread Mode, `IPSR = 0`, PSP aktif,
+**Gözlem:** Başlangıç durumu — Thread Mode, `IPSR = 0`, PSP aktif,
 ve işaret değerleri register'larda duruyor. Henüz hiçbir şey yığılmadı.
 
 ### B — `SVC_Handler`'ın ilk komutu
@@ -477,7 +477,7 @@ $msp = 0x30007ff0
 $psp = 0x300002d0
 ```
 
-**Ne kanıtlıyoruz — tek komutluk bir geçişte dört şey birden:**
+**Komut sonrasında gözlemlenen değişiklikler:**
 
 | Gözlem | Mimari geçiş |
 |---|---|
@@ -503,7 +503,7 @@ $sp           = 0x30007fe0
 g_frame_addr  = 0x300002d0
 ```
 
-**Ne kanıtlıyoruz:** Aktif `$sp` artık ne giriş MSP'si (`0x30007ff0`) ne de
+**Gözlem:** Aktif `$sp` artık ne giriş MSP'si (`0x30007ff0`) ne de
 frame adresi. Handler'ın kendi prologu MSP'yi aşağı itti.
 
 Bu yüzden `cm-frame` aktif `$sp`'den **tahmin etmez** ve frame adresini
@@ -534,7 +534,7 @@ stacked PC = 0x100000ba
 xPSR       = 0x61000000
 ```
 
-**Ne kanıtlıyoruz:** Ön koşullar sağlanıyor (standart frame, tek güvenlik
+**Gözlem:** Ön koşullar sağlanıyor (standart frame, tek güvenlik
 durumu, yığma hatası yok), bu yüzden komut çözüyor. Değerler firmware'in
 bastığıyla birebir aynı.
 
@@ -549,7 +549,7 @@ bastığıyla birebir aynı.
    0x100000ba <do_marked_svc+22>:  bx   lr
 ```
 
-**Ne kanıtlıyoruz:** Yığılmış PC (`0x100000ba`), `svc` komutundan **sonraki**
+**Gözlem:** Yığılmış PC (`0x100000ba`), `svc` komutundan **sonraki**
 komutu gösteriyor. Yani kesilen bağlamın **devam edeceği** adres. `SVC` senkron
 bir exception olduğu için kesin biliniyor.
 
@@ -576,7 +576,7 @@ $lr = 0xfffffffd
 => 0x100004e2 <svc_dispatch+98>:  bx  lr
 ```
 
-**Ne kanıtlıyoruz:** Bu, derleyicinin ürettiği **sıradan bir fonksiyon
+**Gözlem:** Bu, derleyicinin ürettiği **sıradan bir fonksiyon
 dönüşü**. Ama `LR` bir `EXC_RETURN` değeri taşıyor.
 
 ### G — Tek adımda bağlam geri yükleniyor
@@ -597,7 +597,7 @@ r1  = 0x22222222
 r12 = 0xcccccccc
 ```
 
-**Ne kanıtlıyoruz — dersin en önemli tek satırı:** `bx lr` **tek bir adımda**
+**Gözlem:** `bx lr` **tek bir adımda**
 şunların hepsini yaptı:
 
 - Handler Mode → Thread Mode (`IPSR` 11 → 0)
@@ -685,7 +685,7 @@ Inactive
 maskeleme, eşit/daha yüksek öncelikli bir exception'ın aktif olması veya
 mimari uygunluk koşulları olabilir.
 
-**Active** durumunu bu derste gerçekten ölçtük. `SHCSR` register'ı system
+**Active** durumu da bu derste ölçüldü. `SHCSR` register'ı system
 handler'ların active bitlerini taşır — fault hedeflerinde ölçülen değerler:
 
 ```text
@@ -753,11 +753,9 @@ ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk);
 SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;
 ```
 
-Bu ilk denemede gerçekten başımıza geldi: `MEMFAULTENA`'yı `ARM_MPU_Enable()`
-öncesinde temizledik ve escalation hedefi de `IPSR = 4` verdi. Kaynağa bakınca
-sebep görüldü — vendored `armv8m_mpu.h` içinde `ARM_MPU_Enable` bu biti
-kendisi set ediyor. Ders: **kütüphane fonksiyonunun ne yaptığını varsayma,
-kaynağa bak.**
+İlk denemede `MEMFAULTENA`, `ARM_MPU_Enable()` öncesinde temizlendiğinde
+escalation hedefi `IPSR = 4` verdi. Vendored `armv8m_mpu.h` içindeki
+`ARM_MPU_Enable` bu biti yeniden set ediyor.
 
 ```bash
 cmake --build --preset debug --target 07-exceptions-memmanage
@@ -1037,15 +1035,15 @@ Gerçek çıktı:
   Genişletilmiş (FP) frame ve ek durum bağlamı (`DCRS = 0`) varyantları
   **ölçülmedi**; `cm-frame` onları zaten reddediyor. FPU ders 13'te.
 - **Hizalama dolgusu bu çalıştırmalarda görülmedi** (`xPSR` bit 9 = 0). Donanım
-  gerektiğinde bir dolgu word'ü ekleyebilir; uydurma bir örnek vermek yerine
-  ölçülen sonucu yazdık.
+  gerektiğinde bir dolgu word'ü ekleyebilir; burada yalnızca ölçülen
+  sonuçlar gösteriliyor.
 - **Tek güvenlik durumu.** Secure state içinde çalışıyoruz. TrustZone'da
   exception giriş/çıkışının güvenlik durumu boyutu vardır (`EXC_RETURN` bit 0
   ve bit 6, ek frame varyantları) — ders 16.
 - **QEMU hedef konfigürasyonu.** 8 öncelik biti ve PPC davranışı bu
   emülatörde ölçüldü; fiziksel MPS2+ AN505 doğrulanmadı.
 - **External IRQ örneği ertelendi.** AN505'in cihaza özel IRQ numaraları
-  doğrulanmadan `IRQn_Type`'a eklenmiyor (uydurma değer yazmamak için). Bu
+  doğrulanmadan `IRQn_Type`'a eklenmiyor. Bu
   derste external interrupt numaralandırması **kavramsal** olarak anlatıldı
   (`exception numarası = 16 + IRQ numarası`); çalışan bir cihaz IRQ örneği
   ileriye bırakıldı.

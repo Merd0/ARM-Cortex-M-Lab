@@ -56,7 +56,7 @@ RLAR = 0x30000321
 ```
 
 `NP = 1` biti "ayrıcalıksız erişime de izin ver" demektir. Thread'in stack'i
-ve kendi veri alanı bu aralığın içinde; ölçülen kanıt
+ve kendi veri alanı bu aralığın içinde; ölçülen değer
 `STACK_WRITE_MAGIC = 0xA5A5C0DE`.
 
 `XN = 1` ise ayrı bir koruma: stack'e enjekte edilen veriden kod
@@ -97,7 +97,7 @@ Sayaç, ayrıcalıksız bölgenin **altında** kalıyor ve başka bölge de yok.
 Yani handler'ın ayrıcalığı kodundan değil bağlamından geliyor, erişim izni de
 politikadan değil `PRIVDEFENA`'dan.
 
-Ölçülen kanıt: `SVC_INCREMENT_1 = 1`, `SVC_INCREMENT_2 = 2` — aynı değişken,
+Ölçülen değerler: `SVC_INCREMENT_1 = 1`, `SVC_INCREMENT_2 = 2` — aynı değişken,
 aynı firmware, farklı bağlam.
 
 ---

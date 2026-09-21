@@ -6,9 +6,9 @@
 
 ## Why This Matters
 
-Ders 05'in sonunda dürüst bir itirafla bitirmiştik: `g_service_counter`
-sıradan RAM'deydi. "SVC yolundan geçmelisin" bir **yazılım sözleşmesiydi** —
-ayrıcalıksız kod onu doğrudan bozabilirdi ve hiçbir şey olmazdı.
+Ders 05'te `g_service_counter` sıradan RAM'deydi. "SVC yolundan geçmelisin"
+bir **yazılım sözleşmesiydi** — ayrıcalıksız kod onu doğrudan bozabilirdi
+ve hiçbir şey olmazdı.
 
 Bu ders o cümleyi **donanım kuralına** çeviriyor. Aynı doğrudan yazma artık
 bir `MemManage` fault üretecek ve `MMFAR` tam olarak hangi adresin ihlal
@@ -380,7 +380,7 @@ MPU_TYPE = 0x00000800  (region sayisi = 8)
 MPU_CTRL = 0x00000000  (bit0 ENABLE, bit2 PRIVDEFENA)
 ```
 
-**Ne kanıtlıyoruz:** Donanımda 8 bölge var ama MPU **kapalı**. Reset sonrası
+**Gözlem:** Donanımda 8 bölge var ama MPU **kapalı**. Reset sonrası
 varsayılan durum budur; koruma yazılım tarafından kurulur.
 
 ### B — Yapılandırmadan sonra
@@ -444,7 +444,7 @@ Stack     : MSP (0x30007ff0)
             PSP = 0x...
 ```
 
-**Ne kanıtlıyoruz:** Thread ayrıcalıksızdı (`nPRIV = 1`), ama bu SVC
+**Gözlem:** Thread ayrıcalıksızdı (`nPRIV = 1`), ama bu SVC
 handler'ına ulaşabildi ve handler ayrıcalıklı. Ders 05'in zinciri MPU
 açıkken de aynen çalışıyor.
 
@@ -492,8 +492,8 @@ Gerçek çıktı (son satırlar):
 ```
 
 Aynı `str r1, [r0]` komutu: politika A'da `MemManage`, politika B'de başarılı.
-**Kodda hiçbir şey değişmedi; yalnızca MPU politikası değişti.** MPU'nun
-gerçekten bir enforcement mekanizması olduğunun en net kanıtı bu.
+**Kod aynı; değişen MPU politikası.** Erişim sonucunu MPU izinleri
+belirliyor.
 
 `~0x1Fu` maskelemesi de bir ders: 32 byte granularite yüzünden bölge
 `0x30000000..0x3000001F` aralığının tamamını kapsıyor — yalnızca o dört
@@ -590,7 +590,7 @@ stacked PC = 0x10000078
 xPSR       = 0x21000000
 ```
 
-Bunları birlikte okuyunca hikâye tamamlanıyor:
+Bu değerler birlikte yorumlandığında:
 
 | Gözlem | Anlamı |
 |---|---|
@@ -783,7 +783,7 @@ Ders 05'te ayrıcalıksız Thread'in UART'a erişemediğini ölçmüştük
 | Nerede | İşlemcinin **dışında**, SoC ara bağlantısında | İşlemcinin **içinde** |
 | Yapılandıran | SSE-200 güvenlik denetleyicisi (`cfg_ap`) | `MPU_RBAR` / `MPU_RLAR` / `MPU_CTRL` |
 | İhlal davranışı | Sessiz: okuma `0` döner (`cfg_sec_resp = 0`) | `MemManage` exception |
-| Bu repoda kanıt | `UART_BAUDDIV_UNPRIV = 0` | `IPSR = 4`, `MMFAR = 0x30000000` |
+| Bu repodaki gözlem | `UART_BAUDDIV_UNPRIV = 0` | `IPSR = 4`, `MMFAR = 0x30000000` |
 
 **"Ayrıcalıksız kod UART'a yazamıyor çünkü MPU engelliyor" cümlesi
 yanlıştır.** Ders 05'te MPU kapalıydı. İkisi de ayrıcalık ekseninde çalışır

@@ -31,7 +31,7 @@ tek şey **ayrıcalık akışı**.
 | **Mod** | `IPSR` | Thread (`IPSR = 0`) / Handler (`IPSR > 0`) |
 | **Ayrıcalık** | Thread'de `CONTROL.nPRIV`; Handler'da **her zaman ayrıcalıklı** | Privileged / Unprivileged |
 
-İki kural, ezberlenmesi gereken:
+İki temel kural:
 
 1. **Handler Mode her zaman ayrıcalıklıdır.** `CONTROL.nPRIV` handler'ın
    ayrıcalığını tanımlamaz; **kesilen Thread bağlamının** ayrıcalığını
@@ -186,7 +186,7 @@ Yığılmış PC, `SVC` komutundan **sonraki** komutu gösterir. Thumb'da `SVC`'
 T1 kodlaması **16 bittir**: `0b11011111:imm8`. Yani komut `pc - 2`'dedir ve
 düşük byte `imm8`'dir.
 
-Bu build'de gerçekten öyle mi? Ölçüldü:
+Bu build'de ölçülen değerler:
 
 ```text
 10000194:  df01   svc  1
@@ -279,7 +279,7 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 
 ### Neden ayrıcalıksız bölüm sessiz?
 
-Tasarım böyle *olmak zorunda kaldı* — ve sebebi bu dersin en iyi sürprizi.
+Bu tasarımın nedeni, aşağıda incelenen UART erişim davranışı.
 
 İlk sürümde ayrıcalıksız kod doğrudan `console_line()` çağırıyordu ve
 **hiçbir şey basılmıyordu**. Program çalışmaya devam ediyor, ama çıktı yok.
@@ -313,7 +313,7 @@ ayrıcalıksız okunabildiği register'a göre değişir; varsayma, ölç.
 
 ## Observe in GDB
 
-Her durakta tek soru var: **hangi durumu kanıtlıyoruz?**
+Her durakta mod, ayrıcalık ve stack durumunu kontrol edeceğiz.
 
 Terminal 1:
 
@@ -355,7 +355,7 @@ $control = 0x2       $sp = 0x30000330
 $msp     = 0x30007ff0  $psp = 0x30000330
 ```
 
-**Ne kanıtlıyoruz:** Başlangıç durumu ders 04'ün bıraktığı yer — Thread Mode,
+**Gözlem:** Başlangıç durumu ders 04'ün bıraktığı yer — Thread Mode,
 ayrıcalıklı, PSP aktif (`CONTROL` bit 1 = 1). `$sp == $psp`, `$msp` ayrı.
 
 ### B / C — Ayrıcalık düştükten ve self-promotion denemesinden sonra
@@ -375,7 +375,7 @@ Stack     : PSP (0x30000328)
 $control = 0x3
 ```
 
-**Ne kanıtlıyoruz:** İki şeyi birden. Mod hâlâ **Thread** — ayrıcalık düşmesi
+**Gözlem:** Mod hâlâ **Thread** — ayrıcalık düşmesi
 mod değiştirmez. Ve bu duruşa gelinmeden önce kod `nPRIV = 0` yazmayı
 denemişti; `$control` hâlâ `0x3`. **Yazma yok sayıldı.**
 
@@ -409,7 +409,7 @@ $sp = 0x30007ff0        $msp = 0x30007ff0     $psp = 0x30000308
 frame    = 0x30000308
 ```
 
-**Ne kanıtlıyoruz — dört şey:**
+**GDB ile gözlemlenen durum:**
 
 1. `IPSR = 11` → **SVCall**. Vektör tablosunda 11. girdi (`cm-vectors` ile
    doğrula).
@@ -420,7 +420,7 @@ frame    = 0x30000308
    bit 1 de temizlendi (`0x3` → `0x1`): **donanım** exception girişinde
    `SPSEL`'i sıfırladı.
 4. `frame == $psp` → sarmalayıcının `EXC_RETURN` bit 2'den bulduğu adres,
-   gerçekten kesilen Thread'in stack'i.
+   kesilen Thread'in stack'i.
 
 ### E / F — Kesilen frame
 
@@ -445,7 +445,7 @@ xPSR       = 0x61000000
 durumu, stacking hatası yok. (Ön koşullar sağlanmasaydı komut reddederdi —
 bkz. `docs/DEBUGGING.md`.)
 
-Şimdi SVC numarası tekniğini gözle gör:
+SVC numarasının nasıl okunduğunu inceleyelim:
 
 ```gdb
 (gdb) x/2i (*(unsigned int*)($psp+24))-2
@@ -456,8 +456,8 @@ bkz. `docs/DEBUGGING.md`.)
    0x10000196 <thread_entry+106>:  str  r0, [r4, #28]
 ```
 
-**Ne kanıtlıyoruz:** Yığılmış PC `0x10000196`, yani `SVC`'den **sonraki**
-komut. `pc - 2 = 0x10000194` ve orada gerçekten `svc 1` var. Dispatcher'ın
+**Gözlem:** Yığılmış PC `0x10000196`, yani `SVC`'den **sonraki**
+komut. `pc - 2 = 0x10000194` ve o adreste `svc 1` var. Dispatcher'ın
 `frame->pc - 2` hesabı doğru.
 
 ### G — Thread'e dönüş
@@ -479,7 +479,7 @@ $control = 0x3
 r0 = 0x1
 ```
 
-**Ne kanıtlıyoruz — iki şey:**
+**GDB ile gözlemlenen durum:**
 
 1. **Thread hâlâ ayrıcalıksız.** `SVC` çalıştırmak Thread'i otomatik olarak
    yükseltmedi. Kapıdan geçmek yetki kazandırmaz; handler ne yaptıysa o olur.
@@ -766,9 +766,9 @@ Bu ders bilerek eksik. Şu an **korunmayan** şeyler:
 Ölçülen tek gerçek kısıt: **çevre birimi erişimi** (`UART_BAUDDIV_UNPRIV = 0`)
 — ve o da MPU'dan değil, SoC'nin PPC'sinden geliyor.
 
-Yani bu derste kurulan şey **ayrıcalık akışıdır**, izolasyon değil. "SVC
-kullandık, artık güvenliyiz" **yanlış** olur. Ders 06 MPU ile
-`g_service_counter`'ı gerçekten erişilemez yapacak; o zaman doğrudan yazma
+Bu ders **ayrıcalık akışını** kurar; tek başına SVC kullanmak bellek
+izolasyonu sağlamaz. Ders 06 MPU ile
+`g_service_counter`'ı ayrıcalıksız koda kapatacak; o zaman doğrudan yazma
 denemesi bir MemManage fault üretecek.
 
 ---

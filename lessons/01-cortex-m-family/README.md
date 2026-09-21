@@ -11,8 +11,8 @@ karardır. Yanlış seçim, iki yıl sonra "bu işlemcide TrustZone yok, güvenl
 sertifikasyonundan geçemiyoruz" veya "DSP komutları yok, filtreyi
 yetiştiremiyoruz" şeklinde geri döner.
 
-Bu ders tablo ezberletmez. Amaç: birisi sana "neden M33 seçtin?" diye
-sorduğunda **gerekçe** üretebilmek.
+Bu dersin amacı, işlemci seçimini ürün gereksinimleriyle
+gerekçelendirebilmektir.
 
 ---
 

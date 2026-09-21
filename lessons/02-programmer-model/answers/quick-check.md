@@ -104,8 +104,8 @@ Break It bölümündeki fault'u alırsın.
 girerken kesilen kodun kullandığı stack'i kullanır.
 
 Ardından işlemci Handler Mode'a geçer ve `SPSEL`'i temizler, böylece
-handler'ın kendisi **MSP** üzerinde çalışır. Break It deneyinde bunu gerçekten
-gözlemledin: fault anında `CONTROL = 0` idi, çünkü donanım SPSEL'i sıfırladı.
+handler'ın kendisi **MSP** üzerinde çalışır. Break It deneyindeki gözlem de
+bunu gösteriyor: fault anında `CONTROL = 0` idi, çünkü donanım SPSEL'i sıfırladı.
 
 Neden böyle tasarlanmış? Çünkü kernel/handler kodunun, hatalı bir task'ın
 stack'ine bağımlı olmaması gerekir. Task stack'i taşmışsa veya bozuksa

@@ -33,7 +33,8 @@ adıdır.**
 
 ### 2. `escalated` ← `HFSR.FORCED`
 
-`1` ise aktif handler kök sebep değildir; kanıt bir kat aşağıda.
+`1` ise aktif handler kök sebebi göstermez; yükseltilen fault'un
+durum bilgisi incelenmelidir.
 
 ### 3. `fault_class` ← `CFSR` alt alanları
 

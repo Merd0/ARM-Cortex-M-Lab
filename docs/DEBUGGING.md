@@ -142,13 +142,11 @@ Tipik akis:
 (gdb) cm-frame $msp $er          # bit2 = 0 ise (handler henuz stack kullanmadiysa)
 ```
 
-### `cm-frame` NE YAPMAZ
+### `cm-frame` sınırları
 
-Bu komut bir **dogrulayici degildir.** Verilen adresin gercekten gecmiste
-yazilmis bir exception frame'i oldugunu **kanitlayamaz** - hicbir debugger
-bunu yalnizca bir adresten kanitlayamaz. Yaptigi sey desteklenmeyen turleri
-ve bariz sacmaliklari **elemektir**. Kontrollerden gecmesi "bu gercek bir
-frame" demek degildir.
+Bu komut desteklenmeyen frame türlerini ve geçersiz değerleri eler.
+Kontrollerin geçmesi, verilen adreste donanımın daha önce bir exception
+frame yazdığını doğrulamaz; yalnızca adres bilgisi bunun için yeterli değildir.
 
 Reddettigi durumlar:
 
@@ -236,8 +234,8 @@ CFSR'dedir; ilgili fault handler kapali oldugu icin HardFault'a yukselmistir.
 
 `BFSR.STKERR`, `UFSR.STKOF` veya `MMFSR.MSTKERR` set ise donanim exception
 frame'ini **yigamamis** olabilir; bellekte guvenilir bir frame yoktur.
-`cm-frame` bu bitleri gorunce cozmeyi **reddeder** - uydurma register
-degerleri basmaktansa acikca reddetmek dogrudur.
+`cm-frame` bu bitleri gördüğünde güvenilir olmayan belleği register
+değerleri olarak yorumlamamak için çözümlemeyi **reddeder**.
 
 Bu repoda iki ornek var:
 
@@ -266,7 +264,7 @@ watchpoint calismayabilir. Once `-O0`/`Debug` preset ile dene.
 <optimized out>
 ```
 
-Bu bir GDB hatasi degil: derleyici degiskeni gercekten silmis.
+Derleyici değişkeni optimizasyon sırasında kaldırdığı için GDB onu gösteremiyor.
 `Debug` preset (`-Og -g3`) kullan veya degiskeni `volatile` yap.
 
 ## Reset'ten itibaren adim adim gitmek

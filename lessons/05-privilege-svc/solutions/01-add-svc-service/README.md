@@ -165,7 +165,7 @@ r0 = 0x1
 
 Bu servis sınırı **mimari ayrıcalık akışıdır, bellek izolasyonu değildir.**
 `g_service_counter` hâlâ sıradan RAM; ayrıcalıksız kod ona `SVC`'siz de
-yazabilir. Ders 06 MPU ile bunu gerçekten kapatacak.
+yazabilir. Ders 06 MPU ile bu doğrudan erişimi engelleyecek.
 
 ---
 

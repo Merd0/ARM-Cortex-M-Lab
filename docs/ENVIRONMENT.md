@@ -12,7 +12,7 @@ içinde yapıldı.** Somut olarak:
 
 | Ortam | Durum |
 |---|---|
-| Ubuntu 24.04.4 LTS (x86_64) container | ✅ configure, build, QEMU çalıştırma, GDB breakpoint, smoke test — hepsi gerçekten çalıştırıldı |
+| Ubuntu 24.04.4 LTS (x86_64) container | ✅ configure, build, QEMU çalıştırma, GDB breakpoint, smoke test — doğrulandı |
 | Windows 11 + PowerShell | ⬜ **TEST EDİLMEDİ** |
 | WSL2 (Ubuntu) | ⬜ test edilmedi (Linux ile aynı olması bekleniyor) |
 | macOS | ⬜ test edilmedi |
@@ -197,7 +197,7 @@ cmake --build --preset debug
 ./tests/smoke-test.sh
 ```
 
-Bu komut dizisi **bu container'da gerçekten çalıştırıldı: 26 PASS / 0 FAIL.**
+Bu komut dizisinin container'daki sonucu: **26 PASS / 0 FAIL.**
 
 ## WSL notları
 
@@ -225,7 +225,7 @@ Bu komut dizisi **bu container'da gerçekten çalıştırıldı: 26 PASS / 0 FAI
 | `unsupported machine type` | QEMU çok eski | `qemu-system-arm -M help \| findstr mps2` → `mps2-an505` listede olmalı |
 | QEMU açılıyor, çıktı yok | `-serial stdio` eksik | Repo'nun `run-*` hedeflerini kullan |
 | GDB `Remote connection closed` | QEMU başlamadan bağlanıldı | Terminal 1'in beklediğinden emin ol |
-| GDB'de register'lar saçma | Mimari ayarlanmamış | `set architecture armv8-m.main` |
+| GDB'de register değerleri tutarsız | Mimari ayarlanmamış | `set architecture armv8-m.main` |
 | `.ps1 cannot be loaded` | Execution policy | `powershell -ExecutionPolicy Bypass -File scripts\check-environment.ps1` |
 
 ---

@@ -1,10 +1,10 @@
 # Progress
 
-Kural: **tamamlanmayan hiçbir şeye ✅ konmaz.**
-Bir dersin "bitti" sayılması için şunların hepsi gerekir:
+Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
+çalışmalar işaretlenir. Bir dersin tamamlanması için şu adımlar gerekir:
 
-1. Firmware gerçekten build edildi
-2. QEMU'da gerçekten çalıştırıldı ve çıktısı README'ye yazıldı
+1. Firmware build edildi
+2. QEMU'da çalıştırıldı ve çıktısı README'ye yazıldı
 3. GDB gözlemi yapıldı
 4. Experiment ve Break It denendi
 5. "What I Learned" dolduruldu
@@ -91,7 +91,7 @@ Dogrulama durumu (bu container'da olculdu):
 
 ## Öğrenme hedefi kontrol listesi
 
-Projenin sonunda bunların hepsini gerçekten söyleyebilmeliyim:
+Proje sonunda tamamlanması hedeflenen çalışmalar:
 
 - [ ] Cortex-M register modelini debugger'da inceledim
 - [ ] C kodunun assembly karşılığını takip ettim

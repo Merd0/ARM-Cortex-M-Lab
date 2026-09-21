@@ -77,7 +77,7 @@ UFSR.STKOF     (bit 20)   stack limiti asildi
 ```
 
 Bu bitlerden biri set ise bellekte güvenilir bir exception frame olmayabilir;
-oradan okunan "R0", "stacked PC" uydurma olur.
+oradan okunan "R0" ve "stacked PC" değerleri kesilen bağlamı temsil etmeyebilir.
 
 Doğru sıra:
 
@@ -114,7 +114,7 @@ Yapılandırılabilir öncelikli bir exception'ın HardFault'a **yükseltildiği
 (escalated) — ya da mimarinin tanımladığı başka bir escalation koşulunun
 oluştuğunu.
 
-Pratik anlamı: **"bu HardFault kendi başına oluşmadı; asıl kanıt `CFSR`'de."**
+Bu HardFault bir escalation sonucudur; asıl sebep `CFSR` üzerinden incelenir.
 
 `FORCED` "işlemci rastgele bir çöküşü zorladı" demek **değildir**. Mimari bir
 yönlendirme kuralının işlediğini söyler.
@@ -142,7 +142,7 @@ Durum register'larını yazan donanım handler seçiminden bağımsız çalışt
 
 **Precise (`PRECISERR`):** işlemci hatayı belirli bir komutla
 ilişkilendirebilir. Yığılmış PC genellikle o komutu gösterir ve `BFARVALID`
-set ise `BFAR` erişilen adresi verir. İki bağımsız kanıt aynı noktayı
+set ise `BFAR` erişilen adresi verir. İki gözlem aynı noktayı
 gösterir — Vaka 3'te ölçüldüğü gibi (`STACKED_PC = ldr`, `BFAR = hedef`).
 
 **Imprecise (`IMPRECISERR`):** raporlama gecikir. Tipik örnek, yazma
@@ -199,8 +199,7 @@ ister.
 
 **`HFSR.FORCED`.**
 
-- `FORCED = 1` → bu bir escalation; asıl kanıt `CFSR`'de. HardFault'un
-  kendisine bakmayı bırak, bir kat aşağı in.
+- `FORCED = 1` → bu bir escalation; asıl sebebi `CFSR` üzerinden incele.
 - `FORCED = 0` → HardFault kendi başına oluştu (örneğin vector table okuma
   hatası, `VECTTBL`). `HFSR`'nin diğer bitlerine bak.
 
@@ -245,8 +244,8 @@ başlayıp tek bir fault ürettiği için bu sorun yaşanmıyor.
 | Yığılmış PC | ✅ `str` | ✅ `udf` | ✅ `udf` | ❌ okunmaz |
 
 Son sütundaki ince nokta: `BFARVALID = 1` olduğu için **adres** güvenilir,
-ama `STKERR` olduğu için **frame** güvenilmez. Aynı vakada bir kanıt geçerli,
-diğeri değil — "fault'u tek register'dan teşhis etme" kuralının en net örneği.
+ama `STKERR` olduğu için **frame** güvenilmez. Bu nedenle adresin ve
+frame'in geçerliliği ayrı ayrı değerlendirilmelidir.
 
 ---
 

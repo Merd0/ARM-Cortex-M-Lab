@@ -59,7 +59,7 @@ başlangıç durumudur, bir bug değil.
 
 `CHECK_STACK_GUARD` hakkında bir sınır: yalnızca **izlenen o iki konumun**
 üzerine yazılmadığını gösterir. Alt sınırdan taşmayı veya başka bir yere kaçak
-yazmayı yakalamaz. Daha güçlü kanıt GDB ölçümündedir:
+yazmayı yakalamaz. Stack pointer ayrıca GDB ile kontrol edilir:
 
 ```gdb
 p/x $sp     p/x $msp     p/x $psp     p/x $control

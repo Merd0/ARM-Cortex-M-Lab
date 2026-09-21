@@ -52,20 +52,17 @@ tutarsizlik degil, bilincli bir ayrim:
 CMSIS-Core, Arm'in resmi Cortex-M soyutlama katmanidir. Her silikon uretici,
 her RTOS ve her ticari SDK onu varsayar. Elle yazilmis bir header uzun vadede
 iki sekilde bozulur: ya bir register alani yanlis/eksik kalir, ya da mimari
-guncellemelerini takip edemez. Bu repo portfolio olarak da okunacaksa,
-altyapinin resmi CMSIS uzerinde durmasi dogru muhendislik kararidir.
+guncellemelerini takip edemez. Bu nedenle altyapıda resmi CMSIS kullanılır.
 
 **Neden hala elle yazilmis bir header var?**
-`core_cm33.h` tek basina 3284 satirdir (olculdu). Bir ogrenci "CONTROL
-register'i nerede yasiyor" sorusunun cevabini orada aramaz, bulamaz ve
-sonunda sadece `__get_CONTROL()` cagirmayi ogrenir. Ogrenme hedefi tam olarak
-bu soyutlamanin ALTINI gormekse, soyutlama ogretmez.
+`core_cm33.h` tek başına 3284 satırdır (ölçüldü). CONTROL register'ının
+adresini ve `__get_CONTROL()` çağrısının nasıl çalıştığını incelemek için
+daha küçük bir eğitim header'ı kullanıyoruz.
 
-`cm33_teaching.h` bu yuzden var: `SCB->CFSR`'nin gercekten `0xE000ED28`
-oldugunu, `MRS`/`MSR` sarmalayicilarinin sihir degil iki satir inline asm
-oldugunu gostermek icin. Isimlendirme CMSIS ile **birebir ayni** tutulmustur,
-boylece ogrenilen sey dogrudan transfer edilir ve iki header call site'ta
-degistirilebilir.
+`cm33_teaching.h`, `SCB->CFSR` adresinin `0xE000ED28` olduğunu ve
+`MRS`/`MSR` sarmalayıcılarının iki satır inline assembly ile nasıl yazıldığını
+gösterir. İsimlendirme CMSIS ile aynı tutulmuştur; böylece aynı çağrılar
+iki header ile de kullanılabilir.
 
 **Pratik kural**
 

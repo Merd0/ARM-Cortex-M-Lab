@@ -144,10 +144,10 @@ console_kv_str("PRIVILEGE",    (control & 0x1U) ? "Unprivileged" : "Privileged")
 console_kv_str("ACTIVE_STACK", (control & 0x2U) ? "PSP" : "MSP");
 ```
 
-`__get_IPSR()` ve `__get_CONTROL()` sihir değil. Bu derste bilerek resmi
-CMSIS yerine `core/include/core/cm33_teaching.h` kullanıyoruz — çünkü bu
-sarmalayıcıların içini görmek dersin ta kendisi. İçeride tek satırlık inline
-assembly var:
+`__get_IPSR()` ve `__get_CONTROL()` sarmalayıcılarının nasıl çalıştığını
+incelemek için bu derste resmi CMSIS yerine
+`core/include/core/cm33_teaching.h` kullanıyoruz. Her biri tek satırlık
+inline assembly içeriyor:
 
 ```c
 static inline uint32_t __get_CONTROL(void)
@@ -216,7 +216,7 @@ Gerçek çıktı (QEMU 8.2.2, mps2-an505, arm-none-eabi-gcc 13.2.1):
 - `PSP = 0` → PSP'ye henüz kimse değer yazmadı. Reset'te tanımsızdır.
   Bu "boş" PSP ileride **Break It** bölümünde işimize yarayacak.
 - `LOCAL_VAR_ADDR` `MSP` değerinin hemen yanında → yerel değişken
-  gerçekten aktif stack'in içinde yaşıyor.
+  aktif stack'in içinde bulunuyor.
 
 APSR değerleri:
 
@@ -517,7 +517,7 @@ REDDEDILDI [STACKING HATASI]: CFSR = 0x00009200
 > tahmin etmiyor ve desteklemediği durumları açıkça reddediyor. Ama dikkat:
 > bu bir **doğrulayıcı değil**, sınırlı bir çözücüdür. Bir adresin gerçekten
 > geçmişte yazılmış bir frame olduğunu kanıtlayamaz; yalnızca desteklenmeyen
-> türleri ve bariz saçmalıkları eler. `EXC_RETURN` değeri de mimari kodlamaya
+> türleri ve geçersiz değerleri eler. `EXC_RETURN` değeri de mimari kodlamaya
 > göre sıkı doğrulanır — `0xFFFFFFxx` görünümünde olması yetmez; örneğin
 > `0xFFFFFFFF` (bit 1 = 1) ve `0xFFFFFFF5` (Handler + PSP) geçersizdir.
 > Tam liste `docs/DEBUGGING.md` içinde.

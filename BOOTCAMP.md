@@ -1,6 +1,6 @@
 # ARM Cortex-M — 7 Day Practical Bootcamp
 
-Bu dosya günlük çalışma ekranın. Repoyu açtığında önce buraya bak.
+Bu dosya günlük ders planını ve çalışma kontrol listesini içerir.
 
 **Etiketler:** `[QUICK]` 20–35 dk · `[STANDARD]` 45–75 dk · `[DEEP]` 90 dk+
 Zamanın daralırsa `QUICK` ve `STANDARD` üzerinden ilerle, `DEEP` olanları
@@ -21,8 +21,8 @@ DEEP TRACK'e bırak.
 
 ---
 
-> **Nereden baslanir:** bu dosya giris noktasidir ve `lessons/01` ile baslar.
-> `README.md` de ayni sirayi gosterir.
+> **Başlangıç:** Dersleri `lessons/01` ile başlayarak sırayla takip et.
+> `README.md` de aynı sırayı gösterir.
 
 ## Day 1 — Cortex-M Fundamentals
 
@@ -120,9 +120,9 @@ TrustZone sınırının neyi engellediğini deneyle gösterebiliyorum.
 
 ## DEEP TRACK — sonra dönülecekler
 
-Bunlar FAST TRACK'i bloke etmez. Zaman bulunca:
+Bu çalışmalar FAST TRACK için ön koşul değildir; daha sonra tamamlanabilir:
 
-- [ ] M55 (`mps3-an547`) platform portu — MVE capability'sini gerçekten ölç
+- [ ] M55 (`mps3-an547`) platform portu — MVE capability'sini ölç
 - [ ] Arm FVP kurulumu — QEMU'da gözlemlenemeyenler için
 - [ ] Fault analyzer'ı tam sürüme çıkar (tüm CFSR bitleri)
 - [ ] MPU ile task isolation — mini kernel üzerine
@@ -136,8 +136,8 @@ Bunlar FAST TRACK'i bloke etmez. Zaman bulunca:
 
 1. Bu dosyadan günün derslerini aç
 2. Dersi oku → build et → çalıştır → GDB'de gözle
-3. **Experiment** ve **Break It** bölümlerini atlama — asıl öğrenme orada
-4. **What I Learned** bölümünü doldur (sonradan hatırlamazsın)
+3. **Experiment** ve **Break It** deneylerini çalıştır
+4. Gözlemlerini **What I Learned** bölümüne kaydet
 5. Kutuyu işaretle, [`docs/PROGRESS.md`](docs/PROGRESS.md) ve README progress'i güncelle
 
 ## Takıldığında
