@@ -1,0 +1,41 @@
+# ---- build output -------------------------------------------------------
+build/
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.o
+*.d
+*.su
+
+# ---- CMake --------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CMakeUserPresets.json
+.ninja_deps
+.ninja_log
+build.ninja
+
+# ---- debug / tools ------------------------------------------------------
+.gdb_history
+# DIKKAT: ciplak "core" kurali core/ KAYNAK DIZININI de eslestiriyordu; o
+# dizine eklenecek yeni dosyalar sessizce yok sayilirdi (denetim bulgusu M1).
+# "/core" da ise yaramaz - kokteki core/ dizinini yine eslestirir.
+# Bu yuzden kural tamamen kaldirildi; core dump'lar yalnizca uzanti/desen
+# ile yakalaniyor.
+*.core
+core.[0-9]*
+
+# ---- editor / OS --------------------------------------------------------
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

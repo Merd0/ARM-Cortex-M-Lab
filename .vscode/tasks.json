@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "firmware",
+      "type": "promptString",
+      "description": "Firmware/target adi (ornek: 02-programmer-model, capability-probe)",
+      "default": "02-programmer-model"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Configure (debug)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Clean rebuild",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug", "--clean-first"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Run in QEMU",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug", "--target", "run-${input:firmware}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Start QEMU for debugging",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug", "--target", "debug-${input:firmware}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "."
+        }
+      },
+      "presentation": { "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Disassemble",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug", "--target", "disasm-${input:firmware}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Size",
+      "type": "shell",
+      "command": "arm-none-eabi-size",
+      "args": ["-A", "build/debug/lessons/02-programmer-model/02-programmer-model.elf"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check environment",
+      "type": "shell",
+      "windows": {
+        "command": "powershell",
+        "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/check-environment.ps1"]
+      },
+      "linux": { "command": "bash", "args": ["scripts/check-environment.sh"] },
+      "osx": { "command": "bash", "args": ["scripts/check-environment.sh"] },
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}
