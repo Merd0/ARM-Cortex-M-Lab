@@ -76,13 +76,12 @@ MPU kapalı olduğu için firmware sorunsuz çalışıyor ve SVC yolu işliyor �
 Sekiz `CHECK_*` satırının hepsi `PASS` olmalı.
 
 `CHECK_FLASH_REGION_RO_EXEC` ve `CHECK_STACK_REGION_RW_XN` kontrolleri
-register'ları geri okuyup `AP`, `XN` ve `EN` bitlerini denetler — yani
-politikayı gerçekten programladığını doğrular, sadece fonksiyonu
-çağırdığını değil.
+register'ları geri okuyup `AP`, `XN` ve `EN` bitlerini denetler. Böylece
+politikanın donanıma yazıldığı kontrol edilir.
 
 ### İhlali de doğrula
 
-Politikan doğruysa korumanın gerçekten işlediğini gör:
+Politikayı uyguladıktan sonra korumayı şu deneyle kontrol et:
 
 ```bash
 cmake --build --preset debug --target 06-mpu-broken

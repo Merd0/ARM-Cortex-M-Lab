@@ -136,9 +136,9 @@ MSP üzerinde çalışmaya devam eder.
 veya `PSPLIM` sınırını aşıyorsa stacking'in kendisi fault üretir
 (`BFSR.STKERR`, `UFSR.STKOF`, `MMFSR.MSTKERR`). Bu derste her iki durumu da
 ölçtük. O yüzden `cm-frame <adres> <EXC_RETURN>` bu bitleri görünce çözmeyi
-**reddediyor**: bellekte geçerli bir frame olmayabilir. (Red etmek, uydurma
-register değerleri basmaktan iyidir — ama kabul etmesi de frame'in gerçek
-olduğunu kanıtlamaz; komut bir eleyicidir, doğrulayıcı değil.)
+**reddediyor**: bellekte geçerli bir frame olmayabilir. Komutun bir frame'i
+kabul etmesi de onun gerçek olduğunu doğrulamaz; komut geçersiz durumları
+eleyen sınırlı bir çözücüdür.
 
 **2. Bu açıklama tek güvenlik durumu içindir.** TrustZone devredeyken hangi
 stack'in kullanılacağı güvenlik durumu geçişine de bağlıdır (ders 16).
@@ -228,7 +228,7 @@ Pratik kural: bir `bl` çağrısına girerken `SP % 8 == 0` olsun. Bunun en kola
 yolu prolog'da itilen toplam baytı 8'in katı tutmaktır — bu yüzden
 derleyicinin ürettiği prologlarda sık sık gereksiz görünen bir register daha
 itildiğini görürsün. Bu derste `accumulate` (ders 03) ve `psp_start` hedefi
-`thread_entry` aynı numarayı kullanıyor.
+`thread_entry` aynı yöntemi kullanıyor.
 
 Dikkat: bu, **her tek tek `PUSH`'un** çift sayıda register içermesi gerektiği
 anlamına gelmez. Kural fonksiyonun çağrı sınırındaki net `SP` değeri

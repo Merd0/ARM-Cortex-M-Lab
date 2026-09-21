@@ -1,6 +1,6 @@
 # Performance Measurement Methodology
 
-## Once kotu haber
+## Bu hedefteki sınır
 
 Bu target'ta DWT cycle counter **saymiyor** (olculdu, bkz.
 `docs/TARGET_CAPABILITIES.md`). Yani en yaygin Cortex-M profiling yontemi
@@ -10,7 +10,7 @@ burada kullanilamaz.
 DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 ```
 
-Bunu gizlemek yerine, **olculebilir olan seylere** geciyoruz.
+Bu nedenle aşağıdaki ölçüm yöntemlerini kullanıyoruz.
 
 ## QEMU'da gecerli olculer
 
@@ -38,53 +38,51 @@ optimizasyonun ne yaptigini anlamak icin en dogrudan yoldur.
 arm-none-eabi-objdump -d firmware.elf | grep -c "^\s*1[0-9a-f]*:"
 ```
 
-### 4. QEMU `-d in_asm` - DIKKAT: bu bir komut sayaci DEGILDIR
+### 4. QEMU `-d in_asm` — çevrilen blokların kaydı
 
 ```bash
 qemu-system-arm -M mps2-an505 -kernel firmware.elf -nographic \
                 -d in_asm -D trace.log
 ```
 
-Bu satir onceki surumlerde "icra edilen komut sayisi" diye tanitiliyordu.
-**Yanlisti.** `-d in_asm`, QEMU'nun CEVIRDIGI temel bloklarin (translation
-block) disassembly'sini loglar. QEMU bir blogu bir kez cevirir, sonra onu
-kac kez calistirirsa calistirsin **tekrar loglamaz**. Yani:
+`-d in_asm`, QEMU'nun **çevirdiği** temel blokların (translation
+block) disassembly'sini loglar; icra edilen komut sayısını vermez. QEMU bir
+bloğu bir kez çevirir, sonra onu kaç kez çalıştırırsa çalıştırsın **tekrar
+loglamaz**. Yani:
 
 - Bir dongu 1.000.000 kez donse bile log'da bir kez gorunur.
-- Log'daki satir sayisi, icra edilen komut sayisi ile orantili DEGILDIR.
+- Log'daki satır sayısı, icra edilen komut sayısıyla orantılı değildir.
 - Hicbir kod yolu ceviriye girmezse hic gorunmez.
 
 `-d in_asm` su isin aracidir: **hangi kodun gercekten calistirildigini**
 gormek (kapsam, coverage). "Kac komut calisti" sorusunun cevabi degildir.
 
 Dinamik komut sayimi istiyorsan QEMU'nun bunun icin ayri mekanizmalari
-vardir (ornegin TCG plugin'leri). Bu repoda kurulmadi ve kurulmayacak -
-kapsam disi. Kurmadan once sunu sor: **bu sayi neyi kanitlayacak?**
+vardir (ornegin TCG plugin'leri). Bunlar bu reponun kapsamı dışındadır
+ve kurulmamıştır. Kullanılacaksa ölçümün amacı önceden belirlenmelidir.
 QEMU fonksiyonel bir emulatordur; komut sayisi cycle sayisi degildir.
 
-### 5. SysTick - ne ise yarar, ne ise YARAMAZ
+### 5. SysTick — kullanım alanı ve sınırları
 
 SysTick QEMU'da calisir ve hedef uzerinde **yerel bir aralik/sayim deneyi**
 kurmak icin kullanilabilir: "su kadar tick icinde kac iterasyon donduk",
 "iki tick arasi bu islem tamamlandi mi". Bunun icin timer modelinin uygun
 olmasi ve neyi saydiginin bilinmesi gerekir.
 
-Yaramadigi sey sudur: **bir algoritmanin fiziksel Cortex-M donaniminda
-digerinden hizli oldugunu kanitlamak.** Onceki surum bu olcumu "iki algoritmayi
-karsilastirmak icin kullanilabilir" diye tanitiyordu; bu, okuyucuyu donanim
-siralamasi cikarmaya davet ediyordu. Duzeltme:
+Bu ölçümden, bir algoritmanın fiziksel Cortex-M donanımında diğerinden
+daha hızlı olduğu sonucu çıkarılamaz:
 
-- Fonksiyonel emulator zamani donanim cycle zamani DEGILDIR. QEMU komutlari
+- Fonksiyonel emülatör zamanı, donanım cycle zamanı değildir. QEMU komutlari
   dogru yurutur, pipeline/bellek gecikmesi/cache modellemez.
 - Bu yuzden SysTick sonucu ne donanim performans siralamasi ne de WCET kurar.
 - Ayni firmware icinde iki kod yolunu karsilastirmak istiyorsan bile,
-  cikan oranin donanimda korunacagini VARSAYAMAZSIN; orada bellek gecikmesi
+  çıkan oranın donanımda korunacağı varsayılamaz; orada bellek gecikmesi
   ve komut zamanlamalari tamamen farklidir.
 
 Kisacasi SysTick burada bir **deney araci**dir, bir **kiyaslama (benchmark)
 araci** degil.
 
-## Yedi ayri sey - karistirma
+## Yedi ölçüm kavramı
 
 Asagidaki yedi kavram sik sik ayni cumlede kullanilir ve birbirinin yerine
 gecmez. Bir olcum paylasirken hangisini yaptigini acikca yaz.

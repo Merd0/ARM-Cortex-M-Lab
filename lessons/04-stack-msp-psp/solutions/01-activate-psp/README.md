@@ -196,15 +196,15 @@ QEMU 8.2.2, mps2-an505, `debug` preset):
 ```
 
 Üç kontrol de `release` ve `minsize` preset'lerinde de `PASS` verir —
-asıl onarım kanıtı budur, çünkü eski çözüm tam olarak orada kırılıyordu.
+eski çözüm bu iki optimizasyon ayarında başarısız oluyordu.
 
 > Adresler build'e özeldir. Kodun herhangi bir yeri değişirse kayarlar.
 
 `CHECK_STACK_GUARD` hakkında bir sınır: guard word'leri yalnızca **izlenen o
 iki konumun** üzerine yazılmadığını gösterir. Alt sınırdan taşma olmadığını,
 başka bir yere kaçak yazma olmadığını veya `SP`'nin hiç aralık dışına
-çıkmadığını **kanıtlamaz**. Daha güçlü kanıt GDB ölçümleri ve disassembly
-incelemesindedir (dersin "Observe in GDB" bölümü).
+çıkmadığını **göstermez**. Bu durumlar GDB ölçümleri ve disassembly ile
+incelenir (dersin "Observe in GDB" bölümü).
 
 ---
 

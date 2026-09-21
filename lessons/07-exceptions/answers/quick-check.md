@@ -89,9 +89,9 @@ Yani frame "AAPCS'in caller-saved kümesi" **değildir**. Doğru özet: sıradan
 kodu sürdürmek için en acil gereken volatile çalışma register'ları, artı
 kesilen yürütmeyi devam ettirmek için gereken kontrol akışı/durum bilgisi.
 
-Bu, mimari ile ABI'nin bilinçli olarak uyumlu tasarlandığı güzel bir örnek.
+Bu düzen, exception mekanizmasının ABI ile uyumlu çalışmasını sağlar.
 
-Bu derste ölçülen kanıt: `SVC`'den önce yüklenen işaret değerleri frame'de
+Bu dersteki ölçümde `SVC`'den önce yüklenen işaret değerleri frame'de
 birebir duruyordu (`0x11111111` `+0x00`'da, `0xCCCCCCCC` `+0x10`'da).
 
 ---
@@ -127,7 +127,7 @@ Hiçbir yazılım satırı `SPSEL`'i temizlemedi.
 bağımlı olmamalıdır. Thread stack'i taşmış veya bozulmuş olsa bile handler
 temiz bir MSP üzerinde çalışır.
 
-Bu soru ile soru 4'ü karıştırmamak kritik: **frame PSP'de olabilir ama handler
+Bu soru ile soru 4 arasındaki fark: **frame PSP'de olabilir ama handler
 MSP kullanır.** İkisi ayrı sorudur.
 
 (Tek güvenlik durumu varsayımıyla. TrustZone'da bu, *mevcut güvenlik

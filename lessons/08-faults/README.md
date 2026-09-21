@@ -145,7 +145,7 @@ Her BusFault imprecise değildir; her veri fault'u da precise değildir.
 
 > **OBSERVATION:** Bu ortamda ölçülen dört vakanın dördü de **precise**.
 > QEMU'da deterministik bir imprecise BusFault kurulamadı; `IMPRECISERR`
-> kavramsal olarak anlatılıyor, uydurma bir örnek verilmiyor.
+> kavramsal olarak anlatılıyor; ölçülmüş bir örneği yok.
 
 ---
 
@@ -434,7 +434,7 @@ Privilege : Privileged (CONTROL.nPRIV = 0)
 Stack     : PSP (0x300002f8)
 ```
 
-**Ne kanıtlıyoruz:** Thread Mode, PSP. Bir sonraki komut tek bir `ldr`, adres
+**Gözlem:** Thread Mode, PSP. Bir sonraki komut tek bir `ldr`, adres
 `r0`'da ve eşlenmemiş bölgede.
 
 ### B / C — Handler'ın ilk komutu, EXC_RETURN
@@ -454,7 +454,7 @@ Stack     : MSP (0x30007ff0)
 $lr = 0xfffffffd
 ```
 
-**Ne kanıtlıyoruz:** `IPSR = 5` → BusFault, **HardFault değil** (çünkü
+**Gözlem:** `IPSR = 5` → BusFault, **HardFault değil** (çünkü
 `BUSFAULTENA = 1`). `PSP` 32 byte indi → frame yığıldı. `LR` bir
 `EXC_RETURN`.
 
@@ -482,7 +482,7 @@ BFAR  = 0x30100000  (BFARVALID=1 -> adres GECERLI)
 SET   : BFSR.PRECISERR BFSR.BFARVALID
 ```
 
-**Ne kanıtlıyoruz:** Ham değerler ile yardımcının çıktısı birebir aynı.
+**Gözlem:** Ham değerler ile yardımcının çıktısı birebir aynı.
 `BFSR = 0x82` = bit 1 `PRECISERR` + bit 7 `BFARVALID`. `MMFAR = 0` ama
 `MMARVALID = 0` — anlamlı değil, kullanma.
 
@@ -518,9 +518,9 @@ komutundayız** — henüz hiçbir şey onları değiştirmedi. Handler içinde 
    0x100000f8 <trigger_load>:  ldr  r0, [r0, #0]
 ```
 
-**Ne kanıtlıyoruz:** Precise bir veri yolu hatasında yığılmış PC, hata veren
-`ldr`'nin kendisi. Ve `BFAR` o `ldr`'nin adresi. İki bağımsız kanıt aynı
-şeyi söylüyor — teşhis böyle kurulur.
+**Gözlem:** Precise bir veri yolu hatasında yığılmış PC, hata veren
+`ldr`'nin kendisi. Ve `BFAR` o `ldr`'nin adresi. Bu iki gözlem birlikte
+yorumlanarak hata teşhis edilir.
 
 ### `cm-fault` güncellemesi
 
@@ -639,9 +639,9 @@ UYARI: STACKING hatasi bildirilmis (STKOF/STKERR/MSTKERR).
 REDDEDILDI [STACKING HATASI]: CFSR = 0x00009200
 ```
 
-Araç reddediyor ve bu **doğru**. `STKERR` = donanım exception frame'ini
-yığarken hata aldı. Bellekte güvenilir bir frame yok; oradan okunan her değer
-uydurma olur.
+Araç frame çözümlemesini reddediyor. `STKERR` = donanım exception frame'ini
+yığarken hata aldı. Bellekte güvenilir bir frame yok; oradan okunan değerler
+kesilen bağlamın register değerleri olarak kullanılamaz.
 
 Ders 04'teki `STKOF` vakası da aynı şekilde reddedilir (`SET : UFSR.STKOF`).
 

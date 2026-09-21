@@ -201,18 +201,18 @@ static uint32_t task_stack_block[TASK_STACK_WORDS + GUARD_WORDS]
 
 Bloğun sonundaki iki word stack'e ait değildir; bilinen bir desenle doldurulur.
 Normal çalışma sonunda hâlâ bozulmamış olmaları, **bu iki seçilmiş konumun
-üzerine yazılmadığına dair kanıt sunar** — ilk sürümdeki hata tam olarak
+üzerine yazılmadığını gösterir** — ilk sürümdeki hata tam olarak
 böyle yakalanmıştı.
 
-Ne kanıtlamadığını da bilmek gerekir. Guard word'leri şunları **göstermez**:
+Guard word'leri şu durumları **göstermez**:
 
 - alt sınırdan (tabandan) taşma olmadığını,
 - başka bir yere kaçak yazma olmadığını,
 - `SP`'nin hiçbir an aralık dışına çıkmadığını,
 - guard'a yazılıp aynı desenle geri yazılmadığını.
 
-Yani bunlar ucuz ve etkili bir **nöbetçidir**, kapsamlı bir kanıt değil.
-Daha güçlü kanıt aşağıdaki GDB ölçümleri ve disassembly incelemesindedir.
+Bu kontrol yalnızca izlenen konumları kapsar. Stack kullanımını daha
+ayrıntılı incelemek için aşağıdaki GDB ölçümleri ve disassembly kullanılır.
 
 `aligned(8)` neden? AAPCS32, bir **genel arayüz sınırında** — yani normal bir
 fonksiyon çağrısı anında — `SP`'nin 8 byte hizalı olmasını şart koşar. Diziyi
@@ -330,8 +330,8 @@ Gerçek çıktı — **onarım sonrası yeniden ölçüldü**
 Beş gözlem:
 
 1. **Aşama 1 ve 2'de `LOCAL_ADDR` aynı: `0x30007FC4`.** PSP'ye `0x30000200`
-   yazdık, `CONTROL` hâlâ 0, yerel değişkenler hâlâ MSP bölgesinde. Bu dersin
-   ana iddiasının deneysel kanıtı.
+   yazdık, `CONTROL` hâlâ 0, yerel değişkenler hâlâ MSP bölgesinde. PSP değerinin
+   yazılması tek başına aktif stack seçimini değiştirmedi.
 2. **Aşama 3'te `LOCAL_ADDR` `0x300001E4`'e atladı** — `task_stack_block`
    bölgesine.
 3. **`PUSH_DELTA_BYTES = 16`**: dört register × 4 byte. `POP` sonrası `SP`
@@ -342,7 +342,7 @@ Beş gözlem:
    hâlâ `0xDEADBEEF`. Bu, ilk sürümdeki somut hatanın tekrarlanmadığını
    gösterir (`-O2`/`-Os` altında tam oraya yazılıyordu). Yine de bu tek
    başına "hiçbir sınır ihlali yok" demek değildir — yalnızca **izlenen bu
-   konumların** bozulmadığını söyler. Bütünsel kanıt için `$psp`'nin aralık
+   konumların** bozulmadığını söyler. Ayrıca `$psp`'nin aralık
    içinde kaldığını GDB'de ölçmek gerekir.
 
 `LOCAL_ADDR` ile `PSP_NOW`'un farklı olması normal: biri derleyicinin
@@ -399,7 +399,7 @@ Gerçek ölçüm, üç duruş (onarım sonrası):
 
 - **`$sp`, aktif stack pointer'ın takma adıdır.** GDB'nin ayrı bir yorumu yok.
   Aşama 2'de `$sp == $msp`, aşama 3'te `$sp == $psp`.
-- Aşama 2'nin satırı dersin kanıtı: `$psp` doldu, `$sp` **kıpırdamadı**.
+- Aşama 2'de `$psp` değeri değişti, `$sp` aynı kaldı.
 - Aşama 3'te `$msp` hiç değişmedi.
 
 ### 2. Geçişin kendisi
@@ -666,7 +666,7 @@ REDDEDILDI [STACKING HATASI]: CFSR = 0x00100000
 > Yeni arayüz `cm-frame <adres> <EXC_RETURN>`. İkinci argüman frame **türünü**
 > söyler (standart mı, FP-genişletilmiş mi, hangi stack). Yine de bu bir
 > doğrulayıcı değil: bir adresin gerçek bir frame olduğunu kanıtlayamaz,
-> yalnızca desteklenmeyenleri ve bariz saçmalıkları eler. `EXC_RETURN` da
+> yalnızca desteklenmeyen türleri ve geçersiz değerleri eler. `EXC_RETURN` da
 > mimari kodlamaya göre sıkı doğrulanır: `0xFFFFFFxx` biçiminde olmak
 > yetmez (`0xFFFFFFFF` ve `0xFFFFFFF5` geçersizdir). Ayrıntı:
 > [`docs/DEBUGGING.md`](../../docs/DEBUGGING.md).

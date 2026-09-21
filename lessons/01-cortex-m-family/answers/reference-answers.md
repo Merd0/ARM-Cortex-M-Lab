@@ -137,9 +137,9 @@ hapseder. Sandbox'lanmış eklenti kodu, ağdan gelen veriyi ayrıştıran bir
 görev veya kullanıcı uygulaması için bu tam anlamıyla güvenlik korumasıdır.
 
 TrustZone farklı bir sınır çizer: Non-secure tarafın **ayrıcalıklı** kodu
-bile Secure belleği göremez. Ama o da sihir değildir — **Secure yazılım hâlâ
-güvenilirdir**; oradaki bir hata veya yanlış SAU yapılandırması korumayı
-ortadan kaldırır.
+bile Secure belleği göremez. Bu koruma **Secure yazılıma güvenildiği**
+varsayımına dayanır; oradaki bir hata veya yanlış SAU yapılandırması
+korumayı ortadan kaldırır.
 
 Yani ikisi de "güvenilir bir yazılım katmanı" varsayımını **kaldırmaz**,
 yalnızca o katmanı farklı yere koyar. İkisi birlikte kullanılır: Armv8-M'de
@@ -203,7 +203,7 @@ Savunma yöntemi: çok sayıda döngü iterasyonunun **maksimum** süresini öl�
 ortalamayı değil. "M7 %40 daha hızlı" cümlesi, maksimumu ölçmeden hiçbir şey
 ifade etmez.
 
-Ama burada dürüst olmak gerekir: **gözlenen maksimum, kanıtlanmış bir WCET
+**Gözlenen maksimum, kanıtlanmış bir WCET
 (worst-case execution time) sınırı değildir.** Ölçüm yalnızca çalıştırdığın
 girdileri ve durumları kapsar; en kötü yolu hiç tetiklememiş olabilirsin.
 Gerçek WCET analizi statik analiz araçları, donanım modelleri ve genellikle

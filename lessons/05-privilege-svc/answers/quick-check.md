@@ -132,7 +132,7 @@ durumunun* MSP'sidir.)
 
 ### 7. `SVC` dönen Thread'i otomatik ayrıcalıklı yapar mı?
 
-**Hayır.** Bu dersin en önemli ölçümü.
+**Hayır.** Bu hedefte ölçülen davranış aşağıda açıklanıyor.
 
 `SVC #1`'den döndükten hemen sonra:
 

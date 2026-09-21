@@ -14,7 +14,7 @@ kelime: `BL` dönüş yolunu bırakır, `B` bırakmaz.
 register değil, komutun içine gömülü bir sapma (immediate offset) değeridir.
 Register'daki bir adrese dallanmak için `BX` (veya `BLX`) gerekir.
 
-Burada ilginç bir ayrıntı var ve bu repoda gerçekten denendi: GNU assembler
+Bu repoda yapılan denemede GNU assembler
 `b lr` satırını **reddetmez**. `lr`'yi bir register değil, bir **etiket adı**
 olarak okur ve tanımsız bir sembole dallanma üretir:
 

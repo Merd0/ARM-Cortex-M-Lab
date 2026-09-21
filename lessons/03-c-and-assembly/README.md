@@ -209,7 +209,7 @@ QEMU'dan çıkış: `Ctrl-A` sonra `X`.
 
 ### Assembly dosyası build'e nasıl giriyor?
 
-Sihir yok — `.S` dosyası CMake'e normal bir kaynak gibi veriliyor:
+`.S` dosyası CMake'e normal bir kaynak olarak ekleniyor:
 
 ```cmake
 add_firmware(03-c-and-assembly
@@ -254,7 +254,7 @@ sözleşmesine uyuyor.
 
 ## Compiler-generated vs handwritten
 
-Şimdi ikisinin gerçekten ne ürettiğine bakalım:
+İkisinin ürettiği kodu karşılaştıralım:
 
 ```bash
 arm-none-eabi-objdump -d build/debug/lessons/03-c-and-assembly/03-c-and-assembly.elf \

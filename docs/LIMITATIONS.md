@@ -1,8 +1,8 @@
 # Limitations - Simulator ile Gercek Donanim Farklari
 
-QEMU **fonksiyonel** bir emulatordur: komutlarin sonucu dogrudur,
-zamanlamasi degildir. Neyin gercek neyin degil olduğunu bilmek,
-bu repoyu kullanmanin en onemli parcasidir.
+QEMU **fonksiyonel** bir emülatördür: komut sonuçlarını modeller, donanım
+zamanlamasını modellemez. Deney sonuçları aşağıdaki sınırlar içinde
+yorumlanmalıdır.
 
 Olculen degerler icin: `docs/TARGET_CAPABILITIES.md`
 
@@ -26,8 +26,8 @@ DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 ```
 
 Sonuc: klasik "DWT ile cycle say" profiling yontemi bu target'ta
-**calistirilamaz**. Ders 12 bunu gizlemek yerine dogrudan gosterir ve
-alternatif olculere gecer (`docs/PERFORMANCE_MEASUREMENT.md`).
+**calistirilamaz**. Ders 12 bu sınırı gösterir ve
+alternatif ölçüm yöntemlerini kullanır (`docs/PERFORMANCE_MEASUREMENT.md`).
 
 ## 3. Cache yok
 

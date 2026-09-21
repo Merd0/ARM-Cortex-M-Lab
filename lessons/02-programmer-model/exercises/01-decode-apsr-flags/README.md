@@ -34,8 +34,8 @@ cmake --build --preset debug --target 02-exercise-apsr
 | `5 - 5` | `Z = 1` |
 | `5 - 7` | `N = 1` |
 
-`C` ve `V` için beklentini **çalıştırmadan önce** bir yere yaz. Tahminin
-tutmazsa, asıl öğrenme orada.
+`C` ve `V` için beklentini **çalıştırmadan önce** bir yere yaz. Sonuç beklentinden
+farklıysa ilgili bayrağın nasıl oluştuğunu incele.
 
 ## İpucu
 

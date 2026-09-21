@@ -1,9 +1,8 @@
 # Target Capabilities
 
-Bu dosyanin kurali basit: **tahmin yok.**
-Bir hucre ya bu repodaki `tools/capability-probe` firmware'i ile **olculmustur**,
-ya arac ciktisindan (`qemu-system-arm -machine help`) **dogrulanmistir**,
-ya da acikca `OLCULMEDI` yazar.
+Tablodaki bilgiler `tools/capability-probe` firmware'i ile ölçülmüş
+veya araç çıktısından (`qemu-system-arm -machine help`) doğrulanmıştır.
+Henüz kontrol edilmeyen özellikler `OLCULMEDI` olarak işaretlenmiştir.
 
 ## Olcum yontemi
 
@@ -14,7 +13,7 @@ cmake --build --preset debug --target capability-probe
 ```
 
 Probe firmware'i ID register'larini okur (CPUID, MPU_TYPE, SAU_TYPE, MVFR0-2,
-ID_ISAR, DWT_CTRL) ve DWT cycle counter'in gercekten SAYIP saymadigini test eder.
+ID_ISAR, DWT_CTRL) ve DWT cycle counter'ın sayıp saymadığını test eder.
 
 ## Capability matrix
 
@@ -98,15 +97,15 @@ Yani bu target'ta DWT cycle counter ile profiling **yapilamaz**.
 ### Bu bir gozlem, kesin hukum degil
 
 Yukaridaki satirlarin hepsi **bu makinede olculmus davranistir**: QEMU 8.2.2,
-`-M mps2-an505 -cpu cortex-m33`. Soylenebilecek sey budur ve fazlasi degil.
+`-M mps2-an505 -cpu cortex-m33`. Sonuçlar bu yapılandırma için geçerlidir.
 
-Ne soylemiyoruz:
+Yorumlama sınırları:
 
-- "QEMU cycle counter'i hicbir zaman desteklemez" demiyoruz. Baska surumlerde,
-  baska machine/cpu kombinasyonlarinda davranis farkli olabilir.
-- Bir QEMU bug'i oldugunu iddia etmiyoruz. QEMU **fonksiyonel** bir
-  emulatordur: komutlari dogru yurutur, pipeline ve saat cevrimini modellemeyi
-  hedeflemez. Cycle sayaci bu tasarim tercihinin disinda kalir.
+- Başka QEMU sürümlerinde ve machine/cpu kombinasyonlarında cycle counter
+  davranışı farklı olabilir.
+- Bu gözlem tek başına bir QEMU hatası göstermez. QEMU **fonksiyonel** bir
+  emülatördür: komutları yürütür, pipeline ve saat çevrimini modellemeyi
+  hedeflemez. Cycle sayacı bu modelleme kapsamının dışında kalır.
 
 Bagimsiz destek: RTIC (cortex-m-rtfm) projesinin dokumantasyonu, zamanlama
 orneklerinin QEMU'da duzgun calismayacagini, cunku Cortex-M cycle counter
@@ -128,8 +127,8 @@ DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 
 Profiling dersi ve `projects/performance-profiler/` bu kisitin **etrafinda**
 kuruldu: statik kod boyutu, statik komut sayisi ve SysTick tabanli **hedef
-yerel** aralik/sayim deneyleri kullanilir. Sahte cycle sayilari uretilmez ve
-bu olcumlerden **donanim performans siralamasi cikarilmaz** - fonksiyonel
+yerel** aralik/sayim deneyleri kullanilir. Bu ölçümler cycle sayısı vermez ve
+bunlardan **donanım performans sıralaması çıkarılmaz** - fonksiyonel
 emulator zamani donanim cycle zamani degildir.
 
 Gelecek yol (ikisi de belgelendi, ikisi de denenmedi):
@@ -146,7 +145,7 @@ uretici tarafindan kisitlanmis olabilir. Bu repodaki probe zaten dogru soruyu
 soruyor: "register var mi" ile "sayiyor mu" ayri seylerdir. Gercek donanima
 gecerken ayni probe'u calistir.
 
-Bu, simulator kullanmanin gercek bedelidir ve gizlenmemelidir.
+Deneyler planlanırken bu simülatör sınırları dikkate alınmalıdır.
 
 ## Not: SAU nasil okundu
 
@@ -170,7 +169,7 @@ LR    = 0xFFFFFFFD   -> EXC_RETURN
 ```
 
 Yani fault escalation, fault status register'lari ve EXC_RETURN bu target'ta
-gercekten calisiyor. Ders 07/08 icin yeterli.
+çalışıyor. Ders 07/08 deneyleri bu davranışları kullanıyor.
 
 ## M55 / M85 / FVP neden bos?
 
@@ -178,10 +177,10 @@ gercekten calisiyor. Ders 07/08 icin yeterli.
   kullaniyor (ITCM/DTCM, farkli UART adresi), yani ayri bir platform portu
   gerekiyor. Port yazilana kadar tablo `OLCULMEDI` kalir. DEEP TRACK gorevi.
 - **M85:** Bu QEMU surumunde (8.2.2) `-cpu help` ciktisinda cortex-m85 **yok**
-  ve karsilik gelen bir MPS3 makinesi listelenmiyor. Tahmin yerine: yok.
+  ve karşılık gelen bir MPS3 makinesi listelenmiyor.
 - **Arm FVP:** Ayri kurulum/lisans gerektirir, bootstrap sirasinda kurulmadi.
   Ayrica dikkat: "FVP" otomatik olarak zamanlama-dogru veya cycle-approximate
-  bir model DEMEK DEGILDIR. Siradan bir FVP fonksiyonel bir modeldir. Bir
+  bir model anlamına gelmez. Siradan bir FVP fonksiyonel bir modeldir. Bir
   modelin zamanlama ozelligi ancak kendi dokumantasyonunda acikca yaziyorsa
   vardir; bu repoda hicbir FVP dogrulanmamistir.
 

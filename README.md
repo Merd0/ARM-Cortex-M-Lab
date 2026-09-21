@@ -10,13 +10,13 @@ Fiziksel geliştirme kartı gerekmez. Target: **Cortex-M33 / QEMU `mps2-an505`**
 
 ## Bu repo ne?
 
-Üç şey aynı anda:
+Repo üç amaçla kullanılıyor:
 
 1. **Kişisel Cortex-M laboratuvarı** — her kavram için ölçülmüş, gözlemlenmiş
    bir deney.
 2. **Uygulamalı eğitim kaynağı** — daha önce Cortex-M görmemiş bir geliştirici
    de takip edebilsin diye yazıldı.
-3. **Portfolyo projesi** — "kurs izledim" değil, "çalıştım, bozdum, debug ettim".
+3. **Portfolyo projesi** — uygulama, hata teşhisi ve doğrulama çalışmalarının kaydı.
 
 Her ders şu döngüyü izler:
 
@@ -122,7 +122,7 @@ arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
 
 ### 5. Nereden başlamalı?
 
-**[`BOOTCAMP.md`](BOOTCAMP.md)** — günlük çalışma ekranın.
+**[`BOOTCAMP.md`](BOOTCAMP.md)** — günlük çalışma planı.
 İlk ders: [`lessons/01-cortex-m-family/`](lessons/01-cortex-m-family/) — kod
 yazmadan, hedefin kendini nasıl tanıttığını okuyarak başlar.
 Ardından [`lessons/02-programmer-model/`](lessons/02-programmer-model/).
@@ -144,62 +144,67 @@ Günlük plan: [BOOTCAMP.md](BOOTCAMP.md) — giriş noktası orasıdır ve
 | Doğrulanan MPU | 8 bölge (ölçüldü) |
 | Doğrulanan SAU | 8 bölge (ölçüldü) |
 
-**Simülatör gerçek silikon değildir.** Neyin çalıştığı, neyin çalışmadığı
-tahmin edilmeden ölçülüp yazıldı:
+**Simülatör ile gerçek donanımın davranışları farklı olabilir.** Bu hedefte
+ölçülen özellikler ve sınırlar aşağıdaki belgelerde yer alıyor:
 
 - [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) — ölçülmüş capability matrisi
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — simülatör ile donanım farkları
 
 En önemli sınır: **DWT cycle counter bu target'ta saymıyor** (ölçüldü).
-Profiling dersi bunu gizlemek yerine alternatif ölçülere geçer.
+Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 
 ---
 
 ## Progress
 
-Durum gerçek. Tamamlanmayan hiçbir şeye ✅ konmadı.
+Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
+çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
-```text
-Altyapı
-✅ Build sistemi (CMake + Ninja + arm-none-eabi)
-✅ MPS2-AN505 platform portu (startup, linker script, UART)
-✅ QEMU'da çalışan firmware
-✅ GDB bağlantısı + Cortex-M yardımcı komutları
-✅ Target capability probe (ölçülmüş)
-✅ Dokümantasyon temeli
+### Altyapı
 
-Foundation
-✅ Cortex-M family & processor selection
-✅ Programmer model & registers
-⬜ C ↔ Assembly
-⬜ Stack / MSP / PSP
+- [x] Build sistemi (CMake + Ninja + arm-none-eabi)
+- [x] MPS2-AN505 platform portu (startup, linker script, UART)
+- [x] QEMU'da çalışan firmware
+- [x] GDB bağlantısı + Cortex-M yardımcı komutları
+- [x] Target capability probe (ölçülmüş)
+- [x] Dokümantasyon temeli
 
-Architecture
-⬜ Privilege & SVC
-⬜ MPU
-⬜ Exceptions & NVIC
-⬜ Faults & fault analyzer
+### Temeller
 
-Software Development
-⬜ Compiler & AAPCS
-⬜ Linker / ELF / memory layout
-⬜ Startup from scratch
-⬜ Debugging & DWT
+- [x] Cortex-M family & processor selection
+- [x] Programmer model & registers
+- [ ] C ↔ Assembly
+- [ ] Stack / MSP / PSP
 
-Advanced
-⬜ Synchronization / FPU / DSP
-⬜ SysTick & PendSV
-⬜ Mini kernel & context switching
-⬜ TrustZone & advanced features
+### Mimari
 
-Projects
-⬜ Protected Application
-⬜ Fault Analyzer
-⬜ From Reset to Main
-⬜ Performance Profiler
-⬜ Educational Mini Kernel
-⬜ Final Project
-```
+- [ ] Privilege & SVC
+- [ ] MPU
+- [ ] Exceptions & NVIC
+- [ ] Faults & fault analyzer
+
+### Yazılım Geliştirme
+
+- [ ] Compiler & AAPCS
+- [ ] Linker / ELF / memory layout
+- [ ] Startup from scratch
+- [ ] Debugging & DWT
+
+### İleri Konular
+
+- [ ] Synchronization / FPU / DSP
+- [ ] SysTick & PendSV
+- [ ] Mini kernel & context switching
+- [ ] TrustZone & advanced features
+
+### Projeler
+
+- [ ] Protected Application
+- [ ] Fault Analyzer
+- [ ] From Reset to Main
+- [ ] Performance Profiler
+- [ ] Educational Mini Kernel
+- [ ] Final Project
 
 Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 
@@ -207,7 +212,7 @@ Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 
 ## Major Projects
 
-Dersler ilerledikçe birleşen büyük işler — her biri kendi README'sine sahip:
+Birden fazla dersin konularını birleştiren projeler; her birinin ayrı README'si var:
 
 | Proje | Birleştirdiği konular | Durum |
 |---|---|---|
@@ -282,9 +287,9 @@ Amaç: hem konuyu hem de resmi dokümantasyonu okumak için gereken
 
 ## Özgünlük
 
-Bu repo bir kurs kopyası değildir. Tüm açıklamalar, diyagramlar, kod ve
-deneyler özgündür. Teknik iddialar resmi Arm / CMSIS / QEMU dokümantasyonuyla
-doğrulanır; ölçülebilen her şey **gerçekten ölçülür**
+Açıklamalar, diyagramlar, kod ve deneyler bu repo için hazırlanmıştır.
+Teknik açıklamalar resmi Arm / CMSIS / QEMU dokümantasyonuyla doğrulanır;
+ölçülebilen davranışlar deneylerle kontrol edilir
 ([`docs/REFERENCES.md`](docs/REFERENCES.md)).
 
 Çalıştırılmamış bir kodun çıktısı "gerçek çıktı" olarak sunulmaz.

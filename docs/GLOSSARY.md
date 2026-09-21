@@ -1,8 +1,7 @@
 # Glossary - Embedded/Arm Terimleri
 
-Amac: Ingilizce terimleri **oldugu gibi** ogrenmek, yaninda kisa Turkce
-karsiligini bilmek. Resmi dokumantasyon Ingilizce oldugu icin terimleri
-Turkcelestirip ezberlemek uzun vadede zarar verir.
+Terimler, resmi dokümantasyonu takip etmeyi kolaylaştırmak için İngilizce
+biçimleriyle verilmiştir. Yanlarında kısa Türkçe açıklamaları yer alır.
 
 ## Mimari
 
