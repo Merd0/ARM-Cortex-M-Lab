@@ -44,7 +44,9 @@ void decode_fault_snapshot(const fault_snapshot_t *s, fault_decision_t *d)
     } else if ((s->cfsr & SCB_CFSR_BUSFAULTSR_Msk) != 0u) {
         d->fault_class = "BusFault";
         if (s->cfsr & SCB_CFSR_PRECISERR_Msk)        d->primary_bit = "PRECISERR";
-        else if (s->cfsr & SCB_CFSR_IMPRECISERR_Msk) d->primary_bit = "IMPRECISERR";
+        /* BFSR bit2 (genel Armv8-M/CMSIS: IMPRECISERR) BILEREK yok:
+         * Cortex-M33 icin dogrulanmis bir alan olarak ele alinmiyor.
+         * Bkz. lessons/08-faults/README.md, "Precise vs imprecise". */
         else if (s->cfsr & SCB_CFSR_STKERR_Msk)      d->primary_bit = "STKERR";
         else if (s->cfsr & SCB_CFSR_IBUSERR_Msk)     d->primary_bit = "IBUSERR";
         if (s->cfsr & SCB_CFSR_BFARVALID_Msk) {

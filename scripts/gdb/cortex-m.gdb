@@ -455,7 +455,9 @@ define cm-fault
     printf " BFSR.PRECISERR"
   end
   if $cm_cfsr & 0x400
-    printf " BFSR.IMPRECISERR"
+    # Genel Armv8-M/CMSIS adi IMPRECISERR. Cortex-M33 icin dogrulanmis
+    # bir alan olarak SUNULMUYOR (bkz. lessons/08-faults/README.md).
+    printf " BFSR.bit2(generic-IMPRECISERR,M33:dogrulanmadi)"
   end
   if $cm_cfsr & 0x800
     printf " BFSR.UNSTKERR"

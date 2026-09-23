@@ -68,15 +68,58 @@ static uint32_t task_stack[TASK_STACK_WORDS] __attribute__((aligned(8)));
 /* Durum register'larini temizleme (W1C)                               */
 /*                                                                     */
 /* CFSR ve HFSR "write-one-to-clear"dir: bir biti temizlemek icin o    */
-/* bite 1 YAZILIR. 0 yazmak hicbir seyi temizlemez. Her hedef tek bir  */
-/* fault urettigi ve reset'ten basladigi icin burada temizlik yalnizca */
-/* ilkeyi gostermek icin - onceki bir calismadan kalan bit YOK.        */
+/* bite 1 YAZILIR. 0 yazmak hicbir seyi temizlemez.                    */
+/*                                                                     */
+/* CFSR ile HFSR FARKLI ele aliniyor:                                  */
+/*                                                                     */
+/*   CFSR: tanimli bitlerin hepsi W1C, ayrilmis bitler 0 okunur.       */
+/*         Okunan degeri geri yazmak yalnizca set olan bitlere 1       */
+/*         yazar, ayrilmis bitlere 0 yazar -> guvenli.                 */
+/*                                                                     */
+/*   HFSR: bit31 DEBUGEVT icin Cortex-M33'e ozel bir yazma kurali      */
+/*         bildiriliyor: HFSR yazilirken DEBUGEVT'ye 1 yazilmali,      */
+/*         aksi halde davranis UNPREDICTABLE (Cortex-M33 HFSR bit      */
+/*         tablosu - kaynak durumu README'de). "HFSR = HFSR" DEBUGEVT  */
+/*         temizken bit31'e 0 YAZAR -> bu kurali ihlal eder.           */
+/*         Bu yuzden acik bir maske kullaniliyor:                      */
+/*           bit31 DEBUGEVT = 1   (kural geregi; W1C -> onu da temizler)*/
+/*           bit30 FORCED   = okunan deger (set ise 1 -> temizle)      */
+/*           bit1  VECTTBL  = okunan deger (set ise 1 -> temizle)      */
+/*           diger bitler   = 0   (ayrilmis)                           */
+/*                                                                     */
+/* DIKKAT: Cortex-M3/M4 kilavuzlari DEBUGEVT icin TERSINI soyler       */
+/* ("0 yaz"). O kural bu cekirdek icin gecerli degildir.               */
+/*                                                                     */
+/* QEMU bu kurali DOGRULAMAZ: HFSR yazmasini duz W1C olarak uygular    */
+/* (hw/intc/armv7m_nvic.c: hfsr &= ~value). Gercek donanim davranisi   */
+/* bu repoda test EDILMEDI.                                            */
 /* ------------------------------------------------------------------ */
 static void clear_fault_status(void)
 {
-    SCB->CFSR = SCB->CFSR;     /* set olan bitlere 1 yaz -> temizle */
-    SCB->HFSR = SCB->HFSR;
+    uint32_t cfsr = SCB->CFSR;
+    SCB->CFSR = cfsr;                    /* set olan bitlere 1 -> temizle */
+
+    uint32_t hfsr = SCB->HFSR;
+    SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk |
+                (hfsr & (SCB_HFSR_FORCED_Msk | SCB_HFSR_VECTTBL_Msk));
+    __DSB();
 }
+
+#ifdef LESSON08_HAS_DECODE
+/* Serbest duran (freestanding) tam string karsilastirmasi.
+ * libc'ye gerek yok; NULL guvenli. */
+static int str_eq(const char *a, const char *b)
+{
+    if (a == 0 || b == 0) {
+        return 0;
+    }
+    while (*a != '\0' && *a == *b) {
+        a++;
+        b++;
+    }
+    return (*a == '\0') && (*b == '\0');
+}
+#endif
 
 /* ------------------------------------------------------------------ */
 /* Kaydedici. Sarmalayicidan DALLANILIR; donmez.                       */
@@ -174,7 +217,9 @@ void fault_report(const fault_snapshot_t *s)
     print_bit("  MMFSR.MMARVALID", s->cfsr, SCB_CFSR_MMARVALID_Msk);
     print_bit("  BFSR.IBUSERR",    s->cfsr, SCB_CFSR_IBUSERR_Msk);
     print_bit("  BFSR.PRECISERR",  s->cfsr, SCB_CFSR_PRECISERR_Msk);
-    print_bit("  BFSR.IMPRECISERR",s->cfsr, SCB_CFSR_IMPRECISERR_Msk);
+    /* BFSR bit2: genel Armv8-M / CMSIS tanimi "IMPRECISERR". Cortex-M33
+     * icin dogrulanmis bir alan olarak SUNULMUYOR (bkz. README). */
+    print_bit("  BFSR.bit2(generic IMPRECISERR)", s->cfsr, SCB_CFSR_IMPRECISERR_Msk);
     print_bit("  BFSR.UNSTKERR",   s->cfsr, SCB_CFSR_UNSTKERR_Msk);
     print_bit("  BFSR.STKERR",     s->cfsr, SCB_CFSR_STKERR_Msk);
     print_bit("  BFSR.BFARVALID",  s->cfsr, SCB_CFSR_BFARVALID_Msk);
@@ -225,18 +270,32 @@ void fault_report(const fault_snapshot_t *s)
     console_kv_hex("  D_STACKED_PC", d.stacked_pc);
 
     /* Referans karsilastirma - bu hedefte MemManage DACCVIOL beklenir */
+    /* TAM string karsilastirmasi: yalnizca ilk karaktere bakmak
+     * "DIVBYZERO"yu "DACCVIOL" diye kabul ederdi. */
     console_kv_str("  CHECK_D_ACTIVE",
-        (d.active_exception != 0 && d.active_exception[0] == 'M') ? "PASS" : "FAIL");
-    console_kv_str("  CHECK_D_NOT_ESCALATED", (d.escalated == 0 && d.active_exception != 0) ? "PASS" : "FAIL");
+        str_eq(d.active_exception, "MemManage") ? "PASS" : "FAIL");
+    console_kv_str("  CHECK_D_NOT_ESCALATED",
+        (d.escalated == 0 && d.active_exception != 0) ? "PASS" : "FAIL");
     console_kv_str("  CHECK_D_CLASS",
-        (d.fault_class != 0 && d.fault_class[0] == 'M') ? "PASS" : "FAIL");
+        str_eq(d.fault_class, "MemManage") ? "PASS" : "FAIL");
     console_kv_str("  CHECK_D_BIT",
-        (d.primary_bit != 0 && d.primary_bit[0] == 'D') ? "PASS" : "FAIL");
+        str_eq(d.primary_bit, "DACCVIOL") ? "PASS" : "FAIL");
     console_kv_str("  CHECK_D_ADDRESS",
         (d.address_valid && d.fault_address == s->mmfar_raw) ? "PASS" : "FAIL");
     console_kv_str("  CHECK_D_FRAME",
         (d.frame_safe && d.stacked_pc == s->frame.pc) ? "PASS" : "FAIL");
 #endif
+
+    /* --- POST-CLEAR: snapshot'tan SONRA temizle ------------------ */
+    /* Snapshot (s) yukarida zaten sabitlendi; temizlik onu etkilemez.
+     * Bu blok iki seyi gosterir: (1) HFSR.FORCED temizlikten ONCE
+     * yakalandi, (2) maske tabanli temizlik W1C bitlerini sifirladi.
+     * Not: bu, QEMU'da gozlenen davranistir; donanim dogrulamasi degil. */
+    console_line("--- POST-CLEAR ---");
+    clear_fault_status();
+    console_kv_hex("  SNAPSHOT_HFSR", s->hfsr);
+    console_kv_hex("  HFSR_AFTER_CLEAR", SCB->HFSR);
+    console_kv_hex("  CFSR_AFTER_CLEAR", SCB->CFSR);
 
     console_line("===== FAULT END =====");
 }

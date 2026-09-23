@@ -54,6 +54,18 @@ HardFault'tur ama `CFSR` hâlâ `UNDEFINSTR`'i taşır — `fault_class` UsageFa
 geçerliliğini söylerler. Bu yüzden önce sebep bitleri kontrol ediliyor
 (`DACCVIOL`, `PRECISERR`, `UNDEFINSTR`...).
 
+BFSR bit 2 (genel Armv8-M/CMSIS adı `IMPRECISERR`) **bilerek** sebep
+listesinde yok: bu laboratuvar onu Cortex-M33'te gerçekleştirilmiş bir alan
+olarak sunmuyor (kaynaklar tutarsız — bkz. ders README'sindeki BFSR bit 2
+notu).
+
+### Doğrulama nasıl yapılıyor
+
+Firmware, çıkan kararları **tam string karşılaştırmasıyla** denetler
+(küçük, libc gerektirmeyen yerel bir `str_eq()` ile). Yalnızca ilk karaktere
+bakmak `"DIVBYZERO"`yu `"DACCVIOL"` diye kabul ederdi; bu onarımla ölçüldü ki
+`"MemManageX"`, `"Memory"` ve `"DIVBYZERO"` ilgili kontrollerden **FAIL** alır.
+
 ### 5. `address_valid` / `fault_address` ← `VALID` bitleri
 
 ```c

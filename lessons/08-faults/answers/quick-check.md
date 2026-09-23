@@ -141,11 +141,17 @@ Durum register'larını yazan donanım handler seçiminden bağımsız çalışt
 ### 9. (Reasoning) Precise ve imprecise BusFault teşhis açısından nasıl farklı?
 
 **Precise (`PRECISERR`):** işlemci hatayı belirli bir komutla
-ilişkilendirebilir. Yığılmış PC genellikle o komutu gösterir ve `BFARVALID`
-set ise `BFAR` erişilen adresi verir. İki gözlem aynı noktayı
-gösterir — Vaka 3'te ölçüldüğü gibi (`STACKED_PC = ldr`, `BFAR = hedef`).
+ilişkilendirebilir. Yığılmış PC genellikle o **komutun** adresini gösterir;
+`BFARVALID` set ise `BFAR` o komutun erişmeye çalıştığı **veri** adresini
+verir. İkisi farklı adreslerdir ve birlikte tek bir erişimi tarif eder —
+Vaka 3'te ölçüldüğü gibi:
 
-**Imprecise (`IMPRECISERR`):** raporlama gecikir. Tipik örnek, yazma
+```text
+stacked PC = 0x100000F8   komut adresi  (ldr r0, [r0])
+BFAR       = 0x30100000   veri adresi   (ldr'nin okumaya calistigi yer)
+```
+
+**Imprecise (kavram):** raporlama gecikir. Tipik örnek, yazma
 tamponundan geçen bir yazmanın hata vermesi — işlemci o sırada başka
 komutlara geçmiştir. Sonuç:
 
@@ -157,8 +163,16 @@ penceresini daraltarak bulmak gerekir. Geliştirme sırasında yazma
 tamponlamasını devre dışı bırakmak bazı imprecise hataları precise hale
 getirmek için kullanılan bir tekniktir.
 
-> Bu ortamda deterministik bir imprecise BusFault kurulamadı; bu cevap mimari
-> açıklamadır, ölçüm değil.
+> Bu ortamda deterministik bir imprecise BusFault kurulamadı; bu cevap genel
+> fault modeline ait bir açıklamadır, ölçüm değil.
+>
+> **Cortex-M33 notu:** Genel Armv8-M/CMSIS materyali imprecise durumu BFSR
+> bit 2 `IMPRECISERR` ile adlandırır. Bu laboratuvar bu biti **Cortex-M33'te
+> gerçekleştirilmiş bir alan olarak sunmuyor**: bağımsız denetim M33 BFSR
+> register tablosunun bit 2'yi Reserved/RES0 olarak işaretlediğini bildirdi,
+> ulaşılabilen M33 kılavuz metninin özet tablosu ise terimi hâlâ listeliyor.
+> Kaynaklar tutarlı olmadığı için bit 2 yalnızca "`bit2 (generic
+> IMPRECISERR)`" diye etiketleniyor.
 
 ---
 
@@ -221,6 +235,23 @@ SCB->CFSR = SCB->CFSR;     /* set olan her bite 1 yaz -> hepsini temizle */
 SCB->CFSR = SCB_CFSR_DACCVIOL_Msk;   /* yalnizca DACCVIOL'u temizle */
 ```
 
+**HFSR için aynı geri yazma kalıbı kullanılmaz.** Cortex-M33 HFSR bit
+tablosu (bağımsız denetimin aktardığı haliyle) `DEBUGEVT`'ye (bit 31) HFSR
+her yazıldığında **1** yazılmasını ister; aksi halde davranış UNPREDICTABLE.
+`SCB->HFSR = SCB->HFSR`, `DEBUGEVT` temizken bit 31'e 0 yazar. Bu dersin
+kullandığı açık maske:
+
+```c
+uint32_t hfsr = SCB->HFSR;
+SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk |
+            (hfsr & (SCB_HFSR_FORCED_Msk | SCB_HFSR_VECTTBL_Msk));
+```
+
+Ölçüm (QEMU, kaçış vakası): yazılan değer `0xC0000000`, HFSR `0x40000000` →
+`0x00000000`. QEMU bu yazma kuralını **doğrulamaz** (HFSR'yi düz W1C
+uygular); gerçek donanımda test edilmedi. Cortex-M3/M4 kılavuzlarının
+`DEBUGEVT` için "0 yaz" demesi bu çekirdek için geçerli değildir.
+
 Tasarımın sebebi: donanımın yeni bir fault için set ettiği bir biti, yazılımın
 okuma-değiştirme-yazma sırasında yanlışlıkla silmesini önlemek. Yazılım yalnızca
 **gördüğü** bitleri temizler.
@@ -254,8 +285,10 @@ frame'in geçerliliği ayrı ayrı değerlendirilmelidir.
 - Armv8-M ARM (Arm DDI 0553) — `CFSR`, `HFSR`, `MMFAR`, `BFAR`, `SHCSR`,
   W1C, escalation, precise/imprecise
 - Armv8-M Exception Model User Guide (Arm 107706)
-- Cortex-M33 Devices Generic User Guide (Arm 100235)
-- CMSIS-Core `core_cm33.h` — bit konumları
+- Cortex-M33 Devices Generic User Guide (Arm 100235) — 4.2.11 CFSR,
+  4.2.12 HFSR (W1C / sticky; `DEBUGEVT` yazma kuralı), 2.5.1 fault türleri
+- CMSIS-Core `core_cm33.h` — bit konumları (genel Armv8-M tanımları; BFSR
+  bit 2 dahil)
 
 ---
 
