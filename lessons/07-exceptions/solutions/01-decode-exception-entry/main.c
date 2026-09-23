@@ -232,6 +232,19 @@ typedef struct {
 
 static entry_info_t g_info;
 
+/* Tam metin esitligi; freestanding, libc gerektirmez. */
+static int str_eq(const char *a, const char *b)
+{
+    if (a == 0 || b == 0) {
+        return 0;
+    }
+    while (*a != '\0' && *a == *b) {
+        a++;
+        b++;
+    }
+    return (*a == '\0') && (*b == '\0');
+}
+
 static void decode_exception_entry(const exception_frame_t *frame,
                                    uint32_t exc_return,
                                    uint32_t ipsr,
@@ -357,9 +370,9 @@ static void __attribute__((noreturn)) thread_entry(void)
     console_kv_hex("  STACKED_XPSR", g_info.stacked_xpsr);
 
     console_kv_str("  CHECK_DECODE_MODE",
-                   (g_info.interrupted_mode[0] == 'T') ? "PASS" : "FAIL");
+                   str_eq(g_info.interrupted_mode, "Thread") ? "PASS" : "FAIL");
     console_kv_str("  CHECK_DECODE_STACK",
-                   (g_info.frame_stack[0] == 'P') ? "PASS" : "FAIL");
+                   str_eq(g_info.frame_stack, "PSP") ? "PASS" : "FAIL");
     console_kv_str("  CHECK_DECODE_EXCNUM",
                    (g_info.exception_number == 11u) ? "PASS" : "FAIL");
     console_kv_str("  CHECK_DECODE_R0",
