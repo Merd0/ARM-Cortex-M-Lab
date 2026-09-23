@@ -58,6 +58,12 @@ Bu **beklenen başlangıç durumudur**, bir bug değildir.
 
 Altı `CHECK_D_*` satırı da `PASS` olmalı.
 
+Metin alanları **tam olarak** karşılaştırılır — yalnızca ilk harf değil.
+Beklenen değerlerin yazımı exercise yorumunda verildi (`"MemManage"`,
+`"BusFault"`, `"UsageFault"`, `"HardFault"`; sebep bitleri CMSIS'teki
+adlarıyla, örneğin `"DACCVIOL"`). `"DIVBYZERO"` gibi aynı harfle başlayan
+yanlış bir cevap `CHECK_D_BIT`'ten **geçmez**.
+
 ## Kendi fonksiyonunu diğer vakalarda sına (opsiyonel)
 
 `decode.c`'yi `08-faults-bus` veya `08-faults-escalation` hedefine de bağlayıp

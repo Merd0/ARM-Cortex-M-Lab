@@ -85,7 +85,7 @@ MMFSR  bit0 IACCVIOL   komut getirme ihlali
 
 BFSR   bit0 IBUSERR    komut getirme veri yolu hatasi
        bit1 PRECISERR  precise veri yolu hatasi
-       bit2 IMPRECISERR imprecise veri yolu hatasi
+       bit2 (genel Armv8-M/CMSIS: IMPRECISERR)  -> asagidaki nota bak
        bit3 UNSTKERR   donuste geri yukleme hatasi
        bit4 STKERR     giriste yigma hatasi
        bit5 LSPERR     lazy FP koruma hatasi
@@ -102,6 +102,18 @@ UFSR   bit0 UNDEFINSTR tanimsiz komut
 
 `STKOF` Armv7-M tablolarında **yoktur** — Armv7-M'den kopyalanmış bir CFSR
 tablosu bu dersin ders 04 vakasını açıklayamaz.
+
+> **BFSR bit 2 — genel tanım ≠ Cortex-M33 gerçekleştirmesi.** Genel Armv8-M
+> materyali ve vendored CMSIS (`SCB_CFSR_IMPRECISERR_Msk`) bit 2'yi
+> `IMPRECISERR` olarak tanımlar. Bağımsız denetim, Cortex-M33'e özgü BFSR
+> register tablosunun bu biti **Reserved / RES0** olarak işaretlediğini
+> bildirdi. Bu repo o tabloyu kendi başına yeniden okuyamadı; ulaşılabilen
+> Cortex-M33 Generic User Guide r0p4 metninde ise özet "fault types" tablosu
+> (Tablo 2-25) `IMPRECISERR`'i hâlâ listeliyor. Kaynaklar tutarlı olmadığı
+> için bu laboratuvar bit 2'yi **Cortex-M33'te gerçekleştirilmiş bir durum
+> alanı olarak sunmuyor**: firmware ve `cm-fault` onu yalnızca
+> "`bit2 (generic IMPRECISERR)`" diye etiketler, çözüm kodu onu bir sebep
+> biti olarak seçmez. Bu derste hiçbir vakada set olmadı.
 
 ### Adres register'ı + geçerlilik biti = kanıt
 
@@ -122,16 +134,68 @@ UsageFault'un adres register'ı **yoktur**.
 
 `CFSR` ve `HFSR` bitleri, açıkça temizlenene kadar (veya reset'e kadar) set
 kalır. Temizleme **write-one-to-clear**'dır: bir biti temizlemek için ona
-**1** yazılır.
+**1** yazılır. **0 yazmak hiçbir şeyi temizlemez.**
+
+İkisi aynı prensibe dayansa da Cortex-M33'te **farklı ele alınır**:
 
 ```c
-SCB->CFSR = SCB->CFSR;   /* set olan bitlere 1 yaz -> temizle */
-SCB->HFSR = SCB->HFSR;
+/* CFSR: tanimli bitlerin hepsi W1C, ayrilmis bitler 0 okunur.
+ * Okunani geri yazmak: set olan bitlere 1, ayrilmis bitlere 0. */
+uint32_t cfsr = SCB->CFSR;
+SCB->CFSR = cfsr;
+
+/* HFSR: acik maske. */
+uint32_t hfsr = SCB->HFSR;
+SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk |                            /* bit31 = 1 */
+            (hfsr & (SCB_HFSR_FORCED_Msk | SCB_HFSR_VECTTBL_Msk)); /* bit30, bit1 */
 ```
 
-**0 yazmak hiçbir şeyi temizlemez.** Bu dersteki her hedef reset'ten başlar
-ve tek bir fault üretir; yani önceki bir çalışmadan kalan bit yoktur. Temizlik
-kodu yine de ilkeyi göstermek için `main()` başında duruyor.
+| HFSR biti | Yazılan | Sebep |
+|---|---|---|
+| 31 `DEBUGEVT` | **her zaman 1** | Cortex-M33'e özgü yazma kuralı (aşağıya bak). W1C olduğu için bu yazma onu da temizler. |
+| 30 `FORCED` | okunan değer | Set ise 1 yazılır → temizlenir |
+| 1 `VECTTBL` | okunan değer | Set ise 1 yazılır → temizlenir |
+| diğerleri | 0 | Ayrılmış alanlar |
+
+**Neden `HFSR = HFSR` yetmiyor?** Bağımsız denetim, Cortex-M33 HFSR bit
+tablosunun şunu söylediğini bildirdi: HFSR yazılırken `DEBUGEVT`'ye **1**
+yazılmalıdır, aksi halde davranış **UNPREDICTABLE**. Okunan değeri geri yazmak,
+`DEBUGEVT` temizken bit 31'e **0** yazar ve bu kuralı ihlal eder. `CFSR`'de
+böyle bir kural yok; orada geri yazma güvenli.
+
+> **Kaynak durumu (dürüstçe):** Cortex-M33 Generic User Guide'ın HFSR
+> bölümünden bu repoda doğrulanabilen kısım, HFSR'nin *"read, write to
+> clear"* olduğu, bitlerin sticky olduğu ve yalnızca 1 yazılarak veya reset'le
+> temizlendiğidir. `DEBUGEVT`'ye özgü "1 yaz" kuralının geçtiği bit tablosu
+> metni buradan yeniden okunamadı; kural denetimden alındı. Seçilen maske,
+> doğrulanan W1C anlamıyla da tutarlı: bit 31'e 1 yazmak yalnızca
+> `DEBUGEVT`'yi temizler.
+>
+> **Dikkat — ters yönde bir tuzak:** Cortex-M3/M4 kılavuzları `DEBUGEVT`
+> için tam tersini söyler (*"write 0"*). O kural bu çekirdek için geçerli
+> değildir; internetteki M3/M4 örneklerini buraya kopyalama.
+>
+> **ARCHITECTURE vs OBSERVATION:** QEMU v8.2.2 HFSR yazmasını düz W1C olarak
+> uygular (`hw/intc/armv7m_nvic.c`: `hfsr &= ~value`); yani **bu kuralı
+> doğrulamaz**, eski yazma da orada "çalışırdı". Gerçek Cortex-M33 donanımında
+> bu repo test **edilmedi**. Maske, emülatör kabul ettiği için değil, mimari
+> gereksinim için seçildi.
+
+Bu dersteki her hedef reset'ten başlar ve tek bir fault üretir; yani `main()`
+başındaki temizlikte önceki çalışmadan kalan bit yoktur. Aynı temizlik fonksiyonu
+fault raporunun sonunda — snapshot **alındıktan sonra** — bir kez daha
+çağrılıyor (`POST-CLEAR` bölümü). Kaçış (escalation) vakasında ölçülen:
+
+```text
+[  HFSR] 0x40000000             <- snapshot: FORCED temizlikten ONCE yakalandi
+--- POST-CLEAR ---
+[  SNAPSHOT_HFSR] 0x40000000
+[  HFSR_AFTER_CLEAR] 0x00000000
+[  CFSR_AFTER_CLEAR] 0x00000000
+```
+
+GDB'de bu vakada HFSR'ye yazılan değer ölçüldü: `0xC0000000` (`DEBUGEVT = 1`,
+`FORCED = 1`, ayrılmış alanlar 0).
 
 ### Precise vs imprecise
 
@@ -144,8 +208,10 @@ kodu yine de ilkeyi göstermek için `main()` başında duruyor.
 Her BusFault imprecise değildir; her veri fault'u da precise değildir.
 
 > **OBSERVATION:** Bu ortamda ölçülen dört vakanın dördü de **precise**.
-> QEMU'da deterministik bir imprecise BusFault kurulamadı; `IMPRECISERR`
-> kavramsal olarak anlatılıyor; ölçülmüş bir örneği yok.
+> Precise/imprecise ayrımı genel Arm fault modeline ait bir kavram olarak
+> anlatılıyor; bu repoda ölçülmüş bir imprecise örneği yok. Genel
+> Armv8-M/CMSIS'teki `IMPRECISERR` durum biti ise Cortex-M33 için
+> doğrulanmış bir alan olarak **sunulmuyor** (yukarıdaki BFSR bit 2 notu).
 
 ---
 
@@ -518,9 +584,17 @@ komutundayız** — henüz hiçbir şey onları değiştirmedi. Handler içinde 
    0x100000f8 <trigger_load>:  ldr  r0, [r0, #0]
 ```
 
-**Gözlem:** Precise bir veri yolu hatasında yığılmış PC, hata veren
-`ldr`'nin kendisi. Ve `BFAR` o `ldr`'nin adresi. Bu iki gözlem birlikte
-yorumlanarak hata teşhis edilir.
+**Gözlem:** Precise bir veri yolu hatasında iki farklı adres, iki farklı
+soruyu cevaplıyor:
+
+| Register | Değer | Ne |
+|---|---|---|
+| `BFAR` | `0x30100000` | Erişilmeye çalışılan **veri** adresi |
+| stacked PC | `0x100000F8` | Hata veren **komutun** adresi (`ldr r0, [r0]`) |
+
+`BFAR`, `ldr`'nin kendi adresi **değildir**; `ldr`'nin okumaya çalıştığı
+adrestir. İkisi birlikte okununca hikâye tamamlanıyor: *şu komut, şu veri
+adresine erişmeye çalıştı ve bellek sistemi reddetti.*
 
 ### `cm-fault` güncellemesi
 
@@ -529,6 +603,13 @@ isimleriyle listelendiği `SET` satırı, ve bir unstacking notu (triage adımı
 Bit konumları vendored CMSIS'ten alındı. Değişiklik, ders 02 (`STKERR`),
 ders 04 (`STKOF`), ders 06 (`DACCVIOL`) ve ders 07 (escalation) vakalarına
 karşı yeniden test edildi; hepsi doğru etiketlendi.
+
+Denetim onarımında `cm-fault`'ta **tek** bir etiket değişti: BFSR bit 2 artık
+`BFSR.IMPRECISERR` olarak değil,
+`BFSR.bit2(generic-IMPRECISERR,M33:dogrulanmadi)` olarak basılıyor (bkz. BFSR
+bit 2 notu). Ham register çıktısı, `MMARVALID`/`BFARVALID`, yığma/geri yükleme
+uyarıları, `HFSR.FORCED` ve diğer bütün etiketler değişmedi; sekiz bilinen
+vaka yeniden test edildi.
 
 ---
 
@@ -707,6 +788,8 @@ Başlangıç çıktısı (gerçek):
 ```
 
 Bu **beklenen başlangıç durumudur**. Doğrulama ölçütü: altı `CHECK_D_*` PASS.
+Metin alanları **tam** karşılaştırılır (yalnızca ilk harf değil): aynı harfle
+başlayan yanlış bir cevap — örneğin `DACCVIOL` yerine `DIVBYZERO` — geçmez.
 
 **Tuzak:** `fault_class` aktif handler'dan türetilmez — `CFSR`'den türetilir.
 Escalation vakasında ikisi farklıdır.
@@ -814,7 +897,9 @@ Gerçek çıktı:
   fault escalation.
   <https://developer.arm.com/documentation/107706/latest/>
 - **Cortex-M33 Devices Generic User Guide (Arm 100235)** — System Control
-  Block fault register'ları.
+  Block fault register'ları: 4.2.11 CFSR, 4.2.12 HFSR (W1C / sticky;
+  `DEBUGEVT` yazma kuralı), 2.5.1 fault türleri tablosu. HFSR bit tablosunun
+  ve BFSR bit 2'nin durumu için yukarıdaki "Kaynak durumu" notlarına bak.
   <https://developer.arm.com/documentation/100235/latest/>
 - **CMSIS-Core (M)** — `SCB_CFSR_*_Pos/_Msk`, `SCB_HFSR_*`, `SCB_SHCSR_*`
   tanımları; bit konumları bu repoda vendored `core_cm33.h`'ten doğrulandı.
@@ -831,9 +916,12 @@ Gerçek çıktı:
 - **QEMU ≠ fiziksel donanım.** BusFault hedefi (`0x30100000`) QEMU'nun
   bellek haritasında eşlenmemiş bir adrestir; fiziksel bir kartta farklı
   davranabilir. Bütün `CFSR`/`HFSR` değerleri **OBSERVATION**'dır.
-- **Yalnızca precise fault'lar ölçüldü.** Deterministik bir imprecise
-  BusFault kurulamadı; `IMPRECISERR` kavramsal olarak anlatıldı. Uydurma
-  örnek verilmedi.
+- **Yalnızca precise fault'lar ölçüldü.** Imprecise kavramı genel olarak
+  anlatıldı; ölçülmüş örnek yok. Genel `IMPRECISERR` biti Cortex-M33 için
+  doğrulanmış bir alan olarak sunulmuyor (kaynaklar tutarsız, bkz. BFSR bit 2
+  notu).
+- **HFSR yazma kuralı donanımda test edilmedi.** `DEBUGEVT = 1` maskesi
+  mimari gereksinim olarak uygulandı; QEMU bu kuralı doğrulamaz.
 - **Soft-float / basic frame.** `MLSPERR`/`LSPERR`/`NOCP` gibi FP'ye ilişkin
   bitler kapsamda yok; FPU ders 13.
 - **Tek güvenlik durumu.** `SecureFault` (exception 7) ve TrustZone fault
