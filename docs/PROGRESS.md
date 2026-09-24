@@ -42,7 +42,7 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 | 06 | MPU | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 07 | Exceptions & NVIC | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 08 | Faults | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| 09 | Compiler & AAPCS | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
+| 09 | Compiler & AAPCS | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 10 | Linker, ELF & Memory | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 11 | Startup | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 12 | Debug & DWT | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -59,9 +59,9 @@ Dogrulama durumu (bu container'da olculdu):
 | Kontrol | Sonuc |
 |---|---|
 | Temiz build, uc preset | ✅ 14 ELF / preset, 0 uyari |
-| `tests/smoke-test.sh` | ✅ 248 PASS / 0 FAIL, uc preset |
+| `tests/smoke-test.sh` | ✅ 294 PASS / 0 FAIL, uc preset |
 | `tests/build-probes.sh` | ✅ 10 PASS / 0 FAIL |
-| `tests/check-links.py` | ✅ 250 link, 0 kirik |
+| `tests/check-links.py` | ✅ 272 link, 0 kirik |
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
 
@@ -71,6 +71,7 @@ Dogrulama durumu (bu container'da olculdu):
 |---|---|---|---|
 | 01 | senaryo yazımı (kod yok) | — | `lessons/01-cortex-m-family/answers/reference-answers.md` |
 | 02 | `exercises/01-decode-apsr-flags/` | `solutions/01-decode-apsr-flags/` (çalıştırıldı ✅) | `lessons/02-programmer-model/answers/quick-check.md` |
+| 09 | `exercises/01-callee-save/` | `solutions/01-callee-save/` (çalıştırıldı ✅) | `lessons/09-compiler-aapcs/answers/quick-check.md` |
 | 08 | `exercises/01-fault-report/` | `solutions/01-fault-report/` (çalıştırıldı ✅) | `lessons/08-faults/answers/quick-check.md` |
 | 07 | `exercises/01-decode-exception-entry/` | `solutions/01-decode-exception-entry/` (çalıştırıldı ✅) | `lessons/07-exceptions/answers/quick-check.md` |
 | 06 | `exercises/01-thread-mpu-policy/` | `solutions/01-thread-mpu-policy/` (çalıştırıldı ✅) | `lessons/06-mpu/answers/quick-check.md` |
