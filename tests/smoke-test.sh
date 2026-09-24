@@ -109,6 +109,11 @@ L08B="$BUILD/lessons/08-faults/08-faults-bus.elf"
 L08X="$BUILD/lessons/08-faults/08-faults-escalation.elf"
 L08E="$BUILD/lessons/08-faults/08-exercise-fault-report.elf"
 L08S="$BUILD/lessons/08-faults/08-solution-fault-report.elf"
+L09A="$BUILD/lessons/09-compiler-aapcs/09-compiler-aapcs.elf"
+L09B="$BUILD/lessons/09-compiler-aapcs/09-compiler-aapcs-broken.elf"
+L09O="$BUILD/lessons/09-compiler-aapcs/09-compiler-optimization.elf"
+L09E="$BUILD/lessons/09-compiler-aapcs/09-exercise-callee-save.elf"
+L09S="$BUILD/lessons/09-compiler-aapcs/09-solution-callee-save.elf"
 
 for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L03" "$L03B" "$L03E" "$L03S" "$L03M" \
@@ -116,7 +121,8 @@ for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L05" "$L05B" "$L05E" "$L05S" \
          "$L06" "$L06B" "$L06P" "$L06E" "$L06S" \
          "$L07" "$L07M" "$L07F" "$L07X" "$L07E" "$L07S" \
-         "$L08M" "$L08U" "$L08B" "$L08X" "$L08E" "$L08S"; do
+         "$L08M" "$L08U" "$L08B" "$L08X" "$L08E" "$L08S" \
+         "$L09A" "$L09B" "$L09O" "$L09E" "$L09S"; do
     [ -f "$f" ] && ok "$(basename "$f")" || bad "uretilmedi: $f"
 done
 for f in "${L02%.elf}.bin" "${L02%.elf}.map" "${L02%.elf}.lst"; do
@@ -442,6 +448,60 @@ for c in ACTIVE NOT_ESCALATED CLASS BIT ADDRESS FRAME; do
     expect_line "$out" "CHECK_D_$c" "[  CHECK_D_$c] PASS"
 done
 expect_line "$out" "asil bit" "[  D_PRIMARY_BIT] DACCVIOL"
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+# ===========================================================================
+sect "12. Lesson 09 - AAPCS olcumu"
+out="$(run_qemu "$L09A")"
+expect_line "$out" "4 x u32 -> r0-r3" "[  CHECK_ARGS_4U32] PASS"
+expect_line "$out" "5. u32 -> [SP+0]" "[  CHECK_ARG5_ON_STACK] PASS"
+expect_line "$out" "u64 -> r2:r3 (C.3)" "[  CHECK_U64_IN_R2_R3] PASS"
+expect_line "$out" "u64 -> stack, word sirasi" "[  CHECK_U64_ON_STACK] PASS"
+expect_line "$out" "stack argumaninda SP mod 8 = 0" "[  CHECK_U64_STACK_SP_ALIGNED] PASS"
+expect_line "$out" "u64 donus -> r0:r1" "[  CHECK_U64_RETURN_R0_R1] PASS"
+expect_line "$out" "C -> asm -> C zinciri" "[  CHECK_CHAIN_RESULT] PASS"
+expect_line "$out" "BL aninda SP mod 8 = 0" "[  CHECK_SP_ALIGNED_AT_CALL] PASS"
+expect_line "$out" "harness pozitif kontrol" "[  CHECK_HARNESS_POSITIVE_CONTROL] PASS"
+expect_line "$out" "harness BLX aninda hizali" "[  CHECK_HARNESS_SP_ALIGNED] PASS"
+expect_line "$out" "good_callee sonucu" "[  CHECK_RESULT] PASS"
+expect_line "$out" "good_callee sozlesmesi" "[  CHECK_CALLEE_SAVED] PASS"
+expect_line "$out" "bozulan register yok" "[  CORRUPTED] (yok)"
+expect_line "$out" "tamamlandi" "===== END ====="
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+sect "12b. Lesson 09 - bilerek bozuk (dogru sonuc, bozuk sozlesme)"
+out="$(run_qemu "$L09B")"
+expect_line "$out" "olcum aleti once dogrulandi" "[  CHECK_HARNESS_POSITIVE_CONTROL] PASS"
+expect_line "$out" "sonuc DOGRU" "[  CHECK_RESULT] PASS"
+expect_line "$out" "sozlesme BOZUK (beklenen)" "[  CHECK_CALLEE_SAVED] FAIL"
+expect_line "$out" "bozulan register r4" "[  CORRUPTED] r4"
+expect_line "$out" "maske yalnizca r4" "[  TESTED_MASK] 0x00000001"
+expect_line "$out" "normal tamamlandi (cokme yok)" "===== END ====="
+
+sect "12c. Lesson 09 - optimizasyon fikstuu (anlam preset'ten bagimsiz)"
+out="$(run_qemu "$L09O")"
+expect_line "$out" "checksum sabit" "[  OPT_CHECKSUM] 0x79DC404C"
+expect_line "$out" "checksum kontrolu" "[  CHECK_OPT_CHECKSUM] PASS"
+expect_line "$out" "tamamlandi" "===== END ====="
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+sect "12d. Lesson 09 - bitmemis odev (sonuc dogru, sozlesme bozuk olmali)"
+out="$(run_qemu "$L09E")"
+expect_line "$out" "olcum aleti dogrulandi" "[  CHECK_HARNESS_POSITIVE_CONTROL] PASS"
+expect_line "$out" "sonuc dogru (beklenen)" "[  CHECK_RESULT] PASS"
+expect_line "$out" "r5 korunmuyor (beklenen)" "[  CHECK_CALLEE_SAVED] FAIL"
+expect_line "$out" "bozulan register r5" "[  CORRUPTED] r5"
+expect_line "$out" "BL aninda hizasiz (beklenen)" "[  CHECK_SP_ALIGNED_AT_CALL] FAIL"
+reject_line "$out" "odev cozulmus gibi raporlanmiyor" "[  CORRUPTED] (yok)"
+expect_line "$out" "odev guvenli calisiyor" "===== END ====="
+
+sect "12e. Lesson 09 - referans cozum"
+out="$(run_qemu "$L09S")"
+expect_line "$out" "sonuc" "[  CHECK_RESULT] PASS"
+expect_line "$out" "callee-saved korundu" "[  CHECK_CALLEE_SAVED] PASS"
+expect_line "$out" "BL aninda hizali" "[  CHECK_SP_ALIGNED_AT_CALL] PASS"
+expect_line "$out" "bozulan register yok" "[  CORRUPTED] (yok)"
+expect_line "$out" "tamamlandi" "===== END ====="
 reject_line "$out" "hicbir FAIL yok" "] FAIL"
 
 # --- Ozet -----------------------------------------------------------------
