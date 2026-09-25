@@ -21,6 +21,15 @@
  *   - sonucu r0'da (maske) ve *out_result'ta dondurur
  *
  * Maske:  bit0..bit7 = r4..r11 bozuldu,  bit8 = SP geri gelmedi.
+ *
+ * SP'YE GUVENMEYEN DONUS YOLU:
+ *   Test edilen callee SP'yi bozmus olabilir. O durumda [sp] artik
+ *   harness'in frame'ini gostermez. Bu yuzden BLX'ten donduktan sonra, SP
+ *   dogrulanip bilinen iyi degere geri yuklenene kadar HICBIR stack-goreli
+ *   okuma/yazma yapilmaz. Donuste gereken her sey - beklenen SP
+ *   (g_harness_sp_at_call) ve out_result (g_harness_out_result) - BLX'ten
+ *   ONCE global yuvalara yazilir. Harness tek bagli (single-thread),
+ *   egitim amacli bir tani aracidir; global yuvalar bu yuzden yeterlidir.
  * Not: r9, AAPCS'te platforma ozel bir register'dir. Bu repo/toolchain
  * yapilandirmasinda callee-saved (v6) olarak davrandigi OLCULDU; harness
  * onu da denetler (README, M6).
@@ -32,10 +41,14 @@
     .global abi_check_callee
     .type   abi_check_callee, %function
     .thumb_func
-abi_check_callee:
+abi_check_callee:                       @ r0=fn r1=a r2=b r3=out_result
     /* 10 register = 40 byte. Girisi 8'e hizali bir SP 8'e hizali kalir.
-     * r3 iki is gorur: hizalama dolgusu VE out_result'in saklandigi yuva. */
+     * r3 burada yalnizca hizalama DOLGUSU. */
     push    {r3-r11, lr}
+
+    /* out_result'i SP'den BAGIMSIZ bir yuvaya koy (r12: scratch). */
+    ldr     r12, =g_harness_out_result
+    str     r3, [r12]
 
     mov     r12, r0             /* cagri hedefi -> IP (scratch)           */
     mov     r0, r1              /* a                                       */
@@ -52,16 +65,33 @@ abi_check_callee:
 
     ldr     r2, =g_harness_sp_at_call
     mov     r3, sp
-    str     r3, [r2]            /* BLX aninda SP */
+    str     r3, [r2]            /* BEKLENEN SP = BLX anindaki SP */
 
     blx     r12                 /* fn(a, b) */
 
-    /* --- donus: r0 = sonuc; r1-r3, r12 serbest --- */
-    ldr     r3, [sp, #0]        /* dolgu yuvasindan out_result */
+    /* ================================================================
+     * DONUS. SP GUVENILMEZ. Asagidaki bloklarda SP DOGRULANANA KADAR
+     * hicbir [sp] erisimi, push veya pop YOK. r4-r11'e de dokunulmuyor:
+     * onlar test edilen callee'nin kanitidir.
+     * ================================================================ */
+
+    /* 1) Sonucu sakla: isaretci global yuvadan, SP'den degil. */
+    ldr     r3, =g_harness_out_result
+    ldr     r3, [r3]
     str     r0, [r3]            /* *out_result = sonuc */
 
     movs    r0, #0              /* r0 = maske */
 
+    /* 2) SP'yi dogrula ve bilinen iyi degere geri yukle. */
+    ldr     r2, =g_harness_sp_at_call
+    ldr     r2, [r2]            /* beklenen SP */
+    mov     r1, sp              /* donen SP */
+    cmp     r1, r2
+    it      ne
+    orrne   r0, r0, #0x100      /* SP geri gelmedi */
+    mov     sp, r2              /* her durumda bilinen iyi SP (esitse etkisiz) */
+
+    /* 3) SP artik harness'in frame'ini gosteriyor. Nobetcileri denetle. */
     ldr     r1, =0xA4A4A404
     cmp     r4, r1
     it      ne
@@ -95,14 +125,18 @@ abi_check_callee:
     it      ne
     orrne   r0, r0, #0x080
 
-    ldr     r2, =g_harness_sp_at_call
-    ldr     r2, [r2]
-    mov     r1, sp
-    cmp     r1, r2
-    it      ne
-    orrne   r0, r0, #0x100      /* SP geri gelmedi */
-
-    pop     {r3-r11, pc}        /* cagiranin r4-r11'i geri; r3 scratch */
+    /* 4) Cagiranin r4-r11'ini geri ver ve don (SP dogrulandi). */
+    pop     {r3-r11, pc}
     .size   abi_check_callee, . - abi_check_callee
 
     .ltorg
+
+/* ------------------------------------------------------------------ */
+/* SP'den bagimsiz donus yuvasi. g_harness_sp_at_call C tarafinda      */
+/* tanimli (main.c); bu yuva yalnizca harness'e ait.                   */
+/* ------------------------------------------------------------------ */
+    .bss
+    .align  2
+    .global g_harness_out_result
+g_harness_out_result:
+    .space  4

@@ -59,9 +59,9 @@ Dogrulama durumu (bu container'da olculdu):
 | Kontrol | Sonuc |
 |---|---|
 | Temiz build, uc preset | ✅ 14 ELF / preset, 0 uyari |
-| `tests/smoke-test.sh` | ✅ 294 PASS / 0 FAIL, uc preset |
+| `tests/smoke-test.sh` | ✅ 304 PASS / 0 FAIL, uc preset |
 | `tests/build-probes.sh` | ✅ 10 PASS / 0 FAIL |
-| `tests/check-links.py` | ✅ 272 link, 0 kirik |
+| `tests/check-links.py` | ✅ 273 link, 0 kirik |
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
 

@@ -6,6 +6,9 @@
 #   09-compiler-optimization   ayni C kaynagi, uc preset: .lst karsilastirmasi
 #   09-exercise-callee-save    ogrenci ABI'yi bozuk bir asm fonksiyonu onarir
 #   09-solution-callee-save    referans cozum
+#   09-harness-sp-regression   OLCUM ALETI regresyonu (ogrenciye yonelik degil):
+#                              harness, SP'yi bozan bir callee'den sag cikip
+#                              bunu raporlayabiliyor mu?
 #
 # Olcum aracinin (abi_harness.S) ve C yardimcilarinin (helpers.c) TEK bir
 # kaynagi var: hedefler onlari example/ altindan paylasir. Bir olcum
@@ -38,7 +41,11 @@ add_firmware(09-solution-callee-save
     SOURCES solutions/01-callee-save/main.c
             solutions/01-callee-save/scale_and_sum.S ${L09_COMMON})
 
+add_firmware(09-harness-sp-regression
+    SOURCES regression/main.c regression/sp_corruption.S ${L09_COMMON})
+
 foreach(t 09-compiler-aapcs 09-compiler-aapcs-broken 09-compiler-optimization
-          09-exercise-callee-save 09-solution-callee-save)
+          09-exercise-callee-save 09-solution-callee-save
+          09-harness-sp-regression)
     target_include_directories(${t} PRIVATE ${L09_EX})
 endforeach()
