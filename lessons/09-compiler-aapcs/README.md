@@ -230,10 +230,12 @@ abi_check_callee(fn, a, b, *out_result):
                                  r3 = hizalama DOLGUSU ve out_result yuvasi
     r4..r11 <- farkli nobetci degerler (0xA4A4A404 ... 0xABABAB0B)
     SP'yi kaydet
+    out_result'i ve BLX anindaki SP'yi GLOBAL yuvalara yaz
     blx    fn                    fn(a, b)
-    *out_result = r0
+    --- donus: SP guvenilmez; SP dogrulanana kadar [sp] erisimi YOK ---
+    *out_result = r0             (isaretci global yuvadan)
+    SP beklenenden farkli mi? -> bit 8; SP'yi bilinen iyi degere geri yukle
     her biri icin: r4..r11 nobetciye esit mi? degilse maskeye bit
-    SP ayni mi? degilse bit 8
     pop    {r3-r11, pc}          CAGIRANIN r4-r11'i geri; donus
 ```
 
@@ -246,9 +248,19 @@ Harness **bir ölçüm aletidir**, yani kendisi de AAPCS'e uymak zorunda:
 | `BLX` anında SP mod 8 = 0 | 40 byte yığılıyor; ölçülüyor (`CHECK_HARNESS_SP_ALIGNED`) |
 | Sonuç | Maske `r0`'da, callee sonucu `*out_result`'ta |
 | Bozuk callee'den sağ çıkması | Kendi r4–r11'ini callee'ye güvenmeden geri yüklüyor |
+| SP'yi bozan callee'den sağ çıkması | Dönüşte, SP doğrulanıp geri yüklenene kadar hiçbir `[sp]` erişimi yok; gereken her şey `BLX`'ten önce global yuvalara yazılıyor |
 
 Ve **önce pozitif kontrol**: harness doğru bir callee'de (`good_callee`)
 maske = 0 vermiyorsa, bozuk callee üzerindeki ölçümüne güvenilmez.
+
+> **Ölçüm aletinin kendi regresyonu.** Bağımsız denetim, harness'in ilk
+> sürümünün SP'yi bozan bir callee'den sonra `[sp]`'den okuduğu için
+> kendi çağıranının r4'ünü işaretçi sanıp yazdığını buldu (BusFault,
+> `BFAR = 0xDEAD0000`). Onarılmış harness'i bu duruma karşı sınayan ayrı,
+> öğrenciye yönelik olmayan bir hedef var: `09-harness-sp-regression`
+> ([`regression/`](regression/)). SP'yi +4 ve −8 kaydıran callee'lerde maske
+> `0x100`, r4 + SP bozan callee'de `0x101`; her durumda sonuç, çağıranın
+> r4–r11'i ve SP'si geri geliyor.
 
 ---
 
@@ -290,7 +302,7 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 [  F2 [SP+0]] 0xE5E5E5E5
 [  CHECK_ARG5_ON_STACK] PASS
 [  F3 r0 (a)] 0xA1A1A1A1
-[  F3 r1 (unspecified)] 0x100008B8
+[  F3 r1 (unspecified)] 0x100008C8
 [  F3 r2 (b.lo)] 0x55667788
 [  F3 r3 (b.hi)] 0x11223344
 [  CHECK_U64_IN_R2_R3] PASS
@@ -357,9 +369,9 @@ Bunun neden önemli olduğunu ölçüm gösterdi:
 
 | Preset | F3 r1 | F4 r3 |
 |---|---|---|
-| `debug` | `0x100008B8` | **`0x99AABBCC`** |
-| `release` | `0x100009C8` | `0x00000000` |
-| `minsize` | `0x1000080C` | **`0x99AABBCC`** |
+| `debug` | `0x100008C8` | **`0x99AABBCC`** |
+| `release` | `0x100009D8` | `0x00000000` |
+| `minsize` | `0x1000081C` | **`0x99AABBCC`** |
 
 `debug` ve `minsize`'da r3, **tesadüfen** `d`'nin yüksek word'ünü içeriyor —
 GCC onu stack'e yazarken r3'ü geçici register olarak kullanmış. "r3, `d`'nin
@@ -391,14 +403,14 @@ Adresleri kendi build'inden al: `disassemble fixture_chain` ve
 ### A — `main` tarafında, `bl abi_chain` üzerinde
 
 ```gdb
-(gdb) break *0x100004d6
+(gdb) break *0x100004e6
 (gdb) continue
 (gdb) x/1i $pc
 (gdb) info registers r0 r4 sp
 ```
 
 ```text
-=> 0x100004d6 <fixture_chain+10>:  bl  0x100000f4 <abi_chain>
+=> 0x100004e6 <fixture_chain+10>:  bl  0x100000f4 <abi_chain>
 r0  0xa
 r4  0x0
 sp  0x30007fe0
@@ -416,12 +428,12 @@ sp  0x30007fe0
 ```
 
 ```text
-$lr = 0x100004db
+$lr = 0x100004eb
 $sp = 0x30007fe0
 ```
 
-**Gözlem:** `BL` yalnızca `LR`'yi değiştirdi: `0x100004d6 + 4 = 0x100004da`,
-bit 0 = 1 → `0x100004db` (Thumb). SP değişmedi.
+**Gözlem:** `BL` yalnızca `LR`'yi değiştirdi: `0x100004e6 + 4 = 0x100004ea`,
+bit 0 = 1 → `0x100004eb` (Thumb). SP değişmedi.
 
 ### C — `bl helper_scale` üzerinde
 
@@ -437,7 +449,7 @@ bit 0 = 1 → `0x100004db` (Thumb). SP değişmedi.
 ```text
 $sp = 0x30007fd8
 (unsigned)$sp & 7 = 0x0
-0x30007fd8:  0x00000000  0x100004db
+0x30007fd8:  0x00000000  0x100004eb
 $r4 = 0xa
 ```
 
@@ -447,6 +459,8 @@ taşıyor.
 
 ### D — `helper_scale` döndükten hemen sonra
 
+Durak C'de `bl`'den hemen önce `info registers r1 r2 r3` de al, sonra:
+
 ```gdb
 (gdb) break *0x10000104
 (gdb) continue
@@ -454,20 +468,32 @@ taşıyor.
 ```
 
 ```text
-r0  0x1f        <- helper sonucu: 3*10+1
-r1  0x30000004
-r2  0x30007fd8
-r3  0x1234567
-r4  0xa         <- degismedi
+            BL'den once    BL'den sonra
+r0          0xa            0x1f         <- helper sonucu: 3*10+1
+r1          0x30000008     0x30000008
+r2          0x30007fd8     0x30007fd8
+r3          0x1234567      0x1234567
+r4          0xa            0xa          <- degismedi
 ```
 
-**Gözlem:** `r4` sağlam — `helper_scale` sözleşmeye uydu. `r1`–`r3` başka
-değerler taşıyor ve bu **izinli**: onlar caller-clobbered.
+**Gözlem:** `r4` sağlam — `helper_scale` sözleşmeye uydu. Bu çağrıda
+`helper_scale` **yalnızca `r0`'ı** değiştirdi; `r1`–`r3` üç preset'te de
+aynı kaldı.
+
+Bu iki şeyi ayır:
+
+- **ABI:** `r1`–`r3` caller-clobbered. Çağıran onların çağrıdan sağ çıkmasına
+  **güvenemez**; callee onları değiştirmeye **yetkilidir**.
+- **OBSERVATION:** bu `helper_scale` onları değiştirmedi.
+
+"Değiştirilebilir" ile "değiştirildi" aynı şey değildir. Bir register'ın bir
+ölçümde aynı kalması, ona güvenmeyi doğru yapmaz — bir sonraki derleyici
+sürümü veya başka bir callee onu bozabilir.
 
 ### E — `main`'e dönüş
 
 ```gdb
-(gdb) break *0x100004da
+(gdb) break *0x100004ea
 (gdb) continue
 (gdb) info registers r0 r4 sp
 ```

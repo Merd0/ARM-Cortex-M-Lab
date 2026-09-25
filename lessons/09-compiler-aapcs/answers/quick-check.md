@@ -12,7 +12,13 @@ ile döner, ve çağrılar arasında scratch olarak kullanılabilirler. AAPCS32 
 değer çağrıdan sonra lazımsa, çağıran onu başka bir yerde (callee-saved bir
 register'da veya stack'te) tutmak zorundadır.
 
-Ölçüm (GDB durak D): `helper_scale`'den dönünce `r1`–`r3` değişmişti; bu izinli.
+Ayrım önemli: **caller-clobbered**, callee'nin onları değiştirmeye
+**yetkili** olduğu ve çağıranın onlara **güvenemeyeceği** anlamına gelir —
+her callee'nin onları gerçekten değiştirdiği anlamına gelmez.
+
+Ölçüm (GDB durak C ve D, üç preset): `helper_scale` **yalnızca `r0`'ı**
+değiştirdi; `r1`–`r3` `BL`'den önce ve sonra aynıydı. Bu bir gözlemdir; ona
+güvenmek yine de ABI ihlali olur.
 
 ---
 
@@ -65,7 +71,7 @@ dönüş adresini ezer. Bu yüzden yaprak olmayan bir fonksiyon **iç çağrıda
 önce** LR'yi saklamalıdır.
 
 `abi_chain`'de: `push {r4, lr}` … `bl helper_scale` … `pop {r4, pc}`. GDB durak
-C'de stack'te `[SP+4] = 0x100004db` — saklanan LR. `pop {…, pc}` bu değeri
+C'de stack'te `[SP+4] = 0x100004eb` — saklanan LR. `pop {…, pc}` bu değeri
 doğrudan PC'ye yükleyerek döner.
 
 İstisna: tail call (soru 10) — orada LR hiç saklanmaz, çünkü fonksiyon kendi

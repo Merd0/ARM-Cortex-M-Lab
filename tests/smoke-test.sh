@@ -114,6 +114,7 @@ L09B="$BUILD/lessons/09-compiler-aapcs/09-compiler-aapcs-broken.elf"
 L09O="$BUILD/lessons/09-compiler-aapcs/09-compiler-optimization.elf"
 L09E="$BUILD/lessons/09-compiler-aapcs/09-exercise-callee-save.elf"
 L09S="$BUILD/lessons/09-compiler-aapcs/09-solution-callee-save.elf"
+L09R="$BUILD/lessons/09-compiler-aapcs/09-harness-sp-regression.elf"
 
 for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L03" "$L03B" "$L03E" "$L03S" "$L03M" \
@@ -122,7 +123,7 @@ for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L06" "$L06B" "$L06P" "$L06E" "$L06S" \
          "$L07" "$L07M" "$L07F" "$L07X" "$L07E" "$L07S" \
          "$L08M" "$L08U" "$L08B" "$L08X" "$L08E" "$L08S" \
-         "$L09A" "$L09B" "$L09O" "$L09E" "$L09S"; do
+         "$L09A" "$L09B" "$L09O" "$L09E" "$L09S" "$L09R"; do
     [ -f "$f" ] && ok "$(basename "$f")" || bad "uretilmedi: $f"
 done
 for f in "${L02%.elf}.bin" "${L02%.elf}.map" "${L02%.elf}.lst"; do
@@ -503,6 +504,19 @@ expect_line "$out" "BL aninda hizali" "[  CHECK_SP_ALIGNED_AT_CALL] PASS"
 expect_line "$out" "bozulan register yok" "[  CORRUPTED] (yok)"
 expect_line "$out" "tamamlandi" "===== END ====="
 reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+# ===========================================================================
+sect "12f. Lesson 09 - olcum aleti regresyonu (SP bozan callee)"
+out="$(run_qemu "$L09R")"
+expect_line "$out" "pozitif kontrol" "[1] good_callee (pozitif kontrol)"
+expect_line "$out" "SP +4 vakasina ulasildi" "[2] sp_up_callee (SP +4)"
+expect_line "$out" "SP -8 vakasina ulasildi" "[3] sp_down_callee (SP -8)"
+expect_line "$out" "r4 + SP vakasina ulasildi" "[4] sp_up_r4_callee (r4 + SP +4)"
+expect_line "$out" "SP biti raporlandi" "[  MASK] 0x00000100"
+expect_line "$out" "r4 + SP birlikte raporlandi" "[  MASK] 0x00000101"
+expect_line "$out" "cagiranin r4'u isaretci sanilmadi" "[  CALLER_R4_AFTER] 0xDEAD0000"
+expect_line "$out" "harness normal dondu (BusFault yok)" "===== END ====="
+reject_line "$out" "hicbir FAIL yok (maske/sonuc/r4-r11/SP)" "] FAIL"
 
 # --- Ozet -----------------------------------------------------------------
 echo
