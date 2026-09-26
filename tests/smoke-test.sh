@@ -115,6 +115,9 @@ L09O="$BUILD/lessons/09-compiler-aapcs/09-compiler-optimization.elf"
 L09E="$BUILD/lessons/09-compiler-aapcs/09-exercise-callee-save.elf"
 L09S="$BUILD/lessons/09-compiler-aapcs/09-solution-callee-save.elf"
 L09R="$BUILD/lessons/09-compiler-aapcs/09-harness-sp-regression.elf"
+L10A="$BUILD/lessons/10-linker-elf-memory/10-linker-elf-memory.elf"
+L10E="$BUILD/lessons/10-linker-elf-memory/10-exercise-linker.elf"
+L10S="$BUILD/lessons/10-linker-elf-memory/10-solution-linker.elf"
 
 for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L03" "$L03B" "$L03E" "$L03S" "$L03M" \
@@ -123,7 +126,8 @@ for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L06" "$L06B" "$L06P" "$L06E" "$L06S" \
          "$L07" "$L07M" "$L07F" "$L07X" "$L07E" "$L07S" \
          "$L08M" "$L08U" "$L08B" "$L08X" "$L08E" "$L08S" \
-         "$L09A" "$L09B" "$L09O" "$L09E" "$L09S" "$L09R"; do
+         "$L09A" "$L09B" "$L09O" "$L09E" "$L09S" "$L09R" \
+         "$L10A" "$L10E" "$L10S"; do
     [ -f "$f" ] && ok "$(basename "$f")" || bad "uretilmedi: $f"
 done
 for f in "${L02%.elf}.bin" "${L02%.elf}.map" "${L02%.elf}.lst"; do
@@ -517,6 +521,44 @@ expect_line "$out" "r4 + SP birlikte raporlandi" "[  MASK] 0x00000101"
 expect_line "$out" "cagiranin r4'u isaretci sanilmadi" "[  CALLER_R4_AFTER] 0xDEAD0000"
 expect_line "$out" "harness normal dondu (BusFault yok)" "===== END ====="
 reject_line "$out" "hicbir FAIL yok (maske/sonuc/r4-r11/SP)" "] FAIL"
+
+# ===========================================================================
+sect "13. Lesson 10 - linker, ELF ve bellek yerlesimi"
+out="$(run_qemu "$L10A")"
+expect_line "$out" "fonksiyon FLASH'ta" "[  CHECK_TEXT_IN_FLASH] PASS"
+expect_line "$out" "fonksiyon isaretcisinde Thumb biti" "[  CHECK_FN_PTR_THUMB_BIT] PASS"
+expect_line "$out" "rodata + ozel section FLASH salt-okunur bolgede" "[  CHECK_RODATA_IN_FLASH_RO] PASS"
+expect_line "$out" "g_init + asm_word .data icinde" "[  CHECK_DATA_IN_DATA] PASS"
+expect_line "$out" "g_zero + static yerel .bss icinde" "[  CHECK_BSS_IN_BSS] PASS"
+expect_line "$out" ".data ilk degeri LMA'da (FLASH)" "[  CHECK_DATA_LMA_HOLDS_INIT] PASS"
+expect_line "$out" ".data RAM'e kopyalandi" "[  CHECK_DATA_COPIED] PASS"
+expect_line "$out" ".bss sifir" "[  CHECK_BSS_ZERO] PASS"
+expect_line "$out" "static yerel calisiyor" "[  CHECK_STATIC_LOCAL] PASS"
+expect_line "$out" "__flash_load_end tutarli" "[  CHECK_FLASH_LOAD_END] PASS"
+expect_line "$out" "vector[0] = __stack_top" "[  CHECK_VECTOR0_IS_STACK_TOP] PASS"
+expect_line "$out" "TU'lar arasi cagri" "[  CHECK_CROSS_TU_CALL] PASS"
+expect_line "$out" "asm TU link edildi" "[  CHECK_ASM_LINKED] PASS"
+expect_line "$out" "ilk deger LMA'da okundu" "[  deger @ LMA (FLASH)] 0xC0DEFACE"
+expect_line "$out" "tamamlandi" "===== END ====="
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+sect "13b. Lesson 10 - bitmemis odev (hesaplar bos olmali)"
+out="$(run_qemu "$L10E")"
+expect_line "$out" "FLASH hesabi bos (beklenen)" "[  CHECK_FLASH_USED] FAIL"
+expect_line "$out" "RAM hesabi bos (beklenen)" "[  CHECK_RAM_STATIC] FAIL"
+expect_line "$out" "LMA bos (beklenen, fault yok)" "[  CHECK_LMA_HOLDS_INIT] FAIL"
+expect_line "$out" "bolge testi bos (beklenen)" "[  CHECK_REGIONS] FAIL"
+reject_line "$out" "odev cozulmus gibi raporlanmiyor" "[  CHECK_LMA_HOLDS_INIT] PASS"
+expect_line "$out" "odev guvenli calisiyor" "===== END ====="
+
+sect "13c. Lesson 10 - referans cozum"
+out="$(run_qemu "$L10S")"
+expect_line "$out" "FLASH kullanimi" "[  CHECK_FLASH_USED] PASS"
+expect_line "$out" "statik RAM" "[  CHECK_RAM_STATIC] PASS"
+expect_line "$out" "LMA ilk degeri tutuyor" "[  CHECK_LMA_HOLDS_INIT] PASS"
+expect_line "$out" "bolgeler" "[  CHECK_REGIONS] PASS"
+expect_line "$out" "tamamlandi" "===== END ====="
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
 
 # --- Ozet -----------------------------------------------------------------
 echo

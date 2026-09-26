@@ -14,6 +14,16 @@
 #       bolgesinden DUSMEZ; tasma sessiz kalir.
 #       ".data : > RAM AT > FLASH" ise tasmayi link hatasina cevirir.
 #
+#   L10 Ders 10 (Linker, ELF & Memory)
+#       (a) Break It: ".global" olmayan bir asm fonksiyonu -> link hatasi
+#           "undefined reference" (kasitli, deterministik).
+#       (b) Calisma zamaninin kanitlayamadigi statik gozlemler: GC, ozel
+#           input section yerlesimi, relocation turleri, .data VMA/LMA,
+#           .bss dosya/bellek boyutu.
+#       (c) Exercise surucusunun sozlesmesi: ogrencinin dondurdugu HICBIR
+#           LMA degeri firmware'i dusurmemeli. Tasma yapan adresler
+#           (0xFFFFFFFC ...) dahil, gecersiz her deger FAIL + END uretmeli.
+#
 # Kullanim:
 #   ./tests/build-probes.sh              # preset: debug
 #   ./tests/build-probes.sh release
@@ -177,6 +187,151 @@ else
         bad "link basarisiz ama sebep FLASH siniri degil:"
         head -3 "$WORK/big.err"
     fi
+fi
+
+# ===========================================================================
+echo
+echo "=== L10a: Break It - .global olmayan asm sembolu ==="
+
+L10="$ROOT/lessons/10-linker-elf-memory/example"
+L10_SRC=("$L10/main.c" "$L10/objects.c" "$L10/placement.c")
+L10_FLAGS=("${CFLAGS[@]}" -ffunction-sections -fdata-sections -I"$L10")
+
+if arm-none-eabi-gcc "${L10_FLAGS[@]}" -c "$L10/l10_asm_broken.S" \
+        -o "$WORK/l10_broken.o" 2>/dev/null; then
+    if arm-none-eabi-nm "$WORK/l10_broken.o" | grep -qE "^[0-9a-f]+ t asm_fn$"; then
+        ok "asm_fn bozuk nesnede VAR ama LOCAL ('t')"
+    else
+        bad "asm_fn bozuk nesnede beklenen LOCAL sembol degil"
+    fi
+else
+    bad "l10_asm_broken.S derlenemedi"
+fi
+
+if arm-none-eabi-gcc "${L10_FLAGS[@]}" -nostdlib -Wl,--gc-sections -T"$LD" \
+        "${L10_SRC[@]}" "$L10/l10_asm.S" "${PLATFORM_SRC[@]}" -lgcc \
+        -o "$WORK/l10_ok.elf" >/dev/null 2>&1; then
+    ok "kontrol: .global asm_fn ile link BASARILI"
+else
+    bad "kontrol: dogru kaynakla link basarisiz - probe anlamsiz"
+fi
+
+if arm-none-eabi-gcc "${L10_FLAGS[@]}" -nostdlib -Wl,--gc-sections -T"$LD" \
+        "${L10_SRC[@]}" "$L10/l10_asm_broken.S" "${PLATFORM_SRC[@]}" -lgcc \
+        -o "$WORK/l10_broken.elf" 2>"$WORK/l10_broken.err"; then
+    bad "beklenmedik: .global olmadan link BASARILI oldu"
+else
+    if grep -q "undefined reference to .asm_fn'" "$WORK/l10_broken.err"; then
+        ok "link beklendigi gibi basarisiz: undefined reference to 'asm_fn'"
+    else
+        bad "link basarisiz ama beklenen tanilama yok:"
+        head -3 "$WORK/l10_broken.err"
+    fi
+fi
+
+# ===========================================================================
+echo
+echo "=== L10b: statik gozlemler (repo build'i uzerinden) ==="
+
+L10B="$ROOT/build/$PRESET/lessons/10-linker-elf-memory"
+L10E="$L10B/10-linker-elf-memory.elf"
+L10M="$L10B/10-linker-elf-memory.map"
+L10O="$L10B/CMakeFiles/10-linker-elf-memory.dir/example"
+if [ -f "$L10E" ] && [ -f "$L10M" ]; then
+    DISC="$(awk '/^Discarded input sections/{f=1;next} /^Memory Configuration/{f=0} f' "$L10M")"
+    for s in .data.g_unused_data .text.unused_function; do
+        echo "$DISC" | grep -q "^ $s" && ok "GC: $s atildi" || bad "GC: $s atilmadi"
+    done
+    # 'used' derleyiciye aittir; bu toolchain'de linker GC'sini engellemedi.
+    echo "$DISC" | grep -q "^ .rodata.k_unused_used" \
+        && ok "used != KEEP: .rodata.k_unused_used yine de atildi (olculen)" \
+        || bad "used != KEEP gozlemi degisti: .rodata.k_unused_used korundu"
+
+    awk '/^\.rodata /,/^\.data /' "$L10M" | grep -q "^ \.rodata\.l10_table" \
+        && ok "ozel input section .rodata.l10_table -> .rodata cikis section'i" \
+        || bad ".rodata.l10_table beklenen cikis section'inda degil"
+
+    arm-none-eabi-readelf -r "$L10O/main.c.obj" | awk '/\.rel\.text/{f=1} /\.rel\.debug/{f=0} f' \
+        | grep -q "R_ARM_THM_CALL.*text_fn" \
+        && ok "main.o: BL text_fn -> R_ARM_THM_CALL" \
+        || bad "main.o: text_fn icin R_ARM_THM_CALL yok"
+    arm-none-eabi-readelf -r "$L10O/l10_asm.S.obj" | awk '/\.rel\.text/{f=1} /\.rel\.debug/{f=0} f' \
+        | grep -q "R_ARM_THM_JUMP24.*text_fn" \
+        && ok "l10_asm.o: B.W text_fn -> R_ARM_THM_JUMP24" \
+        || bad "l10_asm.o: text_fn icin R_ARM_THM_JUMP24 yok"
+
+    DATA_VMA=$(arm-none-eabi-objdump -h "$L10E" | awk '$2==".data"{print $4}')
+    DATA_LMA=$(arm-none-eabi-objdump -h "$L10E" | awk '$2==".data"{print $5}')
+    case "$DATA_VMA:$DATA_LMA" in
+        3*:1*) ok ".data VMA RAM'de (0x$DATA_VMA), LMA FLASH'ta (0x$DATA_LMA)" ;;
+        *)     bad ".data VMA/LMA beklenmedik: $DATA_VMA / $DATA_LMA" ;;
+    esac
+
+    # .data + .bss ayni LOAD segmentinde: FileSiz = .data, MemSiz = .data + .bss
+    SEG=$(arm-none-eabi-readelf -l -W "$L10E" | awk '$1=="LOAD" && $3 ~ /^0x3/ {print $5, $6}')
+    FS=$(( $(echo "$SEG" | awk '{print $1}') ))
+    MS=$(( $(echo "$SEG" | awk '{print $2}') ))
+    if [ "$MS" -gt "$FS" ]; then
+        ok "RAM segmenti: FileSiz ($FS) < MemSiz ($MS) - .bss dosyada yer tutmuyor"
+    else
+        bad "RAM segmenti FileSiz/MemSiz beklenmedik: $SEG"
+    fi
+else
+    echo "  [SKIP] $L10E yok; once 'cmake --build --preset $PRESET' calistir"
+fi
+
+# ===========================================================================
+echo
+echo "=== L10c: Exercise surucusu - gecersiz LMA asla fault uretmemeli ==="
+
+# Ogrencinin locate.c'sini taklit eden, data_lma_of() icin VERILEN degeri
+# donduren gecici bir kaynak. Surucu (locate_main.c) degistirilmez.
+l10_lma_case() {
+    local label="$1" expr="$2" expect="$3"
+    cat > "$WORK/locate_adv.c" <<C
+#include <stdint.h>
+#include "l10.h"
+#include "locate.h"
+uint32_t flash_used_bytes(void) { return 0u; }
+uint32_t ram_static_bytes(void) { return 0u; }
+uint32_t data_lma_of(const void *p) { (void)p; return (uint32_t)($expr); }
+int in_region(const void *p, uint32_t o, uint32_t l) { (void)p; (void)o; (void)l; return 0; }
+C
+    if ! arm-none-eabi-gcc "${L10_FLAGS[@]}" -nostdlib -Wl,--gc-sections -T"$LD" \
+            "$L10/locate_main.c" "$L10/objects.c" "$L10/placement.c" \
+            "$WORK/locate_adv.c" "${PLATFORM_SRC[@]}" -lgcc \
+            -o "$WORK/locate_adv.elf" >/dev/null 2>&1; then
+        bad "LMA $label: probe derlenemedi"
+        return
+    fi
+    local out
+    out=$(timeout 10 qemu-system-arm -M mps2-an505 -cpu cortex-m33 \
+            -nographic -monitor none -serial stdio \
+            -kernel "$WORK/locate_adv.elf" 2>/dev/null | tr -d '\r')
+    if echo "$out" | grep -q "===== END =====" && \
+       echo "$out" | grep -q "CHECK_LMA_HOLDS_INIT\] $expect"; then
+        ok "LMA $label -> $expect, END'e ulasildi (fault yok)"
+    else
+        bad "LMA $label: beklenen '$expect' + END yok (fault?)"
+    fi
+}
+
+if command -v qemu-system-arm >/dev/null 2>&1; then
+    # Pozitif kontrol: gercek LMA (bu programda .data = yalnizca g_init).
+    l10_lma_case "__etext (gercek LMA)"            '(uintptr_t)&__etext'                PASS
+    # 32 bit tasma: "addr + 4" sarip araliga donerdi.
+    l10_lma_case "0xFFFFFFFC"                      '0xFFFFFFFCu'                        FAIL
+    l10_lma_case "0xFFFFFFFD"                      '0xFFFFFFFDu'                        FAIL
+    l10_lma_case "0xFFFFFFFF"                      '0xFFFFFFFFu'                        FAIL
+    # FLASH'in altinda.
+    l10_lma_case "0x0FFFFFFC (FLASH alti)"         '0x0FFFFFFCu'                        FAIL
+    # Haric bitise 4 byte'tan yakin / tam bitis.
+    l10_lma_case "__flash_load_end - 2"            '(uintptr_t)&__flash_load_end - 2u'  FAIL
+    l10_lma_case "__flash_load_end (haric bitis)"  '(uintptr_t)&__flash_load_end'       FAIL
+    # Hizasiz.
+    l10_lma_case "__etext + 2 (hizasiz)"           '(uintptr_t)&__etext + 2u'           FAIL
+else
+    echo "  [SKIP] qemu-system-arm yok"
 fi
 
 # ===========================================================================
