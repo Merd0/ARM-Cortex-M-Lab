@@ -118,6 +118,10 @@ L09R="$BUILD/lessons/09-compiler-aapcs/09-harness-sp-regression.elf"
 L10A="$BUILD/lessons/10-linker-elf-memory/10-linker-elf-memory.elf"
 L10E="$BUILD/lessons/10-linker-elf-memory/10-exercise-linker.elf"
 L10S="$BUILD/lessons/10-linker-elf-memory/10-solution-linker.elf"
+L11A="$BUILD/lessons/11-startup/11-startup.elf"
+L11B="$BUILD/lessons/11-startup/11-startup-broken.elf"
+L11E="$BUILD/lessons/11-startup/11-exercise-startup.elf"
+L11S="$BUILD/lessons/11-startup/11-solution-startup.elf"
 
 for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L03" "$L03B" "$L03E" "$L03S" "$L03M" \
@@ -127,7 +131,8 @@ for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L07" "$L07M" "$L07F" "$L07X" "$L07E" "$L07S" \
          "$L08M" "$L08U" "$L08B" "$L08X" "$L08E" "$L08S" \
          "$L09A" "$L09B" "$L09O" "$L09E" "$L09S" "$L09R" \
-         "$L10A" "$L10E" "$L10S"; do
+         "$L10A" "$L10E" "$L10S" \
+         "$L11A" "$L11B" "$L11E" "$L11S"; do
     [ -f "$f" ] && ok "$(basename "$f")" || bad "uretilmedi: $f"
 done
 for f in "${L02%.elf}.bin" "${L02%.elf}.map" "${L02%.elf}.lst"; do
@@ -557,6 +562,49 @@ expect_line "$out" "FLASH kullanimi" "[  CHECK_FLASH_USED] PASS"
 expect_line "$out" "statik RAM" "[  CHECK_RAM_STATIC] PASS"
 expect_line "$out" "LMA ilk degeri tutuyor" "[  CHECK_LMA_HOLDS_INIT] PASS"
 expect_line "$out" "bolgeler" "[  CHECK_REGIONS] PASS"
+expect_line "$out" "tamamlandi" "===== END ====="
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+# ===========================================================================
+sect "14. Lesson 11 - gercek startup yolu (reset -> main)"
+out="$(run_qemu "$L11A")"
+expect_line "$out" "vector[0] = __stack_top" "[  CHECK_VECTOR0_EQ_STACK_TOP] PASS"
+expect_line "$out" "vector[1] = Reset_Handler" "[  CHECK_VECTOR1_EQ_RESET_HANDLER] PASS"
+expect_line "$out" "vector[1] Thumb biti" "[  CHECK_VECTOR1_THUMB_BIT] PASS"
+expect_line "$out" ".data ilk degeri" "[  CHECK_DATA_INIT] PASS"
+expect_line "$out" ".bss sifir (tek basina kanit degil)" "[  CHECK_BSS_ZERO] PASS"
+expect_line "$out" "main girisinde SP 8'e hizali" "[  CHECK_MAIN_SP_ALIGNED] PASS"
+expect_line "$out" "main girisinde SP stack bolgesinde" "[  CHECK_MAIN_SP_BELOW_STACK_TOP] PASS"
+expect_line "$out" "main'in LR'si Reset_Handler'a" "[  CHECK_MAIN_LR_IN_RESET_HANDLER] PASS"
+expect_line "$out" "SystemInit UART'i baslatti" "[  CHECK_SYSTEMINIT_UART] PASS"
+expect_line "$out" "VTOR = vektor tablosu" "[  CHECK_VTOR_IS_VECTORS] PASS"
+expect_line "$out" "Thread mode, ayricalikli" "[  CHECK_THREAD_MODE_PRIVILEGED] PASS"
+expect_line "$out" "tamamlandi" "===== END ====="
+expect_line "$out" "main donuyor" "main donuyor -> Reset_Handler'in WFI dongusu"
+reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+sect "14b. Lesson 11 - bilerek bozuk (.bss sifirlanmiyor)"
+out="$(run_qemu "$L11B")"
+expect_line "$out" ".data yine dogru" "[  CHECK_DATA_INIT] PASS"
+expect_line "$out" ".bss sifirlanmadi (beklenen)" "[  CHECK_BSS_ZERO] FAIL"
+expect_line "$out" "zehir gorunuyor" "[  g_l11_zero] 0xA5A5A5A5"
+expect_line "$out" "faz sirasi dogru" "[  CHECK_PHASE_ORDER] PASS"
+expect_line "$out" "normal tamamlandi (fault yok)" "===== END ====="
+
+sect "14c. Lesson 11 - bitmemis odev (iki dongu eksik)"
+out="$(run_qemu "$L11E")"
+expect_line "$out" ".data kopyalanmadi (beklenen)" "[  CHECK_DATA_INIT] FAIL"
+expect_line "$out" ".bss sifirlanmadi (beklenen)" "[  CHECK_BSS_ZERO] FAIL"
+expect_line "$out" "faz sirasi korunuyor" "[  CHECK_PHASE_ORDER] PASS"
+reject_line "$out" "odev cozulmus gibi raporlanmiyor" "[  g_l11_init] 0x11C0FFEE"
+expect_line "$out" "odev guvenli calisiyor" "===== END ====="
+
+sect "14d. Lesson 11 - referans cozum"
+out="$(run_qemu "$L11S")"
+expect_line "$out" ".data" "[  CHECK_DATA_INIT] PASS"
+expect_line "$out" ".bss" "[  CHECK_BSS_ZERO] PASS"
+expect_line "$out" "faz sirasi" "[  CHECK_PHASE_ORDER] PASS"
+expect_line "$out" "vector[0]" "[  CHECK_VECTOR0_EQ_STACK_TOP] PASS"
 expect_line "$out" "tamamlandi" "===== END ====="
 reject_line "$out" "hicbir FAIL yok" "] FAIL"
 
