@@ -44,7 +44,7 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 | 08 | Faults | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 09 | Compiler & AAPCS | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 10 | Linker, ELF & Memory | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| 11 | Startup | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
+| 11 | Startup (Reset → main) | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 12 | Debug & DWT | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 13 | Sync, FPU & DSP | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 14 | SysTick & PendSV | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -59,9 +59,9 @@ Dogrulama durumu (bu container'da olculdu):
 | Kontrol | Sonuc |
 |---|---|
 | Temiz build, uc preset | ✅ 14 ELF / preset, 0 uyari |
-| `tests/smoke-test.sh` | ✅ 335 PASS / 0 FAIL, uc preset |
-| `tests/build-probes.sh` | ✅ 29 PASS / 0 FAIL, uc preset |
-| `tests/check-links.py` | ✅ 292 link, 0 kirik |
+| `tests/smoke-test.sh` | ✅ 369 PASS / 0 FAIL, uc preset |
+| `tests/build-probes.sh` | ✅ 47 PASS / 0 FAIL, uc preset |
+| `tests/check-links.py` | ✅ 314 link, 0 kirik |
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
 
@@ -71,6 +71,7 @@ Dogrulama durumu (bu container'da olculdu):
 |---|---|---|---|
 | 01 | senaryo yazımı (kod yok) | — | `lessons/01-cortex-m-family/answers/reference-answers.md` |
 | 02 | `exercises/01-decode-apsr-flags/` | `solutions/01-decode-apsr-flags/` (çalıştırıldı ✅) | `lessons/02-programmer-model/answers/quick-check.md` |
+| 11 | `exercises/01-reset-sequence/` | `solutions/01-reset-sequence/` (çalıştırıldı ✅) | `lessons/11-startup/answers/quick-check.md` |
 | 10 | `exercises/01-locate-your-data/` | `solutions/01-locate-your-data/` (çalıştırıldı ✅) | `lessons/10-linker-elf-memory/answers/quick-check.md` |
 | 09 | `exercises/01-callee-save/` | `solutions/01-callee-save/` (çalıştırıldı ✅) | `lessons/09-compiler-aapcs/answers/quick-check.md` |
 | 08 | `exercises/01-fault-report/` | `solutions/01-fault-report/` (çalıştırıldı ✅) | `lessons/08-faults/answers/quick-check.md` |
