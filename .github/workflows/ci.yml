@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             gcc-arm-none-eabi binutils-arm-none-eabi \
-            qemu-system-arm cmake ninja-build
+            qemu-system-arm cmake ninja-build gdb-multiarch
 
       - name: Tool versions
         run: |
@@ -52,6 +52,9 @@ jobs:
       - name: Markdown link check
         run: python3 tests/check-links.py
 
+      - name: Lesson 12 debugger and measurement checks
+        run: python3 tests/lesson12-check.py ${{ matrix.preset }}
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,4 +64,5 @@ jobs:
             build/${{ matrix.preset }}/**/*.elf
             build/${{ matrix.preset }}/**/*.bin
             build/${{ matrix.preset }}/**/*.map
+            build/${{ matrix.preset }}/lesson12-evidence/
           if-no-files-found: warn

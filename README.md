@@ -160,6 +160,11 @@ Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
+2026-10-23: Lessons 01–11 `main` üzerinde; Lesson 12 bu geliştirme dalında
+uygulandı ve yerel üç-preset doğrulaması yapıldı. Uzak CI/PR onayı bekliyor.
+Lessons 13–16, beş birleştirici proje ve final proje henüz tamamlanmadı.
+Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
+
 ### Altyapı
 
 - [x] Build sistemi (CMake + Ninja + arm-none-eabi)
@@ -173,22 +178,22 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 
 - [x] Cortex-M family & processor selection
 - [x] Programmer model & registers
-- [ ] C ↔ Assembly
-- [ ] Stack / MSP / PSP
+- [x] C ↔ Assembly
+- [x] Stack / MSP / PSP
 
 ### Mimari
 
-- [ ] Privilege & SVC
-- [ ] MPU
-- [ ] Exceptions & NVIC
-- [ ] Faults & fault analyzer
+- [x] Privilege & SVC
+- [x] MPU
+- [x] Exceptions & NVIC
+- [x] Faults (birleştirici Fault Analyzer projesi aşağıda ayrı izlenir)
 
 ### Yazılım Geliştirme
 
-- [ ] Compiler & AAPCS
-- [ ] Linker / ELF / memory layout
-- [ ] Startup from scratch
-- [ ] Debugging & DWT
+- [x] Compiler & AAPCS
+- [x] Linker / ELF / memory layout
+- [x] Startup from scratch
+- [x] Debugging & DWT
 
 ### İleri Konular
 

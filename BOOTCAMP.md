@@ -8,6 +8,11 @@ DEEP TRACK'e bırak.
 
 **Durum:** `[ ]` yapılmadı · `[~]` devam ediyor · `[x]` bitti
 
+Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
+otomatik işaretlenmez. Repository teslim durumu: ders 01–11 `main` üzerinde;
+ders 12 bu dalda yerel olarak doğrulandı, uzak CI/PR bekliyor. Ders 13–16
+ve projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
+
 ---
 
 ## Day 0 — Kurulum (bir kez)
@@ -16,7 +21,7 @@ DEEP TRACK'e bırak.
 - [ ] `[QUICK]` İlk build — `cmake --preset debug && cmake --build --preset debug`
 - [ ] `[QUICK]` İlk çalıştırma — `./scripts/run-qemu.sh build/debug/tools/capability-probe/capability-probe.elf`
 - [ ] `[QUICK]` İlk GDB bağlantısı — [`docs/DEBUGGING.md`](docs/DEBUGGING.md)
-- [ ] `[QUICK]` Smoke test — `./tests/smoke-test.sh` (26 kontrol; hepsi geçmeli)
+- [ ] `[QUICK]` Smoke test — `./tests/smoke-test.sh` (normal/bozuk/eksik hedeflerin beklenen davranışları doğrulanmalı)
 - [ ] `[QUICK]` Kendi tool sürümlerini kaydet — [`docs/TOOL_VERSIONS.md`](docs/TOOL_VERSIONS.md)
 
 ---

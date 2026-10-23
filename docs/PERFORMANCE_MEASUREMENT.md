@@ -131,10 +131,18 @@ Gecersiz    : cycle / wall-clock (bu target'ta anlamsiz)
 
 ## Gercek donanimda ne degisir?
 
-Board geldiginde `DWT->CYCCNT` gercekten sayar ve:
+Board üzerinde erişim izinleri, DWT/cycle-counter varlığı ve gerçekten
+ilerlediği ayrıca doğrulanırsa `DWT->CYCCNT` ile:
 
 - cycle bazli olcum mumkun olur
 - flash wait state, cache, branch prediction etkileri gorunur
 - ayni kod QEMU'dakinden farkli siralanabilir
 
 Ayrintisi: `docs/REAL_HARDWARE_MIGRATION.md`
+
+## Çalışan deney
+
+[Ders 12](../lessons/12-debug-dwt/) readback, çalışmayan cycle counter,
+SysTick yerel aralığı, I/O ile kirletilen ölçüm ve yalnızca iş yükünde O0/O2
+karşılaştırmasını çalıştırır. `tests/lesson12-check.py` disassembly ve gerçek
+GDB watchpoint kontrollerini üç preset üzerinde tekrarlar.

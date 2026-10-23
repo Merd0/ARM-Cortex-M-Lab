@@ -190,3 +190,12 @@ Kontrol komutlari:
 qemu-system-arm -machine help | grep mps
 qemu-system-arm -cpu help | grep cortex-m
 ```
+
+## Lesson 12 tekrar ölçümü — 2026-10-23
+
+Windows / QEMU `11.1.0 (v11.1.0-12130-ge470268ff4)`, Cortex-M33 AN505:
+DEMCR.TRCENA ve DWT.CTRL.CYCCNTENA yazma denemesinden sonra her iki
+register readback'i `0x00000000`; CYCCNT başlangıç/bitiş `0/0`.
+GDB write/read watchpoint ise gdbstub üzerinden çalıştı. Bu, fiziksel DWT
+comparator desteğinin kanıtı değildir. Ayrıntılar ve tekrar komutları:
+[Lesson 12](../lessons/12-debug-dwt/).
