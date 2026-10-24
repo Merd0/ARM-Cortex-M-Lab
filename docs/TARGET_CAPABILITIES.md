@@ -199,3 +199,26 @@ register readback'i `0x00000000`; CYCCNT başlangıç/bitiş `0/0`.
 GDB write/read watchpoint ise gdbstub üzerinden çalıştı. Bu, fiziksel DWT
 comparator desteğinin kanıtı değildir. Ayrıntılar ve tekrar komutları:
 [Lesson 12](../lessons/12-debug-dwt/).
+
+
+## Lesson 13 fonksiyonel tekrar — 2026-10-24
+
+Yerel Windows / GCC 15.2.1 / QEMU 11.1.0, `mps2-an505 / cortex-m33`:
+
+- CPACR=0 iken ilk FP komutu NOCP UsageFault (CFSR=0x00080000,
+  HFSR=0, IPSR=6). CP10/CP11 açıldıktan sonra FP toplama sonucu 3.5.
+- Aktif FP context olmadan basic 32-byte; aktif context ile TS=0,
+  Secure→Secure/MSP deneyinde 104-byte extended frame ölçüldü.
+- Lazy LSPACT 1→0 ve raw stack slot'unun ilk handler FP komutuyla
+  dolması, ardından S0–S2 restore edilmesi GDB'de doğrulandı.
+- Çağıranın FZ=1 FPSCR kontrol durumu worker/exception dönüşünde korundu.
+  Denormal aritmetik davranışı bu deneyde ölçülmedi.
+- SMLAD sonucu bounded C referansıyla eşleşti; QADD iki yönde saturation
+  ve Q flag üretti. Bu fonksiyonel doğrulamadır; cycle/hız ölçümü değildir.
+- Exception ile bozulan exclusive reservation ve retry; PRIMASK'ın önceki
+  değere geri yüklenmesi üç preset'te doğrulandı. DMA/global monitor veya
+  çok çekirdekli atomiklik doğrulaması yapılmadı.
+
+Tam komutlar, kapsam ve kayıtlar: [Lesson 13](../lessons/13-sync-fpu-dsp/).
+Bu sonuçlar önceki ID snapshot'ını değiştirmez; başka QEMU sürümü veya
+fiziksel hedefte yeniden ölçülmelidir. Ders 13 uzak CI sonucu ayrıca izlenir.

@@ -55,6 +55,9 @@ jobs:
       - name: Lesson 12 debugger and measurement checks
         run: python3 tests/lesson12-check.py ${{ matrix.preset }}
 
+      - name: Lesson 13 synchronization, FP context and ABI checks
+        run: python3 tests/lesson13-check.py ${{ matrix.preset }}
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,4 +68,5 @@ jobs:
             build/${{ matrix.preset }}/**/*.bin
             build/${{ matrix.preset }}/**/*.map
             build/${{ matrix.preset }}/lesson12-evidence/
+            build/${{ matrix.preset }}/lesson13-evidence/
           if-no-files-found: warn

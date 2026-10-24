@@ -160,9 +160,10 @@ Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
-2026-10-23: Lessons 01–11 `main` üzerinde; Lesson 12 bu geliştirme dalında
-uygulandı ve yerel üç-preset doğrulaması yapıldı. Uzak CI/PR onayı bekliyor.
-Lessons 13–16, beş birleştirici proje ve final proje henüz tamamlanmadı.
+2026-10-24: Lessons 01–12 `main` üzerinde; PR #8 sonrası üç-preset CI geçti.
+Lesson 13 bu geliştirme dalında uygulandı ve yerel QEMU/GDB ile doğrulandı;
+uzak CI/PR onayı bekliyor. Lessons 14–16, beş birleştirici proje ve final
+proje henüz tamamlanmadı.
 Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### Altyapı
@@ -197,7 +198,7 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### İleri Konular
 
-- [ ] Synchronization / FPU / DSP
+- [x] Synchronization / FPU / DSP (Lesson 13: yerel doğrulandı; CI/PR bekliyor)
 - [ ] SysTick & PendSV
 - [ ] Mini kernel & context switching
 - [ ] TrustZone & advanced features
