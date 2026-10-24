@@ -1,6 +1,6 @@
 # Lesson 16 — TrustZone & Advanced Features
 
-`[DEEP]` · **STATUS: temel geliştirme doğrulandı; toplu kalite kapısı bekliyor**
+`[DEEP]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
 
 ## TEACH — İki güvenlik durumu, aynı işlemci
 
@@ -152,3 +152,10 @@ geniş negatif testler toplu kalite kapısında yapılacak.
 - [QEMU fault handling](https://github.com/qemu/qemu/blob/v8.2.2/target/arm/tcg/m_helper.c): NS data attribution fault'unda AUVIOL yolu; model gözleminin bağlamı.
 
 **Previous:** [15](../15-mini-kernel/) · **Next:** toplu kalite kapısı, sonra [projeler](../../projects/).
+
+## Son toplu kapı
+
+Üç preset clean build ve dört çift QEMU senaryosu PASS. Final sistemde yeniden
+kullanılan aynı boot/SAU/NSC kaynaklarının Secure geçişi ve fault sınırı ayrıca
+GDB ile doğrulandı. Standalone Lesson 16'nın ayrı kapsamlı GDB/audit sertifikası
+iddia edilmez. [Progress](../../docs/PROGRESS.md) tüm yerel kapıları ve uzak CI durumunu ayırır.

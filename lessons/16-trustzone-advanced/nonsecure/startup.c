@@ -4,12 +4,14 @@ extern int main(void);
 void NS_Reset_Handler(void);
 static void unexpected(void) { for (;;) __asm volatile("wfi"); }
 typedef void (*handler_t)(void);
+#ifndef L16_EXTERNAL_VECTORS
 __attribute__((section(".vectors"),used))
 const handler_t ns_vectors[16] = {
     (handler_t)&__stack_top, NS_Reset_Handler, unexpected, unexpected,
     unexpected, unexpected, unexpected, 0, 0, 0, 0, unexpected, unexpected, 0,
     unexpected, unexpected
 };
+#endif
 void NS_Reset_Handler(void)
 {
     uint32_t *src = &__etext;

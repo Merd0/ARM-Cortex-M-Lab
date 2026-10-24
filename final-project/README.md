@@ -1,6 +1,6 @@
 # Final Project
 
-**STATUS: planned** — specialization'ın sonunda başlanacak.
+**STATUS: çalışan yerel entegrasyon; üç-preset kapısı PASS, uzak CI/merge bekliyor.**
 
 Tek bir proje: [`secure-real-time-sensor-node/`](secure-real-time-sensor-node/)
 

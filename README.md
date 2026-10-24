@@ -160,12 +160,16 @@ Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
-2026-10-24: Lessons 01–12 `main` üzerinde; PR #8 sonrası üç-preset CI geçti.
-Lesson 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) üzerinde;
-üç preset CI PASS, merge onayı bekliyor. Lessons 14–16 yerel
-`codex/lessons-14-16` dalında çalışan örnek/alıştırma/çözümleriyle uygulandı:
-Debug build ve temel QEMU kapısı geçti. Toplu kalite denetimi, uzak CI ve
-merge henüz yapılmadı. Beş birleştirici proje ve final proje planlı.
+2026-10-24 teknik teslim: 16 ders, beş birleştirici proje ve çalışan Secure
+Sensor Node uygulandı. Debug/Release/MinSize clean build, geniş regresyonlar
+ve kritik GDB kapıları yerelde PASS. Lesson 13, üç preset CI sonrası
+[PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi.
+Lesson 14–16 da [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+ile üç preset CI sonrası merge edildi. Proje/final entegrasyonu dahil her PR yalnız üç preset CI
+başarılıysa `main` dalına alınır. Yayımlanan commit'lerin güncel uzak sonuçları
+[GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions) üzerindedir.
+Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
+doğrulaması olarak sunulmaz.
 Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### Altyapı
@@ -200,19 +204,22 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### İleri Konular
 
-- [x] Synchronization / FPU / DSP (Lesson 13: PR #9, üç preset CI PASS; merge bekliyor)
-- [x] SysTick & PendSV (yerel temel geliştirme; toplu kalite kapısı bekliyor)
-- [x] Mini kernel & context switching (yerel temel geliştirme; toplu kalite kapısı bekliyor)
-- [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; toplu kalite kapısı bekliyor)
+- [x] Synchronization / FPU / DSP (Lesson 13: PR #9 merge, üç preset CI PASS)
+- [x] SysTick & PendSV (üç preset/QEMU/GDB yerel PASS; uzak kabul kapısı: üç preset CI)
+- [x] Mini kernel & context switching (üç preset/QEMU/GDB yerel PASS; uzak kabul kapısı: üç preset CI)
+- [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; yerel kapılar PASS)
 
 ### Projeler
 
-- [ ] Protected Application
-- [ ] Fault Analyzer
-- [ ] From Reset to Main
-- [ ] Performance Profiler
-- [ ] Educational Mini Kernel
-- [ ] Final Project
+- [x] Protected Application (yerel üç preset PASS)
+- [x] Fault Analyzer (yerel üç preset PASS)
+- [x] From Reset to Main (yerel üç preset PASS)
+- [x] Performance Profiler (yerel üç preset PASS)
+- [x] Educational Mini Kernel (yerel üç preset PASS)
+- [x] Final Project (yerel üç preset PASS)
+
+Projeler/final için uzak kabul kapısı da aynı üç preset CI'dir; güncel sonuçlar
+yukarıdaki Actions bağlantısında, ilgili commit ve PR altında izlenir.
 
 Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 
@@ -224,12 +231,12 @@ Birden fazla dersin konularını birleştiren projeler; her birinin ayrı README
 
 | Proje | Birleştirdiği konular | Durum |
 |---|---|---|
-| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Planlandı |
-| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decode + CFSR/HFSR analizi | Planlandı |
-| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Planlandı |
-| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi + compiler optimizasyonu | Planlandı |
-| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Planlandı |
-| [Final Project](final-project/) | Hepsinin entegrasyonu | Planlandı |
+| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Yerel üç-preset PASS |
+| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decode + CFSR/HFSR analizi | Yerel üç-preset PASS |
+| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Yerel üç-preset PASS |
+| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi + compiler optimizasyonu | Yerel üç-preset PASS |
+| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Yerel üç-preset PASS |
+| [Final Project](final-project/) | Hepsinin entegrasyonu | Yerel üç-preset PASS |
 
 ---
 

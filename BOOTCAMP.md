@@ -9,10 +9,12 @@ DEEP TRACK'e bırak.
 **Durum:** `[ ]` yapılmadı · `[~]` devam ediyor · `[x]` bitti
 
 Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
-otomatik işaretlenmez. Repository teslim durumu: ders 01–12 `main` üzerinde;
-ders 13 PR #9'da üç preset CI'yi geçti, merge bekliyor. Ders 14–16 yerel
-dalda temel Debug/QEMU kabulünü geçti; toplu kalite denetimi ve uzak yayınlama
-henüz yapılmadı. Projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
+otomatik işaretlenmez. Repository teknik teslimi: 16 ders, beş proje ve final
+sensor node uygulandı; yerel üç-preset/QEMU ve kritik GDB kapıları geçti.
+Ders 13 PR #9, Lesson 14–16 PR #10 ile üç preset CI sonrası merge edildi.
+Proje/final PR'ı için de merge koşulu üç preset CI başarısıdır. Güncel
+yayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.md) içindedir.
+Öğrenci çalışma kutuları teknik teslim adına otomatik doldurulmaz. Güncel teknik durum: [Progress](docs/PROGRESS.md).
 
 ---
 

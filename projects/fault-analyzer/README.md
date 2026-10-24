@@ -1,113 +1,49 @@
 # Project — Fault Analyzer
 
-**STATUS: planned** · Bağımlı dersler: 07, 08
+**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
 
-> Bu proje ilerleyen tüm derslerde **yeniden kullanılacak**. Ders 08'den sonra
-> yazılır, ders 15'teki mini kernel'da hâlâ işe yarar.
+[diagnostic.c](diagnostic.c) Lesson 08'in referans decoder'ını yeniden kullanır.
+Önüne konservatif frame capture sınırı ekler: trusted stack bounds, desteklenen
+EXC_RETURN, minimum uzunluk, hizalama, xPSR.T/exception mode ve padding.
+MSTKERR, STKERR, STKOF, unstack/lazy-save hatalarında **pointer dereference edilmez**.
+Basic same-state Secure ve Non-secure frame desteklenir. FP ve cross-security
+frame'ler sessizce yanlış decode edilmek yerine reddedilir.
 
----
+## Kritik düzeltme
 
-## Problem
+`0xFFFFFFFD` bu temel Secure bağlamda **Thread Mode / PSP / basic frame**
+dönüşüdür. Handler/MSP dönüşü değildir. Non-secure same-state karşılığı
+`0xFFFFFFBC` olur; security bitlerini yok sayarak aynı sabit kullanılamaz.
 
-Cortex-M'de bir crash'in varsayılan görüntüsü şudur: işlemci sonsuz döngüde
-bekleyen bir `Default_Handler` içindedir ve hiçbir şey söylemez. Bu oturumda
-ölçülen gerçek bir örnekte elde edilen tek ham veri şuydu:
+Örneğin CFSR=0x9200 hem PRECISERR hem STKERR ve BFARVALID içerir.
+HFSR.FORCED=1 yükseltilmiş fault'u gösterir. BFAR ancak validity bitiyle adres
+kanıtıdır; stacking başarısız olduğundan stacked PC **güvenilir değildir**.
+Bitlerin birlikte bulunması tek başına olayların nedensel sırasını kanıtlamaz.
 
-```text
-IPSR = 3        (HardFault)
-CFSR = 0x00009200
-HFSR = 0x40000000
-BFAR = 0xFFFFFFF8
-LR   = 0xFFFFFFFD
+## Çalıştırma
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+./scripts/run-qemu.sh build/debug/projects/fault-analyzer/project-fault-bus.elf
+python tests/system-smoke.py
 ```
 
-Bu sayılar bir insana hiçbir şey anlatmaz. Fault Analyzer'ın işi bunları
-şuna çevirmektir:
+Gerçek firmware'ler: project-fault-udf, -unaligned, -bus, -mpu, -escalated.
+Ayrı project-fault-cases, sentetik negatif snapshot testlerini çalıştırır.
+Bunlar gerçek stacking fault üretilmiş gibi sunulmaz.
 
-```text
-===== FAULT REPORT =====
-TYPE     : HardFault (escalated)
-CAUSE    : BusFault - precise data bus error during exception stacking
-BFAR     : 0xFFFFFFF8 (valid)
-RETURN   : Handler Mode, MSP, no FP context
-NOTE     : stacking failed -> stacked frame is NOT trustworthy
-========================
-```
+Debug/QEMU'da beş gerçek fault senaryosunda CAUSE/FRAME/PRIVILEGE/CLEAR PASS;
+dokuz sentetik kontrolde MSP/PSP/NS basic frame, stack-error reddi, FP/cross-state
+reddi, bounds ve MMFAR/BFAR validity PASS. HFSR temizliği Cortex-M33 DEBUGEVT=1
+yazma kuralını korur; generic CMSIS IMPRECISERR sabiti M33 BFSR bit2 uygulanmış
+gibi yorumlanmaz. Raw CFSR/HFSR kaybolmaz; birincil sınıf bütün root-cause zinciri değildir.
 
----
+Handler privilege CONTROL.nPRIV'den çıkarılmaz. Handler her zaman privileged'dır.
+Capture, corrupt MSP üzerinde güvenli bir emergency-stack mekanizması değildir;
+böyle bir durumda exception entry/raporlama zaten çalışamayabilir.
 
-## Architecture
+GDB ve geniş negatif set son kapıda yapılacak. Öğrenci starter'ı ve referans
+decoder [Lesson 08](../../lessons/08-faults/) içinde ayrı kalır.
 
-```mermaid
-flowchart TD
-    F["Fault exception"] --> E["fault_entry (naked asm)"]
-    E -->|EXC_RETURN bit 2| S{"Hangi stack?"}
-    S -->|0| M["MSP"]
-    S -->|1| P["PSP"]
-    M --> D["fault_report(frame*)"]
-    P --> D
-    D --> A["Stacked frame decode<br/>R0 R1 R2 R3 R12 LR PC xPSR"]
-    D --> B["Status register decode<br/>CFSR / HFSR / MMFAR / BFAR"]
-    A --> O["Konsol raporu"]
-    B --> O
-```
-
-Kritik detay: hangi stack pointer'ın frame'i taşıdığını **tahmin edemezsin**;
-`EXC_RETURN`'ün (yani handler girişindeki `LR`'nin) 2. biti bunu söyler. Bu
-yüzden giriş noktası `__attribute__((naked))` bir asm parçasıdır — derleyicinin
-prolog üretmesine izin verirsen `LR` bozulur.
-
----
-
-## Yapılacaklar (student)
-
-1. `fault_entry` — naked; `LR`'yi inceleyip doğru SP'yi `R0`'a koyar ve
-   `fault_report`'a dallanır.
-2. `struct exception_frame` — donanımın ittiği 8 word'ün tam sırası.
-   (Soft-float kullanıyoruz, yani frame 8 word. FPU açılırsa değişir — bunu
-   ders 13'te göreceğiz.)
-3. `decode_cfsr()` — MMFSR / BFSR / UFSR alanlarını ayrı ayrı bas, `*VALID`
-   bitlerini kontrol etmeden `MMFAR`/`BFAR`'a güvenme.
-4. `decode_exc_return()` — mod, stack, FP context, security state.
-5. `decode_hfsr()` — `FORCED` bitinin anlamı: HardFault aslında başka bir
-   fault'un yükseltilmiş (escalated) halidir.
-
-`TODO(student)` blokları `src/` içinde hazır olacak; decode tabloları
-**verilmeyecek**, referans kılavuzdan sen çıkaracaksın.
-
----
-
-## Acceptance criteria
-
-- [ ] Analyzer dört farklı senaryoyu doğru sınıflandırıyor:
-      hizasız erişim (UsageFault), geçersiz adres (BusFault),
-      MPU ihlali (MemManage), tanımsız komut (UsageFault).
-- [ ] Rapor, escalated HardFault ile doğrudan HardFault'u ayırt ediyor.
-- [ ] `*VALID` biti 0 iken adres register'ı "geçersiz" olarak raporlanıyor.
-- [ ] Stacking'in kendisi başarısız olduğunda (`BFSR.STKERR`) rapor,
-      frame'in güvenilmez olduğunu **açıkça** söylüyor.
-
-Son madde bu oturumda ölçülen gerçek senaryodan geliyor: stacking başarısız
-olduğunda stack üzerinde okuduğun değerler anlamsızdır. Çoğu basit fault
-handler bunu kaçırır ve yanlış PC raporlar.
-
----
-
-## Yeniden kullanım
-
-Bitince kaynak `common/` altına taşınabilir; sonraki tüm lesson firmware'leri
-aynı analyzer'ı linkleyebilir. Portfolio açısından da en gösterilebilir
-parçalardan biri: crash diagnostics yazabilmek, embedded'de doğrudan iş
-becerisidir.
-
----
-
-## References
-
-- Armv8-M Architecture Reference Manual — Fault handling, `CFSR`, `HFSR`
-- Cortex-M33 Devices Generic User Guide — System Control Block register'ları
-- [`docs/DEBUGGING.md`](../../docs/DEBUGGING.md) — CFSR bit tablosu
-
----
-
-[← projects/](../README.md) · [Ders 08 — Faults](../../lessons/08-faults/README.md)
+[Projects](../README.md)

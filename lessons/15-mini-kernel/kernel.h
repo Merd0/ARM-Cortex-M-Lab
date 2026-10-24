@@ -10,7 +10,11 @@ typedef struct {
 } task_t;
 _Static_assert(offsetof(task_t, low) == 4 && offsetof(task_t, high) == 8, "ASM TCB offsets");
 enum { L15_WORDS = 512, L15_SAVED_WORDS = 9, L15_CONTEXT_WORDS = 17 };
+#ifdef L15_NONSECURE
+#define L15_EXC_RETURN 0xFFFFFFBCU
+#else
 #define L15_EXC_RETURN 0xFFFFFFFDU
+#endif
 uint32_t *l15_initial_frame(uint32_t *top, uint32_t id, uintptr_t entry, uintptr_t exit);
 void l15_task_entry(void);
 void l15_task_exit(void);
