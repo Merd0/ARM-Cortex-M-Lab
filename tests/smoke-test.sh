@@ -122,6 +122,12 @@ L11A="$BUILD/lessons/11-startup/11-startup.elf"
 L11B="$BUILD/lessons/11-startup/11-startup-broken.elf"
 L11E="$BUILD/lessons/11-startup/11-exercise-startup.elf"
 L11S="$BUILD/lessons/11-startup/11-solution-startup.elf"
+L12DIR="$BUILD/lessons/12-debug-dwt"
+
+for name in 12-debug-dwt 12-debug-dwt-broken 12-profile-io 12-profile-o0 12-profile-o2 \
+            12-exercise-measurement 12-solution-measurement; do
+    [ -f "$L12DIR/$name.elf" ] && ok "$name.elf" || bad "uretilmedi: $name.elf"
+done
 
 for f in "$CAP" "$L02" "$L02B" "$L02E" "$L02S" \
          "$L03" "$L03B" "$L03E" "$L03S" "$L03M" \
@@ -607,6 +613,35 @@ expect_line "$out" "faz sirasi" "[  CHECK_PHASE_ORDER] PASS"
 expect_line "$out" "vector[0]" "[  CHECK_VECTOR0_EQ_STACK_TOP] PASS"
 expect_line "$out" "tamamlandi" "===== END ====="
 reject_line "$out" "hicbir FAIL yok" "] FAIL"
+
+# ===========================================================================
+sect "15. Lesson 12 - debugging ve olcum sinirlari"
+for name in 12-debug-dwt 12-debug-dwt-broken 12-profile-io 12-profile-o0 12-profile-o2; do
+    out="$(run_qemu "$L12DIR/$name.elf")"
+    watch=PASS; clean=PASS
+    [ "$name" = "12-debug-dwt-broken" ] && watch=FAIL
+    [ "$name" = "12-profile-io" ] && clean=FAIL
+    expect_line "$out" "$name: veri yazimi" "[CHECK_WATCH_VALUE] $watch"
+    expect_line "$out" "$name: temiz pencere" "[CHECK_CLEAN_WINDOW] $clean"
+    for check in WORKLOAD TIMER_CONFIG TIMER_PROGRESS NO_FAULT; do
+        expect_line "$out" "$name: $check" "[CHECK_$check] PASS"
+    done
+    expect_line "$out" "$name: sonuc" "[CHECKSUM] 424"
+    expect_line "$out" "$name: DWT gozlemi" "[DWT_CHANGED] NO"
+    expect_line "$out" "$name: cycle iddiasi yok" "[CYCLE_BENCHMARK] NOT VALIDATED ON QEMU"
+    expect_line "$out" "$name: tamamlandi" "===== END ====="
+done
+for kind in exercise solution; do
+    out="$(run_qemu "$L12DIR/12-$kind-measurement.elf")"
+    expected=FAIL; count=0
+    if [ "$kind" = solution ]; then expected=PASS; count=12; fi
+    for case_name in FORWARD WRAP STOPPED_ZERO STOPPED_NONZERO NO_TRACE DISABLED \
+                     NO_COUNTER SECURE_DISABLED IO IO_AND_STOPPED DELTA_FORWARD DELTA_WRAP; do
+        expect_line "$out" "$kind: $case_name" "[$case_name] $expected"
+    done
+    expect_line "$out" "$kind: tum vakalar" "[CASES_PASSED] $count"
+    expect_line "$out" "$kind: tamamlandi" "===== END ====="
+done
 
 # --- Ozet -----------------------------------------------------------------
 echo

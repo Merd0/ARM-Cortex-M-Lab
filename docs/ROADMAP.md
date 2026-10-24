@@ -1,5 +1,40 @@
 # Roadmap
 
+## Tamamlama sırası — 2026-10-23
+
+Başlangıç: `main` = `266642efb55e881a275a1034a01923ecbd17a3fa`.
+Ders 01–11 ve önceki audit düzeltmeleri korunur. Yeni bir müfredat veya
+platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
+
+1. **Lesson 12 — Debugging & DWT:** bu dalda uygulandı; yerel build/QEMU/GDB
+   doğrulandı. Uzak yayınlama ve CI/PR bekliyor. Cycle sayacı yerine uydurma
+   ölçüm yok; debugger teşhisi, statik boyut ve yerel timer deneyleri var.
+2. **Lesson 13 — Sync/FPU/DSP:** kontrollü lost-update ve exclusive monitor,
+   CPACR izinleri, FP exception context, soft/hard-float ABI sınırları.
+3. **Lesson 14 — SysTick/PendSV:** timer, öncelik, pending ve yürütme sırası.
+4. **Lesson 15 — Mini Kernel:** PSP/MSP, sentetik ilk frame, assembly
+   R4–R11/EXC_RETURN koruması, stack sınırları ve scheduler regresyonları.
+5. **Lesson 16 — TrustZone:** AN505 üzerinde gerçek Secure/Non-secure imaj,
+   SAU/NSC/gateway ve yetkisiz erişim deneyleri; ileri özellikler capability
+   kanıtı olmadan çalışıyor sayılmayacak.
+6. **Birleştirici projeler:** From Reset to Main (10–11), Fault Analyzer
+   (07–08), Protected Application (04–08), Performance Profiler (09/12),
+   Educational Mini Kernel (14–15). Her biri ayrı kabul kapısıdır.
+7. **Final sensor node:** beş projenin ve TrustZone sınırının entegrasyonu;
+   sentetik sensör, veri işleme ve kontrollü servisler. Güvenlik iddiaları
+   negatif testlerle, gerçek zaman iddiaları hedef/model sınırlarıyla raporlanır.
+
+Her aşama: mevcut base kontrolü → ayrı dal → uygulama → üç preset → QEMU
+ve GDB → negatif testler → teknik inceleme → kısa teslim. Uzak push/PR/merge
+için kullanıcı onayı alınır; CI geçmeden merge yapılmaz. Sonraki aşamalar
+bu listede yer aldığı için tamamlanmış kabul edilmez. Checkpoint etiketi
+ve Release ayrıca kararlaştırılır.
+
+Önceki auditlerin korunan kabul kriterleri: fresh PSP frame/stack guard,
+EXC_RETURN ve fault-frame reddi, M33 HFSR/BFSR kuralları, tam cevap eşitliği,
+AAPCS/SP recovery, effective -O2, libgcc sırası, FLASH LMA sınırı, reserved
+vektörler 8/9/10/13. Mevcut testler azaltılmayacak.
+
 ## Faz 0 - Bootstrap (TAMAMLANDI)
 
 - Repository iskeleti, CMake + Ninja + Arm GNU Toolchain build sistemi

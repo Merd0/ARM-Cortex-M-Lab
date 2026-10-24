@@ -1,13 +1,17 @@
 # Progress
 
 Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
-çalışmalar işaretlenir. Bir dersin tamamlanması için şu adımlar gerekir:
+çalışmalar işaretlenir. Bir dersin öğrenci tarafından tamamlanması için:
 
 1. Firmware build edildi
 2. QEMU'da çalıştırıldı ve çıktısı README'ye yazıldı
 3. GDB gözlemi yapıldı
 4. Experiment ve Break It denendi
 5. "What I Learned" dolduruldu
+
+"What I Learned" öğrencinin kişisel kaydıdır; teknik teslim adına doldurulmaz.
+2026-10-23: ders 01–11 main üzerinde, ders 12 bu dalda yerel doğrulandı;
+uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
 ## Altyapı
 
@@ -16,7 +20,7 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 | CMake + Ninja + arm-none-eabi build sistemi | ✅ |
 | CMSIS-Core 6.3 entegrasyonu (baseline core API) | ✅ (clean build + QEMU + GDB ile doğrulandı) |
 | Eğitim header'ı `cm33_teaching.h` (lesson'lar için) | ✅ |
-| Markdown link kontrolü (`tests/check-links.py`) | ✅ 165 link, 0 kırık |
+| Markdown link kontrolü (`tests/check-links.py`) | ✅ son çalıştırma sayısı aşağıda |
 | CMake presets (debug/release/minsize) | ✅ |
 | MPS2-AN505 platform portu (startup, linker, UART) | ✅ |
 | QEMU'da çalışan firmware | ✅ (doğrulandı) |
@@ -25,8 +29,8 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 | Environment check scriptleri | ✅ bash doğrulandı / ⬜ PowerShell Windows'ta test edilmeli |
 | Target capability probe | ✅ (ölçüldü) |
 | Dokümantasyon temeli | ✅ |
-| Smoke test (`tests/smoke-test.sh`) | ✅ üç preset'te de 26 PASS / 0 FAIL |
-| CI (`.github/workflows/ci.yml`) | ✅ yazıldı / ⬜ GitHub'da çalıştığı doğrulanmadı |
+| Smoke test (`tests/smoke-test.sh`) | ✅ davranışsal regresyon; güncel sonuç aşağıda |
+| CI (`.github/workflows/ci.yml`) | ✅ önceki PR #7 üç preset PASS; bu dalın CI değişikliği henüz uzakta çalışmadı |
 | VS Code tasks + launch | ✅ yazıldı / ⬜ Windows'ta denenmedi |
 | Proje ve final-project tanımları | ✅ README'ler yazıldı / ⬜ kod yok (planlı) |
 
@@ -45,23 +49,27 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 | 09 | Compiler & AAPCS | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 10 | Linker, ELF & Memory | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 11 | Startup (Reset → main) | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| 12 | Debug & DWT | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
+| 12 | Debug & DWT | ✅ | ✅ | ✅ yerel | ✅ üç preset | ⬜ |
 | 13 | Sync, FPU & DSP | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 14 | SysTick & PendSV | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 15 | Mini Kernel | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 16 | TrustZone & Advanced | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 
-## Onarim pass (bagimsiz denetim sonrasi)
+## Doğrulama kaydı
 
-Kritik ve altyapi bulgulari kapatildi; ayrinti icin o oturumun raporuna bak.
-Dogrulama durumu (bu container'da olculdu):
+Önceki bağımsız audit düzeltmeleri Git geçmişinde korunuyor. Başlangıç
+regresyonu 2026-10-23 Windows üzerinde yeniden geçti: üç preset, 48 mevcut
+ELF/preset, smoke 369/0 ve probes 47/0.
+
+Lesson 12 teslimi, 2026-10-23 Windows / GCC 15.2.1 / QEMU 11.1.0:
 
 | Kontrol | Sonuc |
 |---|---|
-| Temiz build, uc preset | ✅ 14 ELF / preset, 0 uyari |
-| `tests/smoke-test.sh` | ✅ 369 PASS / 0 FAIL, uc preset |
+| Temiz build, uc preset | ✅ 55 ELF / preset, 0 uyarı / 0 hata |
+| `tests/smoke-test.sh` | ✅ 454 PASS / 0 FAIL, üç preset |
 | `tests/build-probes.sh` | ✅ 47 PASS / 0 FAIL, uc preset |
-| `tests/check-links.py` | ✅ 314 link, 0 kirik |
+| `tests/check-links.py` | ✅ 337 link, 0 kırık |
+| `tests/lesson12-check.py` | ✅ üç preset; write/read watchpoint, backtrace, single-step, stopped-timer ve I/O negatif kontrolleri, header/optimizasyon karşılaştırması |
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
 
@@ -71,6 +79,7 @@ Dogrulama durumu (bu container'da olculdu):
 |---|---|---|---|
 | 01 | senaryo yazımı (kod yok) | — | `lessons/01-cortex-m-family/answers/reference-answers.md` |
 | 02 | `exercises/01-decode-apsr-flags/` | `solutions/01-decode-apsr-flags/` (çalıştırıldı ✅) | `lessons/02-programmer-model/answers/quick-check.md` |
+| 12 | `exercises/01-valid-measurement/` (0/12, eksik) | `solutions/01-valid-measurement/` (12/12 PASS) | `lessons/12-debug-dwt/answers/quick-check.md` |
 | 11 | `exercises/01-reset-sequence/` | `solutions/01-reset-sequence/` (çalıştırıldı ✅) | `lessons/11-startup/answers/quick-check.md` |
 | 10 | `exercises/01-locate-your-data/` | `solutions/01-locate-your-data/` (çalıştırıldı ✅) | `lessons/10-linker-elf-memory/answers/quick-check.md` |
 | 09 | `exercises/01-callee-save/` | `solutions/01-callee-save/` (çalıştırıldı ✅) | `lessons/09-compiler-aapcs/answers/quick-check.md` |
