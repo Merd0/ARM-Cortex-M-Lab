@@ -130,6 +130,14 @@ HardFault'a yükseldi; bu deneme Thread-origin testinin yerine kullanılamaz.
 Final negatif firmware gerçek unprivileged Thread erişimini sınar.
 Bu model gözlemi tüm Cortex-M33 donanımlarına genellenmez.
 
+CI QEMU 8.2.2'de Secure taraftan NS SysTick alias'ına erişim, modelin
+reentrancy guard hatasıyla BusFault üretir
+([upstream düzeltme](https://github.com/qemu/qemu/commit/4a934d284dfac9fa19b0f47874f12d9b3519c21c)).
+NS kernel normal/fault sonlandırmada kendi timer'ını durdurur; Secure raporlama
+bunu alias üzerinden tekrar etmez. Terminal Secure yollar kesmeleri maskeler
+ve dönmez. Bu model hatası, alias adresinin mimari olarak geçersiz olduğu
+anlamına gelmez; runtime/fault beklentileri bu nedenle gevşetilmez.
+
 Debugger/DMA, code injection/ROP, gerçek kart, kriptografik kimlik ve üretim
 RTOS güvenilirliği bu eğitim sisteminin doğrulanmış güvenlik kapsamı değildir.
 DWT CYCCNT burada ilerlemez; performans/WCET sonucu uydurulmaz.

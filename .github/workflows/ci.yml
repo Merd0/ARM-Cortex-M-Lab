@@ -43,6 +43,15 @@ jobs:
           find build/${{ matrix.preset }} -name '*.elf' -print0 \
             | xargs -0 -r arm-none-eabi-size
 
+      - name: Projects and final sensor pipeline
+        run: python3 tests/system-smoke.py --preset ${{ matrix.preset }}
+
+      - name: Context, fault and CMSE debugger gate
+        run: python3 tests/integration-check.py --preset ${{ matrix.preset }}
+
+      - name: Static profiling report
+        run: python3 tests/profile-report.py --preset ${{ matrix.preset }}
+
       - name: Smoke + regression tests (QEMU)
         run: ./tests/smoke-test.sh ${{ matrix.preset }}
 
@@ -60,15 +69,6 @@ jobs:
 
       - name: Lessons 14-16 development gate (tick, context, TrustZone)
         run: python3 tests/development-smoke.py all --preset ${{ matrix.preset }}
-
-      - name: Projects and final sensor pipeline
-        run: python3 tests/system-smoke.py --preset ${{ matrix.preset }}
-
-      - name: Context, fault and CMSE debugger gate
-        run: python3 tests/integration-check.py --preset ${{ matrix.preset }}
-
-      - name: Static profiling report
-        run: python3 tests/profile-report.py --preset ${{ matrix.preset }}
 
       - name: Upload artifacts
         if: always()
