@@ -88,3 +88,28 @@ sonlandırır.
 ---
 
 [← Ana sayfa](../README.md)
+
+## Lessons 14–16 — hızlı geliştirme kapısı
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+python tests/development-smoke.py all
+# Tek ders: python tests/development-smoke.py 15
+```
+
+Stdlib Python; her imajın END işareti, CHECK anahtarlarının tam kümesi ve
+beklenen PASS/FAIL sonuçları kontrol edilir. 12 senaryo: her derste örnek,
+kasıtlı hata, eksik starter ve ayrı çözüm. Lesson 16 her seferinde Secure
+kernel ELF + Non-secure loader ELF birlikte yükler; tek imaj yeterli değildir.
+
+PendSV sırası/pending birleşmesi, gerçek timer preemption, R4–R11 canary'leri,
+stack guard'ları, ilk frame reddi, NSC dönüşleri, AUVIOL ve INVEP temel kapsamdır.
+SFAR yalnız SFARVALID set ise adres olarak kullanılır. Ham kayıtlar ignored
+`build/<preset>/development-evidence/` altında tutulur. Süreçler yalnız testin
+başlattığı QEMU'ya ait PID üzerinden kapatılır.
+
+Yeni kapı üç CI preset'ine bağlandı; uzak sonuç ancak dal push edilince oluşur.
+Bu aşamada Debug çalıştırıldı; `--preset release` / `--preset minsize` seçenekleri
+toplu kapıda kullanılacak. Mevcut smoke, build-probes ve GDB script'leri
+azaltılmadı. Bu hızlı test tam mimari/security audit veya donanım testi değildir.

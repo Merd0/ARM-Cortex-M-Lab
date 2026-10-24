@@ -10,8 +10,9 @@ DEEP TRACK'e bırak.
 
 Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
 otomatik işaretlenmez. Repository teslim durumu: ders 01–12 `main` üzerinde;
-ders 13 bu dalda yerel olarak doğrulandı, uzak CI/PR bekliyor. Ders 14–16
-ve projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
+ders 13 PR #9'da üç preset CI'yi geçti, merge bekliyor. Ders 14–16 yerel
+dalda temel Debug/QEMU kabulünü geçti; toplu kalite denetimi ve uzak yayınlama
+henüz yapılmadı. Projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
 
 ---
 
