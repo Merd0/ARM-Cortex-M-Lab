@@ -16,6 +16,8 @@ volatile uint32_t g_l15_runs[2], g_l15_bad[2], g_l15_booted;
 static volatile uint32_t bad_stack[2];
 static volatile uint32_t tick_pending;
 extern uint32_t __stack_top;
+__attribute__((weak)) void l15_application_step(uint32_t id) { (void)id; }
+__attribute__((weak)) void l15_application_report(void) { }
 
 static void check(const char *key, uint32_t ok)
 {
@@ -74,6 +76,7 @@ uint32_t l15_observe(uint32_t id, uint32_t registers_ok)
         bad_stack[id] = 1U;
     ++g_l15_runs[id];
     if (!registers_ok) g_l15_bad[id] = 1U;
+    l15_application_step(id);
     if ((g_l15_runs[0] >= 12U && g_l15_runs[1] >= 12U &&
          g_l15_ticks >= 4U && g_l15_async >= 2U) ||
         g_l15_ticks >= 16U || g_l15_switches >= 50000U) return 1U;
@@ -110,6 +113,7 @@ void l15_finish(void)
           __get_MSP() <= (uint32_t)(uintptr_t)&__stack_top &&
           __get_MSP() > (uint32_t)(uintptr_t)&__stack_top - 4096U);
     check("CHECK_NO_FAULT", SCB->CFSR == 0U && SCB->HFSR == 0U);
+    l15_application_report();
     console_line("===== END =====");
     for (;;) __WFI();
 }
