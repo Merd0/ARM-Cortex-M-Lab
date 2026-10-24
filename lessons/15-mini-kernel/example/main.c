@@ -13,6 +13,7 @@ static task_t tasks[2];
 task_t *g_l15_current;
 volatile uint32_t g_l15_ticks, g_l15_switches, g_l15_yields, g_l15_async;
 volatile uint32_t g_l15_runs[2], g_l15_bad[2], g_l15_booted;
+static volatile uint32_t bad_stack[2];
 static volatile uint32_t tick_pending;
 extern uint32_t __stack_top;
 
@@ -65,6 +66,12 @@ uint32_t l15_observe(uint32_t id, uint32_t registers_ok)
     /* ASM masks interrupts only across this C call. The broken-save experiment
      * therefore corrupts canaries in ASM, not a suspended C pointer/frame. */
     if (id > 1U) l15_panic();
+    const task_t *task = &tasks[id];
+    uint32_t psp = __get_PSP();
+    if (__get_IPSR() != 0U || (__get_CONTROL() & 7U) != 2U ||
+        g_l15_current != task || __get_PSPLIM() != (uint32_t)(uintptr_t)task->low ||
+        psp < (uint32_t)(uintptr_t)task->low || psp > (uint32_t)(uintptr_t)task->high)
+        bad_stack[id] = 1U;
     ++g_l15_runs[id];
     if (!registers_ok) g_l15_bad[id] = 1U;
     if ((g_l15_runs[0] >= 12U && g_l15_runs[1] >= 12U &&
@@ -96,6 +103,7 @@ void l15_finish(void)
     check("CHECK_TASK_PROGRESS", g_l15_runs[0] >= 12U && g_l15_runs[1] >= 12U);
     check("CHECK_REGISTERS", g_l15_bad[0] == 0U && g_l15_bad[1] == 0U);
     check("CHECK_STACK_GUARDS", guards());
+    check("CHECK_TASK_STACKS", bad_stack[0] == 0U && bad_stack[1] == 0U);
     check("CHECK_PREEMPTION", g_l15_ticks >= 4U && g_l15_async >= 2U);
     check("CHECK_YIELD", g_l15_yields >= 16U);
     check("CHECK_HANDLER_MSP", __get_IPSR() == 11U &&

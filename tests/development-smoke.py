@@ -64,7 +64,7 @@ def lesson15(build, evidence):
                          ("15-exercise-frame", ("CHECK_INITIAL_FRAME",)), ("15-solution-frame", ())):
         checks = ("CHECK_INITIAL_FRAME", "CHECK_STACK_GUARDS", "CHECK_NO_FAULT")
         checks += (("CHECK_NO_LAUNCH",) if "exercise" in name else
-                   ("CHECK_TASK_PROGRESS", "CHECK_REGISTERS", "CHECK_PREEMPTION", "CHECK_YIELD", "CHECK_HANDLER_MSP"))
+                   ("CHECK_TASK_PROGRESS", "CHECK_REGISTERS", "CHECK_PREEMPTION", "CHECK_YIELD", "CHECK_HANDLER_MSP", "CHECK_TASK_STACKS"))
         verify(folder / (name + ".elf"), evidence, failed, required=checks)
 
 

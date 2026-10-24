@@ -1,8 +1,8 @@
-# Quick Check cevaplarÄ±
+# Quick Check cevapları
 
-1. IDAU daha sÄ±kÄ± attribution verebilir; bus MPC'si NS iÅŸlemini ayrÄ±ca engelleyebilir.
-2. HayÄ±r. NSC, SG Ã¼zerinden kontrollÃ¼ giriÅŸ bÃ¶lgesidir; Secure body ve secret NS olmaz.
-3. SFARVALID ayrÄ± validlik bitidir. Temizse register iÃ§eriÄŸi fault adresi deÄŸildir.
-4. NS pointer'Ä±nÄ±n attribution, range overflow ve TOCTOU doÄŸrulamasÄ±na ihtiyaÃ§
-   doÄŸurmaz. Pointer API'si eklenirse bu problemler ayrÄ±ca Ã§Ã¶zÃ¼lmelidir.
-5. HayÄ±r. Ä°maj doÄŸrulama/imza, anahtar yÃ¶netimi ve gÃ¼venilir boot zinciri uygulanmadÄ±.
+1. IDAU daha sıkı attribution verebilir; bus MPC'si NS işlemini ayrıca engelleyebilir.
+2. Hayır. NSC, SG üzerinden kontrollü giriş bölgesidir; Secure body ve secret NS olmaz.
+3. SFARVALID ayrı validlik bitidir. Temizse register içeriği fault adresi değildir.
+4. NS pointer'ının attribution, range overflow ve TOCTOU doğrulamasına ihtiyaç
+   doğurmaz. Pointer API'si eklenirse bu problemler ayrıca çözülmelidir.
+5. Hayır. İmaj doğrulama/imza, anahtar yönetimi ve güvenilir boot zinciri uygulanmadı.

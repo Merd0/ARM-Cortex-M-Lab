@@ -1,5 +1,5 @@
-# Referans Ã§Ã¶zÃ¼m â€” Ã–ncelik
+# Referans çözüm — Öncelik
 
-`priorities.c` SysTick'i 64, PendSV'yi 255 yapar. SysTick_Config sonrasÄ± tekrar
-uygulanÄ±r. `14-solution-priority` Debug/QEMU'da bÃ¼tÃ¼n kontrolleri geÃ§ti:
-ilk olay sÄ±rasÄ± 1,2,3 ve timer sayacÄ± 4 oldu.
+`priorities.c` SysTick'i 64, PendSV'yi 255 yapar. SysTick_Config sonrası tekrar
+uygulanır. `14-solution-priority` Debug/QEMU'da bütün kontrolleri geçti:
+ilk olay sırası 1,2,3 ve timer sayacı 4 oldu.

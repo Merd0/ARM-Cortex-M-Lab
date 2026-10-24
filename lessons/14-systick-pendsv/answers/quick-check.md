@@ -1,6 +1,6 @@
-# Quick Check cevaplarÄ±
+# Quick Check cevapları
 
-1. Pending biti tek durumdur; birden Ã§ok istek birleÅŸebilir.
-2. EÅŸit Ã¶ncelikler preemption saÄŸlamaz; SysTick bitince PendSV yine Ã§alÄ±ÅŸabilir.
-3. CMSIS yardÄ±mcÄ±sÄ± SysTick Ã¶nceliÄŸini en dÃ¼ÅŸÃ¼k deÄŸere yazar.
-4. HayÄ±r. Thread MSP Ã¼zerinde kaldÄ±; context switching sonraki derstedir.
+1. Pending biti tek durumdur; birden çok istek birleşebilir.
+2. Eşit öncelikler preemption sağlamaz; SysTick bitince PendSV yine çalışabilir.
+3. CMSIS yardımcısı SysTick önceliğini en düşük değere yazar.
+4. Hayır. Thread MSP üzerinde kaldı; context switching sonraki derstedir.

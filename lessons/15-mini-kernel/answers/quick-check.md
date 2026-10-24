@@ -1,9 +1,9 @@
-# Quick Check cevaplarÄ±
+# Quick Check cevapları
 
-1. Basic hardware frame caller-clobbered register'larÄ± saklar. Suspend edilen
-   task'Ä±n callee-saved register'larÄ±nÄ± scheduler korumalÄ±dÄ±r.
-2. STM, SP Ã¼zerinden yapÄ±lmaz. Adres sÄ±nÄ±rÄ± ilk store'dan Ã¶nce denetlenmelidir.
-3. O frame PSP Ã¼zerinde kurulmadÄ±; stack seÃ§imini deÄŸiÅŸtirip eski C fonksiyonunu
-   sÃ¼rdÃ¼rmek farklÄ± bellekte yerel deÄŸiÅŸken/return address arar.
-4. Yield'ler bitince her iki task'Ä±n ilerlemesi ve kaydedilen PC yield dÃ¶nÃ¼ÅŸÃ¼
-   dÄ±ÅŸÄ±nda olan timer switch'leri. YalnÄ±z tick saymak task geÃ§iÅŸini kanÄ±tlamaz.
+1. Basic hardware frame caller-clobbered register'ları saklar. Suspend edilen
+   task'ın callee-saved register'larını scheduler korumalıdır.
+2. STM, SP üzerinden yapılmaz. Adres sınırı ilk store'dan önce denetlenmelidir.
+3. O frame PSP üzerinde kurulmadı; stack seçimini değiştirip eski C fonksiyonunu
+   sürdürmek farklı bellekte yerel değişken/return address arar.
+4. Yield'ler bitince her iki task'ın ilerlemesi ve kaydedilen PC yield dönüşü
+   dışında olan timer switch'leri. Yalnız tick saymak task geçişini kanıtlamaz.

@@ -1,6 +1,6 @@
-# Referans Ã§Ã¶zÃ¼m â€” Scalar politika
+# Referans çözüm — Scalar politika
 
-`value <= 15U` tÃ¼m unsigned [0,15] aralÄ±ÄŸÄ±nÄ± kabul eder. Ä°ÅŸaretli cast veya
-yalnÄ±z bir Ã¶rneÄŸe eÅŸitlik kullanmak sÄ±nÄ±r koÅŸullarÄ±nÄ± bozar. `16-solution-policy`
-Secure/Non-secure Ã§ifti Debug/QEMU'da tÃ¼m kontrolleri geÃ§ti. Politika bellek
-attribution'Ä±nÄ± deÄŸiÅŸtirmez; NS'den doÄŸrudan Secure okuma hÃ¢lÃ¢ AUVIOL Ã¼retir.
+`value <= 15U` tüm unsigned [0,15] aralığını kabul eder. İşaretli cast veya
+yalnız bir örneğe eşitlik kullanmak sınır koşullarını bozar. `16-solution-policy`
+Secure/Non-secure çifti Debug/QEMU'da tüm kontrolleri geçti. Politika bellek
+attribution'ını değiştirmez; NS'den doğrudan Secure okuma hâlâ AUVIOL üretir.
