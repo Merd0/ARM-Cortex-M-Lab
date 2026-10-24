@@ -1,131 +1,93 @@
-# Lesson 14 — SysTick & PendSV
+# Lesson 14 â€” SysTick & PendSV
 
-`[STANDARD]` · Day 6 · **STATUS: scaffold**
+`[STANDARD]` Â· **STATUS: temel geliÅŸtirme doÄŸrulandÄ±; toplu kalite kapÄ±sÄ± bekliyor**
 
-> Bu ders henüz yazılmadı. Aşağıdaki iskelet neyin kapsanacağını ve hangi
-> deneylerin yapılacağını tanımlar. Ders 02 tam kalite referanstır:
-> [`lessons/02-programmer-model/`](../02-programmer-model/)
+## TEACH â€” Tick bir scheduler deÄŸildir
 
----
+SysTick zamanÄ± sayar; PendSV ertelenmiÅŸ iÅŸi Ã§alÄ±ÅŸtÄ±rÄ±r. Pending biti olay kuyruÄŸu
+deÄŸildir: maskeli durumda aynÄ± biti iki kere set etmek iki Ã§aÄŸrÄ± biriktirmez.
+Scheduler bu mekanizmalarÄ±n Ã¼zerine kurulur.
 
-## Why This Matters
+KÃ¼Ã§Ã¼k sayÄ±sal Ã¶ncelik daha yÃ¼ksek Ã¶nceliktir. Test edilen AN505/QEMU hedefinde
+sekiz Ã¶ncelik biti vardÄ±r. SysTick=64, PendSV=255 seÃ§imi PendSV'nin SysTick'i
+kesmesini engeller. Bunlar evrensel M33 sabitleri deÄŸildir. SysTick_Config
+Ã¶nceliÄŸi de yazar; ders kendi ayarÄ±nÄ± bu Ã§aÄŸrÄ±dan sonra tekrar uygular.
 
-Her gerçek zamanlı sistemin iki yapı taşı: periyodik bir tick ve düşük öncelikli bir anahtarlama noktası.
+## SHOW â†’ RUN
 
----
-
-## Core Idea
-
-Kapsanacak konular:
-
-- SysTick'i 1 ms periyotla kurmak
-- Timer ile scheduler'ın aynı şey olmadığını görmek
-- PendSV'nin neden en düşük önceliğe ayarlandığı
-- `ICSR.PENDSVSET` ile PendSV tetiklemek
-- Tick handler'ın kısa, PendSV'nin ağır işi yaptığı model
-
----
-
-## Mental Model
-
-<!-- Ders yazılırken doldurulacak: konuyu oturtan basit benzetme -->
-
----
-
-## Visual
-
-<!-- Mermaid diyagram: ders yazılırken eklenecek -->
-
----
-
-## Tiny Example
-
-<!-- İzole, minimum çalışan örnek: example/main.c  (exercise -> exercises/, çözüm -> solutions/) -->
-
----
-
-## Build & Run
+[main.c](example/main.c) kontrollÃ¼ exception sÄ±rasÄ±, pending birleÅŸmesi ve gerÃ§ek
+timer ilerlemesini ayrÄ± deneylerde gÃ¶sterir. [Ã–ncelik ayarÄ±](example/priorities.c)
+ayrÄ±dÄ±r. Handler'lar UART yazdÄ±rmaz; sonuÃ§lar Thread mode'da basÄ±lÄ±r.
 
 ```bash
 cmake --preset debug
-cmake --build --preset debug --target 14-systick-pendsv
+cmake --build --preset debug --target 14-systick-pendsv 14-pendsv-broken 14-exercise-priority 14-solution-priority
 ./scripts/run-qemu.sh build/debug/lessons/14-systick-pendsv/14-systick-pendsv.elf
+python tests/development-smoke.py 14
 ```
 
----
+## OBSERVE
 
-## Expected Output
-
-<!-- Firmware gerçekten çalıştırıldıktan SONRA buraya gerçek çıktı yapıştırılacak.
-     Çalıştırılmadan örnek çıktı uydurulmayacak. -->
-
----
-
-## Observe in GDB
-
-Planlanan gözlem komutları:
+Debug/QEMU'da Ã¶lÃ§Ã¼len ana sonuÃ§lar:
 
 ```text
-x/1wx 0xE000E010
-x/1wx 0xE000ED04
-break SysTick_Handler
-break PendSV_Handler
-cm-mode
+[EVENT0] 1
+[EVENT1] 2
+[EVENT2] 3
+[CHECK_DEFERRED] PASS
+[CHECK_PENDING_COALESCES] PASS
+[TICKS] 4
+[CHECK_TICK_RELOAD] PASS
+[CHECK_TICK_PROGRESS] PASS
 ```
 
-<!-- Her komut için "neye bakmalısın" açıklaması ders yazılırken eklenecek -->
+20 MHz platform saati / 1000 iÃ§in LOAD=19999. Bu, donanÄ±m Ã¼zerinde Ã¶lÃ§Ã¼lmÃ¼ÅŸ
+duvar saati doÄŸruluÄŸu iddiasÄ± deÄŸildir. DÃ¶rt tick beklenir; PendSV Ã§aÄŸrÄ± sayÄ±sÄ±
+tick baÅŸÄ±na tam bir olmak zorunda deÄŸildir. Pending olaylarÄ± birleÅŸebilir.
 
----
+GDB ile isteÄŸe baÄŸlÄ± inceleme (ayrÄ±ntÄ±lÄ± GDB kapÄ±sÄ± bu aÅŸamada Ã§alÄ±ÅŸtÄ±rÄ±lmadÄ±):
 
-## Experiment
+```text
+break SysTick_Handler
+break PendSV_Handler
+print g_l14_phase
+print g_l14_inside_tick
+print g_l14_events
+x/wx 0xE000E014
+```
 
-1. 1 ms tick sayacı kur, saniyede bir mesaj bas
-2. SysTick içinden PendSV'yi pending yap, çalışma sırasını gözle
-3. PendSV önceliğini yükseltip sıranın nasıl bozulduğunu gör
+Breakpoint timer zamanlamasÄ±nÄ± deÄŸiÅŸtirir. Ä°lk kontrollÃ¼ deneyde timer kapalÄ±dÄ±r;
+olay 1 SysTick giriÅŸini, 2 SysTick sonunu, 3 PendSV'yi gÃ¶sterir.
 
----
+## MODIFY â†’ BREAK â†’ DEBUG
 
-## Break It
+`14-pendsv-broken` PendSV'yi 0 yapar. Ã–lÃ§Ã¼len sÄ±ra 1,3,2 ve
+CHECK_DEFERRED=FAIL: PendSV, SysTick Ã§alÄ±ÅŸÄ±rken girmiÅŸtir. Olay dizisini ve
+`g_l14_nested` deÄŸerini incele; yalnÄ±zca son sayacÄ± okumak hatayÄ± gizler.
 
-PendSV'ye SysTick'ten yüksek öncelik ver ve ortaya çıkan davranışı açıkla.
+[AlÄ±ÅŸtÄ±rmada](exercises/01-defer-work/README.md) Ã¶ncelik ayarÄ± eksiktir.
+Reset'teki eÅŸit Ã¶ncelikler sÄ±ra deneyini geÃ§ebilir; aÃ§Ä±k konfigÃ¼rasyon kontrolÃ¼
+bu yÃ¼zden de gereklidir. [Referans Ã§Ã¶zÃ¼m](solutions/01-defer-work/README.md) ayrÄ±dÄ±r.
 
----
+## VERIFY
 
-## Debug It
-
-<!-- Doğrudan cevap verilmeyecek; teşhis noktaları sırayla gösterilecek -->
-
----
-
-## What I Learned
-
-> Bu bölüm senin. Deneyi yaptıktan sonra doldur.
-
-**Beni şaşırtan şey:**
-
-**Yaptığım hata:**
-
-**Debugger'da gördüğüm davranış:**
-
----
+Debug derleme ve dÃ¶rt QEMU senaryosu Ã§alÄ±ÅŸtÄ±rÄ±ldÄ±. Ã–rnek/Ã§Ã¶zÃ¼m tÃ¼m kontrolleri
+geÃ§er; starter yalnÄ±z CHECK_PRIORITY, bozuk sÃ¼rÃ¼m CHECK_PRIORITY ve
+CHECK_DEFERRED iÃ§in beklenen FAIL Ã¼retir. GeniÅŸ regresyon ve ayrÄ±ntÄ±lÄ± Ã¼Ã§-preset
+karÅŸÄ±laÅŸtÄ±rmasÄ± toplu kalite aÅŸamasÄ±ndadÄ±r.
 
 ## Quick Check
 
-<!-- 3–5 soru, en az biri reasoning gerektiren -->
+1. Ä°ki PENDSVSET yazmasÄ± neden iki iÅŸ kaydÄ± deÄŸildir?
+2. Starter neden doÄŸru olay sÄ±rasÄ±nÄ± yine de Ã¼retebilir?
+3. SysTick_Config sonrasÄ±nda Ã¶nceliÄŸi niÃ§in yeniden ayarlÄ±yoruz?
+4. Bu ders task deÄŸiÅŸtirdi mi?
 
----
-
-## Takeaway
-
-<!-- 3–5 madde -->
-
----
+[Cevaplar](answers/quick-check.md)
 
 ## References
 
-Armv8-M ARM — SysTick, PendSV, exception priorities
+- [Cortex-M33 Devices Generic User Guide](https://documentation-service.arm.com/static/5f16e93d20b7cf4bc524af1d): ICSR, SysTick, exception priorities.
+- [CMSIS implementation](../../external/CMSIS/CMSIS/Core/Include/core_cm33.h): SysTick_Config.
 
----
-
-**Previous:** [13 — Synchronization, FPU & DSP](../13-sync-fpu-dsp/)
-**Next:** [15 — Educational Mini Kernel](../15-mini-kernel/)
+**Previous:** [13](../13-sync-fpu-dsp/) Â· **Next:** [15](../15-mini-kernel/)
