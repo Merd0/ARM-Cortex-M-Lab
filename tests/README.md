@@ -3,15 +3,17 @@
 Bu dizin **unit test** için değil. Gömülü tarafta unit test ayrı bir konudur
 (host üzerinde derleyip çalıştırmak gerekir) ve bu repoda kapsam dışıdır.
 
-Burada üç şey var:
+Burada firmware davranışı, link sözleşmeleri, debugger gözlemleri ve belge bağlantıları sınanır:
 
 ```bash
 ./tests/smoke-test.sh          # davranışsal regresyon (preset: debug)
 ./tests/build-probes.sh        # link/linker sözleşme probe'ları
 python3 tests/check-links.py   # Markdown göreli link kontrolü
+python3 tests/lesson12-check.py debug  # GDB / ölçüm sınırları
+python3 tests/lesson13-check.py debug  # synchronization / FP frame / ABI
 ```
 
-Üçü de CI'da çalışır (`.github/workflows/ci.yml`).
+Hepsi üç preset için CI'da çalışır (`.github/workflows/ci.yml`).
 
 ## `smoke-test.sh` — hedef sınıflandırması
 
@@ -24,7 +26,7 @@ türüne göre beklenen **davranış** doğrulanıyor:
 |---|---|
 | Normal örnek | Doğru sonuç + tamamlanma işareti, hiç `FAIL` yok |
 | Referans çözüm | Tüm `CHECK_*` satırları `PASS` |
-| Bilerek bozuk | **Beyan edilen** yanlış sonuç ya da fault; tamamlanmamalı |
+| Bilerek bozuk | **Beyan edilen** yanlış sonuç/FAIL ya da fault; END sözleşmeye bağlı |
 | Bitmemiş ödev | Eksik davranış; çözülmüş gibi raporlanmamalı |
 
 `===== END =====` görünmesi **tek başına** hiçbir yerde başarı sayılmaz.
@@ -34,8 +36,9 @@ biti uyumu), Lesson 02 (aritmetik + bayraklar + kasıtlı fault), Lesson 03
 (ABI ihlalinin beyan edilen yanlış sonucu), Lesson 04 (üç aşama, push/pop
 delta'sı, stack guard, PSP çözümü).
 
-Ölçülen son durum: **87 PASS / 0 FAIL**, üç preset'te de
-(Ubuntu 24.04 container, gcc 13.2.1, QEMU 8.2.2).
+Lesson 12 main kapanış kaydı: **454 PASS / 0 FAIL**, üç preset'te de
+(GitHub Actions, Ubuntu 24.04 / QEMU 8.2.2). Lesson 13'ün yeni hedefleri de
+eklenmiştir; güncel yerel sonuçlar [Progress](../docs/PROGRESS.md) içindedir.
 
 ## `build-probes.sh` — link sözleşmeleri
 
@@ -50,7 +53,27 @@ delta'sı, stack guard, PSP çözümü).
   vermeli. Ayrıca sınır içindeki bir imajın `.data`'sının çalışma zamanında
   gerçekten RAM'e ulaştığı ve `.bss`'in sıfırlandığı QEMU'da doğrulanır.
 
-Ölçülen son durum: **10 PASS / 0 FAIL**.
+Main kapanış kaydı: **47 PASS / 0 FAIL**, üç preset. Lesson 10/11
+linker/startup probe'ları da bu script'tedir; önceki kontroller azaltılmaz.
+
+## Lesson-local debugger ve ABI kontrolleri
+
+`lesson12-check.py`: gerçek write/read watchpoint, backtrace, single-step,
+ölçüm penceresinde I/O reddi, durdurulan timer ve statik optimizasyon/header
+karşılaştırması. `lesson13-check.py`: kontrollü SysTick, R4–R11/SP preservation,
+basic/eager/lazy FP frame, NOCP fault PC, lazy slot'un materialize edilmesi,
+S0–S2 restore, çağıranın FPSCR kontrol durumunun korunması, matching/mixed float ABI link probe'ları ve emitted DSP/FP.
+
+İkisi de stdlib Python ve Arm GDB (`arm-none-eabi-gdb` veya `gdb-multiarch`)
+kullanır; GDB Python eklentisi gerekmez. Eksik araç SKIP gibi sunulmaz.
+Lesson 13'ün negatif hedefleri retry eksikliğini ve kapalı FPU iznini,
+link probe'ları ise iki yöndeki softfp/hard karışımını yakalar. Geçici
+olarak derlenen iki yanlış kritik-bölüm çözümü de korumasız güncelleme ve
+koşulsuz IRQ açmanın doğru kontrol tarafından reddedildiğini doğrular.
+
+Ham kanıtlar ignored `build/<preset>/lesson12-evidence/` ve
+`build/<preset>/lesson13-evidence/` altında kalır; workflow bunları upload eder.
+GDB'nin QEMU watchpoint'i fiziksel DWT comparator/cycle desteği sayılmaz.
 
 ## Neden bu kadar az
 

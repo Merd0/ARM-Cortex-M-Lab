@@ -10,8 +10,10 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 5. "What I Learned" dolduruldu
 
 "What I Learned" öğrencinin kişisel kaydıdır; teknik teslim adına doldurulmaz.
-2026-10-23: ders 01–11 main üzerinde, ders 12 bu dalda yerel doğrulandı;
-uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
+2026-10-24: ders 01–12 main üzerinde. PR #8 merge sonrası main SHA
+`01bc73c51046d09169f68c8cae009df4deb8e433`, üç preset CI PASS
+([run 40074628843](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40074628843)).
+Ders 13 bu dalda yerel doğrulandı; uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
 ## Altyapı
 
@@ -30,7 +32,7 @@ uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
 | Target capability probe | ✅ (ölçüldü) |
 | Dokümantasyon temeli | ✅ |
 | Smoke test (`tests/smoke-test.sh`) | ✅ davranışsal regresyon; güncel sonuç aşağıda |
-| CI (`.github/workflows/ci.yml`) | ✅ önceki PR #7 üç preset PASS; bu dalın CI değişikliği henüz uzakta çalışmadı |
+| CI (`.github/workflows/ci.yml`) | ✅ main/PR #8 üç preset PASS; Lesson 13 adımı henüz uzakta çalışmadı |
 | VS Code tasks + launch | ✅ yazıldı / ⬜ Windows'ta denenmedi |
 | Proje ve final-project tanımları | ✅ README'ler yazıldı / ⬜ kod yok (planlı) |
 
@@ -49,8 +51,8 @@ uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
 | 09 | Compiler & AAPCS | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 10 | Linker, ELF & Memory | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 11 | Startup (Reset → main) | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| 12 | Debug & DWT | ✅ | ✅ | ✅ yerel | ✅ üç preset | ⬜ |
-| 13 | Sync, FPU & DSP | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
+| 12 | Debug & DWT | ✅ | ✅ | ✅ main/CI | ✅ üç preset | ⬜ |
+| 13 | Sync, FPU & DSP | ✅ | ✅ | ✅ yerel | ✅ üç preset | ⬜ |
 | 14 | SysTick & PendSV | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 15 | Mini Kernel | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
 | 16 | TrustZone & Advanced | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -73,12 +75,35 @@ Lesson 12 teslimi, 2026-10-23 Windows / GCC 15.2.1 / QEMU 11.1.0:
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
 
+## Lesson 13 yerel teslim — 2026-10-24
+
+Windows / GCC 15.2.1 / QEMU 11.1.0, debug/release/minsize:
+
+- Temiz build: **64 ELF/preset**, 0 uyarı / 0 hata.
+- Tam smoke/regresyon: **566 PASS / 0 FAIL**; önceki 454 kontrol korundu.
+- Mevcut build probe'ları: **47 PASS / 0 FAIL / 0 SKIP**.
+- `lesson12-check.py`: üç preset tekrar PASS.
+- `lesson13-check.py`: dokuz hedef, altı GDB senaryosu/preset;
+  R4–R11/SP, NOCP PC, eager/lazy raw frame, S0–S2 ve FPSCR kontrol durumu,
+  DSP/ABI metadata kontrolleri PASS. İki mixed ABI link probe'u ve iki
+  yanlış kritik-bölüm çözümü beklenen şekilde reddedildi.
+- Göreli link kontrolü: **358 link, 0 kırık**; `git diff --check` PASS.
+
+FP worker'ın gereksiz FPSCR sıfırlaması son AAPCS incelemesinde kaldırıldı.
+Çağıranın açık ortam destek fonksiyonuyla seçtiği FZ=1 korunuyor; kaydedilen
+FPSCR ve çağrı sonrası değer GDB'de karşılaştırılıyor. Bu kontrol koruması,
+denormal aritmetiğin veya donanım performansının doğrulaması değildir.
+
+Lesson 13 henüz push/PR/uzak CI aşamasına geçmedi. Ders 14–16 ve projeler
+planlı kalıyor; bağımsız audit veya donanım doğrulaması tamamlandı denmiyor.
+
 ## Exercise / Solution / Answers
 
 | Ders | Exercise | Solution | Cevap anahtarı |
 |---|---|---|---|
 | 01 | senaryo yazımı (kod yok) | — | `lessons/01-cortex-m-family/answers/reference-answers.md` |
 | 02 | `exercises/01-decode-apsr-flags/` | `solutions/01-decode-apsr-flags/` (çalıştırıldı ✅) | `lessons/02-programmer-model/answers/quick-check.md` |
+| 13 | `exercises/01-critical-update/` (2/6, eksik) | `solutions/01-critical-update/` (6/6 PASS) | `lessons/13-sync-fpu-dsp/answers/quick-check.md` |
 | 12 | `exercises/01-valid-measurement/` (0/12, eksik) | `solutions/01-valid-measurement/` (12/12 PASS) | `lessons/12-debug-dwt/answers/quick-check.md` |
 | 11 | `exercises/01-reset-sequence/` | `solutions/01-reset-sequence/` (çalıştırıldı ✅) | `lessons/11-startup/answers/quick-check.md` |
 | 10 | `exercises/01-locate-your-data/` | `solutions/01-locate-your-data/` (çalıştırıldı ✅) | `lessons/10-linker-elf-memory/answers/quick-check.md` |

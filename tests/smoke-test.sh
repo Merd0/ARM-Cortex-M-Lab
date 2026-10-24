@@ -123,6 +123,12 @@ L11B="$BUILD/lessons/11-startup/11-startup-broken.elf"
 L11E="$BUILD/lessons/11-startup/11-exercise-startup.elf"
 L11S="$BUILD/lessons/11-startup/11-solution-startup.elf"
 L12DIR="$BUILD/lessons/12-debug-dwt"
+L13DIR="$BUILD/lessons/13-sync-fpu-dsp"
+
+for name in 13-sync-fpu-dsp 13-sync-broken 13-exercise-critical 13-solution-critical \
+            13-fpu-basic 13-fpu-eager 13-fpu-lazy 13-fpu-denied 13-fpu-hard; do
+    [ -f "$L13DIR/$name.elf" ] && ok "$name.elf" || bad "uretilmedi: $name.elf"
+done
 
 for name in 12-debug-dwt 12-debug-dwt-broken 12-profile-io 12-profile-o0 12-profile-o2 \
             12-exercise-measurement 12-solution-measurement; do
@@ -642,6 +648,57 @@ for kind in exercise solution; do
     expect_line "$out" "$kind: tum vakalar" "[CASES_PASSED] $count"
     expect_line "$out" "$kind: tamamlandi" "===== END ====="
 done
+
+# ===========================================================================
+sect "16. Lesson 13 - synchronization, FPU ve DSP"
+for name in 13-sync-fpu-dsp 13-sync-broken; do
+    out="$(run_qemu "$L13DIR/$name.elf")"
+    atomic=PASS; total=2
+    if [ "$name" = "13-sync-broken" ]; then atomic=FAIL; total=1; fi
+    for check in LOST_UPDATE INTERRUPTED_RESERVATION DSP BASELINE_SOFT NO_FAULT; do
+        expect_line "$out" "$name: $check" "[CHECK_$check] PASS"
+    done
+    expect_line "$out" "$name: atomic" "[CHECK_ATOMIC_TOTAL] $atomic"
+    expect_line "$out" "$name: kayip guncelleme" "[RACY_TOTAL] 1"
+    expect_line "$out" "$name: exclusive sonuc" "[EXCLUSIVE_TOTAL] $total"
+    expect_line "$out" "$name: ilk strex" "[FIRST_STREX_STATUS] 1"
+    expect_line "$out" "$name: retry" "[RETRIES] 1"
+    expect_line "$out" "$name: bitis" "===== END ====="
+done
+for kind in exercise solution; do
+    out="$(run_qemu "$L13DIR/13-$kind-critical.elf")"
+    expected=FAIL; count=2
+    if [ "$kind" = solution ]; then expected=PASS; count=6; fi
+    for check in OPEN_MASK NESTED_MASK; do
+        expect_line "$out" "$kind: $check" "[$check] PASS"
+    done
+    for check in OPEN_IRQ OPEN_TOTAL NESTED_IRQ NESTED_TOTAL; do
+        expect_line "$out" "$kind: $check" "[$check] $expected"
+    done
+    expect_line "$out" "$kind: tum vakalar" "[CASES_PASSED] $count"
+    expect_line "$out" "$kind: bitis" "===== END ====="
+done
+for mode in basic eager lazy hard; do
+    out="$(run_qemu "$L13DIR/13-fpu-$mode.elf")"
+    for check in RESET_PERMISSION PERMISSION FRAME_TYPE STACK_LAYOUT LAZY_STATE \
+                 FP_PAYLOAD FP_RESTORE FP_CONTROLS FLOAT_ABI NO_FAULT; do
+        expect_line "$out" "FP $mode: $check" "[CHECK_$check] PASS"
+    done
+    bytes=104; ret=0xFFFFFFE9
+    if [ "$mode" = basic ]; then bytes=32; ret=0xFFFFFFF9; fi
+    expect_line "$out" "FP $mode: frame" "[FRAME_BYTES] $bytes"
+    expect_line "$out" "FP $mode: EXC_RETURN" "[EXC_RETURN] $ret"
+    expect_line "$out" "FP $mode: bitis" "===== END ====="
+    reject_line "$out" "FP $mode: beklenmeyen FAIL yok" "] FAIL"
+done
+out="$(run_qemu "$L13DIR/13-fpu-denied.elf")"
+for check in RESET_PERMISSION NOCP USAGE_HANDLER DENIED_PC DENIED_BASIC; do
+    expect_line "$out" "NOCP: $check" "[CHECK_$check] PASS"
+done
+expect_line "$out" "NOCP: CFSR" "[CFSR] 0x00080000"
+expect_line "$out" "NOCP: HFSR" "[HFSR] 0x00000000"
+expect_line "$out" "NOCP: bitis" "===== END ====="
+reject_line "$out" "NOCP: beklenmeyen FAIL yok" "] FAIL"
 
 # --- Ozet -----------------------------------------------------------------
 echo

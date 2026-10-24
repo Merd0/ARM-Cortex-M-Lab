@@ -9,8 +9,8 @@ DEEP TRACK'e bırak.
 **Durum:** `[ ]` yapılmadı · `[~]` devam ediyor · `[x]` bitti
 
 Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
-otomatik işaretlenmez. Repository teslim durumu: ders 01–11 `main` üzerinde;
-ders 12 bu dalda yerel olarak doğrulandı, uzak CI/PR bekliyor. Ders 13–16
+otomatik işaretlenmez. Repository teslim durumu: ders 01–12 `main` üzerinde;
+ders 13 bu dalda yerel olarak doğrulandı, uzak CI/PR bekliyor. Ders 14–16
 ve projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
 
 ---

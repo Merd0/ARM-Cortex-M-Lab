@@ -6,11 +6,13 @@ Başlangıç: `main` = `266642efb55e881a275a1034a01923ecbd17a3fa`.
 Ders 01–11 ve önceki audit düzeltmeleri korunur. Yeni bir müfredat veya
 platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
 
-1. **Lesson 12 — Debugging & DWT:** bu dalda uygulandı; yerel build/QEMU/GDB
-   doğrulandı. Uzak yayınlama ve CI/PR bekliyor. Cycle sayacı yerine uydurma
-   ölçüm yok; debugger teşhisi, statik boyut ve yerel timer deneyleri var.
-2. **Lesson 13 — Sync/FPU/DSP:** kontrollü lost-update ve exclusive monitor,
-   CPACR izinleri, FP exception context, soft/hard-float ABI sınırları.
+1. **Lesson 12 — Debugging & DWT:** PR #8 ile main üzerinde tamamlandı;
+   `01bc73c51046d09169f68c8cae009df4deb8e433` için merge sonrası üç preset
+   CI PASS (2026-10-24). Cycle sonucu uydurulmadı.
+2. **Lesson 13 — Sync/FPU/DSP:** bu dalda dokuz firmware hedefi; kontrollü
+   lost-update/exclusive retry, PRIMASK alıştırması, NOCP, eager/lazy frame,
+   DSP ve softfp/hard ABI pozitif/negatif link kontrolleri uygulandı.
+   Yerel üç preset QEMU/GDB doğrulandı; uzak yayınlama ve CI/PR bekliyor.
 3. **Lesson 14 — SysTick/PendSV:** timer, öncelik, pending ve yürütme sırası.
 4. **Lesson 15 — Mini Kernel:** PSP/MSP, sentetik ilk frame, assembly
    R4–R11/EXC_RETURN koruması, stack sınırları ve scheduler regresyonları.
