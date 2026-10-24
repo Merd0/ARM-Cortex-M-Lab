@@ -4,6 +4,24 @@
     .text
     .align 2
 
+    /* Explicit FP environment support functions. Unlike the arithmetic worker,
+     * this setter deliberately changes the application's FP control state. */
+    .global l13_fp_set_environment
+    .type l13_fp_set_environment, %function
+    .thumb_func
+l13_fp_set_environment:
+    vmsr fpscr, r0
+    bx lr
+    .size l13_fp_set_environment, .-l13_fp_set_environment
+
+    .global l13_fp_get_environment
+    .type l13_fp_get_environment, %function
+    .thumb_func
+l13_fp_get_environment:
+    vmrs r0, fpscr
+    bx lr
+    .size l13_fp_get_environment, .-l13_fp_get_environment
+
     .global l13_fp_run
     .type l13_fp_run, %function
     .thumb_func
@@ -15,8 +33,7 @@ l13_fp_run:
 l13_fp_first:
     vmov.f32 s0, #1.5
     vmov.f32 s1, #2.0
-    movs r0, #0
-    vmsr fpscr, r0
+    /* Keep the caller's FPSCR controls (rounding/FZ/etc.). */
     vadd.f32 s2, s0, s1
 .Lno_fp:
     /* Seed the future 104-byte frame inside a temporarily allocated stack

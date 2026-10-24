@@ -161,7 +161,7 @@ def fp_checks(build, evidence):
         else:
             require("] FAIL" not in text, mode + " no unexpected FAIL")
             for key in ("PERMISSION", "FRAME_TYPE", "STACK_LAYOUT", "LAZY_STATE", "FP_PAYLOAD",
-                        "FP_RESTORE", "FLOAT_ABI", "NO_FAULT"):
+                        "FP_RESTORE", "FP_CONTROLS", "FLOAT_ABI", "NO_FAULT"):
                 expect(text, "CHECK_" + key, "PASS")
             expect(text, "FRAME_BYTES", 32 if mode == "basic" else 104)
             expect(text, "EXC_RETURN", "0xFFFFFFF9" if mode == "basic" else "0xFFFFFFE9")
@@ -176,6 +176,9 @@ def fp_debugger(build, evidence):
         size = 104 if extended else 32
         slot = "0xA5A5A5A5" if mode == "lazy" else "0x3FC00000"
         commands = "tbreak *l13_fp_run\ncontinue\nset $call_sp = $sp\nset $return_pc = $lr & ~1\n"
+        if extended:
+            # Firmware's explicit environment setter establishes active caller state.
+            commands += "if $fpscr != 0x01000000\n    quit 1\nend\n"
         for reg in range(4, 12):
             commands += f"set $saved_r{reg} = $r{reg}\n"
         commands += f"""tbreak *SVC_Handler
@@ -201,7 +204,7 @@ if ($sp != $frame - 8) || ((g_l13_fpccr_after & 1) != 0) || (($xpsr & 511) != 11
 end
 """
         if extended:
-            commands += """if (*(unsigned int*)($frame + 32) != 0x3FC00000) || (g_l13_fp_saved[0] != 0x3FC00000) || ($s0 != 8.0)
+            commands += """if (*(unsigned int*)($frame + 32) != 0x3FC00000) || (g_l13_fp_saved[0] != 0x3FC00000) || (g_l13_fp_saved[16] != 0x01000000) || ($s0 != 8.0)
     quit 1
 end
 x/26wx $frame
@@ -220,6 +223,8 @@ if $sp != $call_sp
     quit 1
 end
 """
+        if extended:
+            commands += "if $fpscr != 0x01000000\n    quit 1\nend\n"
         for reg in range(4, 12):
             commands += f"if $r{reg} != $saved_r{reg}\n    quit 1\nend\n"
         commands += """tbreak l13_done
@@ -270,6 +275,44 @@ def abi_checks(evidence):
                             "mixed " + caller_abi + "/" + add_abi + " ABI rejected")
 
 
+def exercise_negative_checks(preset, evidence):
+    """Compile disposable incorrect solutions without editing the starter/solution."""
+    lesson = ROOT / "lessons/13-sync-fpu-dsp"
+    solution = (lesson / "solutions/01-critical-update/critical.c").read_text()
+    require("__set_PRIMASK(saved);" in solution, "critical-section negative probe anchor")
+    early_enable = solution.replace('#include "../../sync.h"', '#include "sync.h"').replace(
+        "__set_PRIMASK(saved);", "(void)saved; __enable_irq();")
+    unprotected = """#include "sync.h"
+void l13_protected_increment(volatile uint32_t *counter) {
+    uint32_t value = *counter;
+    l13_pend_update();
+    *counter = value + 1U;
+}
+"""
+    flags = ["arm-none-eabi-gcc", "-mcpu=cortex-m33", "-mthumb", "-mfloat-abi=soft",
+             "-std=c11", "-ffreestanding", "-ffunction-sections", "-fdata-sections", "-nostdlib",
+             {"debug": "-Og", "release": "-O2", "minsize": "-Os"}[preset]]
+    for folder in (lesson, ROOT / "platform/mps2-an505/include", ROOT / "common/include", ROOT / "external/CMSIS/Core/Include"):
+        flags += ["-I", str(folder)]
+    sources = [lesson / "exercise_driver.c", lesson / "sync_support.c"]
+    sources += [ROOT / "platform/mps2-an505/src" / name for name in
+                ("startup_mps2_an505.c", "system_init.c", "uart_cmsdk.c")]
+    sources += [ROOT / "common/src" / name for name in ("console.c", "tiny_libc.c")]
+    with tempfile.TemporaryDirectory() as temp:
+        for name, source in (("early-enable", early_enable), ("unprotected", unprotected)):
+            path = Path(temp) / (name + ".c")
+            path.write_text(source)
+            elf = Path(temp) / ("13-mutant-" + name + ".elf")
+            subprocess.run(flags + [str(s) for s in sources] + [str(path),
+                "-T", str(ROOT / "platform/mps2-an505/linker/mps2-an505-secure.ld"),
+                "-Wl,--gc-sections", "-lgcc", "-o", str(elf)], check=True, capture_output=True, text=True)
+            text = firmware(elf, evidence)
+            expect(text, "CASES_PASSED", 5)
+            expect(text, "NESTED_MASK" if name == "early-enable" else "OPEN_TOTAL", "FAIL")
+            require(len(re.findall(r"^\[[A-Z_]+\] FAIL$", text, re.M)) == 1,
+                    name + " rejected by the intended exercise check")
+
+
 def code_checks(build, evidence):
     def command(args):
         return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT)
@@ -309,6 +352,7 @@ def main():
     fp_checks(build, evidence)
     fp_debugger(build, evidence)
     abi_checks(evidence)
+    exercise_negative_checks(args.preset, evidence)
     code_checks(build, evidence)
     print("Lesson 13", args.preset, "PASS; evidence:", evidence)
 

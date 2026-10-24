@@ -3,6 +3,8 @@
 
 uint32_t l13_fp_run(uint32_t active);
 uint32_t l13_abi_call_bits(uint32_t a, uint32_t b);
+void l13_fp_set_environment(uint32_t fpscr);
+uint32_t l13_fp_get_environment(void);
 extern char l13_after_svc, l13_fp_first;
 
 volatile uint32_t g_l13_before_sp, g_l13_entry_sp, g_l13_exc_return;
@@ -11,6 +13,7 @@ volatile uint32_t g_l13_fp_slot_before;
 volatile uint32_t g_l13_fp_active;
 volatile uint32_t g_l13_core[8], g_l13_fp_saved[17];
 volatile uint32_t g_l13_return_bits, g_l13_cfsr, g_l13_hfsr;
+volatile uint32_t g_l13_return_fpscr;
 
 static void check(const char *name, uint32_t yes)
 {
@@ -76,8 +79,12 @@ int main(void)
     g_l13_fp_active = 0U;
 #else
     g_l13_fp_active = 1U;
+    /* Caller explicitly selects FZ=1 through an FP environment support function.
+     * The worker must preserve control state; all arithmetic uses normal values. */
+    l13_fp_set_environment(1U << 24);
 #endif
     g_l13_return_bits = l13_fp_run(g_l13_fp_active);
+    if (g_l13_fp_active != 0U) g_l13_return_fpscr = l13_fp_get_environment();
     uint32_t bytes = g_l13_before_sp - g_l13_entry_sp;
     uint32_t extended = (g_l13_exc_return & 0x10U) == 0U;
     console_kv_hex("CPACR_AFTER", SCB->CPACR);
@@ -88,6 +95,7 @@ int main(void)
     console_kv_hex("FPCCR_AFTER_FP", g_l13_fpccr_after);
     console_kv_hex("RAW_FP_SLOT_BEFORE", g_l13_fp_slot_before);
     console_kv_hex("RESTORED_S0", g_l13_return_bits);
+    console_kv_hex("RESTORED_FPSCR", g_l13_return_fpscr);
     check("CHECK_PERMISSION", (SCB->CPACR & 0x00F00000U) == 0x00F00000U);
     check("CHECK_FRAME_TYPE", extended == g_l13_fp_active &&
           ((g_l13_thread_control >> 2) & 1U) == g_l13_fp_active);
@@ -106,6 +114,8 @@ int main(void)
     check("CHECK_FP_PAYLOAD", !extended || (g_l13_fp_saved[0] == 0x3FC00000U &&
           g_l13_fp_saved[1] == 0x40000000U && g_l13_fp_saved[2] == 0x40600000U));
     check("CHECK_FP_RESTORE", g_l13_return_bits == (extended ? 0x3FC00000U : 0U));
+    check("CHECK_FP_CONTROLS", !extended || (g_l13_fp_saved[16] == (1U << 24) &&
+          g_l13_return_fpscr == (1U << 24)));
     uint32_t result = l13_abi_call_bits(0x3FC00000U, 0x40000000U);
     console_kv_hex("ABI_ADD_BITS", result);
     check("CHECK_FLOAT_ABI", result == 0x40600000U);
