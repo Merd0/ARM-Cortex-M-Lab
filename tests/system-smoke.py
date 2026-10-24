@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Integrated projects/final behavioral gate; each expected CHECK must be present."""
 import argparse
+import re
 from pathlib import Path
 import runpy
 
@@ -31,10 +32,42 @@ def projects(build, evidence):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--preset",choices=("debug","release","minsize"),default="debug")
+    parser.add_argument("--group",choices=("projects","final","all"),default="all")
     args=parser.parse_args()
     build=ROOT/"build"/args.preset
     evidence=build/"system-evidence"; evidence.mkdir(parents=True,exist_ok=True)
-    projects(build,evidence)
+    if args.group in ("projects","all"): projects(build,evidence)
+    if args.group in ("final","all"): final(build,evidence)
+
+def final(build,evidence):
+    folder=build/"final-project/secure-real-time-sensor-node"
+    prefix=("CHECK_PARTITION","CHECK_NS_VECTORS")
+    secure=("CHECK_SECURE_PROCESSING","CHECK_NS_FPU_DISABLED","CHECK_SECURE_CALLER")
+    normal=("CHECK_PIPELINE","CHECK_RESULT","CHECK_TASK_PRIVILEGE","CHECK_REGISTERS",
+            "CHECK_STACKS","CHECK_BASIC_CONTEXT","CHECK_SCHEDULING","CHECK_MODEL_BUDGET","CHECK_NO_FAULT")
+    for mode in ("normal","kernel-write","cross-task","secure-read","stack-limit","spin","bad-svc"):
+        values={}
+        if mode=="secure-read":
+            keys=prefix+("CHECK_EXPECTED_SECURE_FAULT","CHECK_SECURE_HANDLER","CHECK_NO_ESCALATION")
+            values={"SFSR":"0x00000008","SFAR":"INVALID"}
+        elif mode in ("kernel-write","cross-task","stack-limit"):
+            fault="CHECK_STACK_FAULT_REJECT" if mode=="stack-limit" else "CHECK_EXPECTED_MPU_FAULT"
+            keys=prefix+secure+(fault,"CHECK_FAULT_NOT_ESCALATED","CHECK_KERNEL_STACK","CHECK_GUARDS","CHECK_PIPELINE_STARTED")
+            values={"EXC_RETURN":"0xFFFFFFBC","HFSR":"0x00000000"}
+        else:
+            keys=prefix+normal+secure
+            if mode=="spin": keys+=("CHECK_SPIN_PREEMPTED",)
+            if mode=="bad-svc": keys+=("CHECK_BAD_SVC_REJECT",)
+            # Independent integer oracle for sliding four-sample average and 1.5 gain.
+            samples=[i%16 for i in range(32)]
+            expected=sum(((sum(samples[max(0,i-3):i+1])//min(i+1,4))*3)//2 for i in range(32))
+            values={"PRODUCED":32,"PROCESSED":32,"LOGGED":32,"FILTERED_SUM":expected,
+                    "THREAD_CONTROL":"0x00000003","LAST_SVC_RETURN":"0xFFFFFFBC"}
+        text=verify(folder/("node-"+mode+"-secure.elf"),evidence,values=values,required=keys,
+               extra=("-device","loader,file="+str(folder/("node-"+mode+"-nonsecure.elf"))))
+        if mode in ("normal","spin","bad-svc"):
+            assert re.findall(r"^\[TELEMETRY_SEQ\] (\d+)$",text,re.M)==["8","16","24","32"],text
+            assert re.findall(r"^\[TELEMETRY_VALUE\] (\d+)$",text,re.M)==["7","19","7","19"],text
 
 if __name__=="__main__":
     main()

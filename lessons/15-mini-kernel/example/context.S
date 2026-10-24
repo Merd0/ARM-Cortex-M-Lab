@@ -22,12 +22,20 @@ SVC_Handler:
     mrsne r0,psp
     ldr r1,[r0,#24]
     ldrb r1,[r1,#-2]
+#ifdef L15_CUSTOM_TASKS
+    cmp r1,#1
+    beq 6f
+    mov r1,lr
+    b node_svc_dispatch
+6:
+#else
     cmp r1,#0
     beq l15_yield
     cmp r1,#2
     beq l15_finish
     cmp r1,#1
     bne l15_panic
+#endif
     ldr r0,=g_l15_booted
     ldr r1,[r0]
     cbnz r1,1f
@@ -38,7 +46,11 @@ SVC_Handler:
     ldr r1,[r0,#4]
     msr psplim,r1
     ldr r0,[r0]
+#ifdef L15_UNPRIV
+    movs r1,#3
+#else
     movs r1,#2
+#endif
     msr control,r1
     isb
     ldmia r0!,{r4-r11,lr}
@@ -59,7 +71,11 @@ SVC_Handler:
 .type PendSV_Handler,%function
 .thumb_func
 PendSV_Handler:
+#ifdef L15_NONSECURE
+    ldr r1,=0xFFFFFFBC
+#else
     ldr r1,=0xFFFFFFFD
+#endif
     cmp lr,r1
     bne l15_panic
     mrs r0,psp
@@ -99,6 +115,7 @@ PendSV_Handler:
     bx lr
 .size PendSV_Handler,.-PendSV_Handler
 
+#ifndef L15_CUSTOM_TASKS
 .global l15_task_entry
 .type l15_task_entry,%function
 .thumb_func
@@ -152,4 +169,5 @@ l15_after_yield:
 4:  svc #2
     b l15_panic
 .size l15_task_entry,.-l15_task_entry
+#endif
 .section .note.GNU-stack,"",%progbits

@@ -10,6 +10,12 @@ static volatile uint32_t secret __attribute__((section(".secret"))) = 0x13579BDF
 static volatile uint32_t calls, from_ns, reported;
 extern char __nsc_start, __nsc_end;
 typedef void (*ns_entry_t)(void) __attribute__((cmse_nonsecure_call));
+/* Application hooks keep the tested board partition/CMSE boundary reusable. */
+__attribute__((weak)) void l16_platform_ready(void) { }
+__attribute__((weak)) uint32_t l16_transform(uint32_t value) { return value * 2U + 1U; }
+__attribute__((weak)) uint32_t l16_observation(uint32_t value, uint32_t caller_ns)
+{ (void)value; (void)caller_ns; return 0U; }
+__attribute__((weak)) void l16_fault_hook(uint32_t status) { (void)status; }
 
 static void check(const char *name, uint32_t ok)
 {
@@ -27,11 +33,13 @@ uint32_t l16_service(uint32_t value)
     ++calls;
     if (cmse_nonsecure_caller()) ++from_ns;
     if (!l16_allowed(value)) return L16_DENIED;
-    return value * 2U + 1U;
+    return l16_transform(value);
 }
 __attribute__((cmse_nonsecure_entry))
 void l16_report(uint32_t observations)
 {
+    uint32_t caller_ns = cmse_nonsecure_caller();
+    if (l16_observation(observations, caller_ns)) return;
     if (observations & 0x80000000U) {
         check("CHECK_SECURE_REJECT", 0U);
         end();
@@ -40,12 +48,13 @@ void l16_report(uint32_t observations)
     check("CHECK_NS_STARTUP", (observations & 1U) != 0U);
     check("CHECK_SERVICE", (observations & 2U) != 0U);
     check("CHECK_POLICY_DENY", (observations & 4U) != 0U);
-    check("CHECK_CALLER_NS", cmse_nonsecure_caller() && calls == 5U && from_ns == 5U);
+    check("CHECK_CALLER_NS", caller_ns && calls == 5U && from_ns == 5U);
     /* Return through the compiler-generated BXNS before testing denial. */
 }
 void SecureFault_Handler(void)
 {
     uint32_t status = SFSR;
+    l16_fault_hook(status);
     console_kv_hex("SFSR", status);
     uint32_t address_valid = (status & (1U << 6)) != 0U;
     if (address_valid) console_kv_hex("SFAR", SFAR);
@@ -89,6 +98,7 @@ static void region(uint32_t number, uint32_t first, uint32_t last, uint32_t nsc)
 int main(void)
 {
     console_line("===== LESSON 16: SECURE AND NONSECURE IMAGES =====");
+    l16_platform_ready();
     __TZ_set_MSPLIM_NS(0x20007000U);
     __set_MSPLIM(0x30003000U);
     SAU->CTRL = 0U;
