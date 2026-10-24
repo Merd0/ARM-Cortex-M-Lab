@@ -1,109 +1,33 @@
 # Project — Performance Profiler
 
-**STATUS: planned** · Bağımlı dersler: 09, 12
+**STATUS: Debug temel kapısı PASS; son toplu kalite kapısı bekliyor.**
 
-> ⚠️ Bu projenin ilk gerçeği: **DWT CYCCNT bu hedefte saymıyor.**
-> Ölçüldü, uydurulmadı — bkz. [`docs/TARGET_CAPABILITIES.md`](../../docs/TARGET_CAPABILITIES.md).
-> Proje bu kısıtın etrafında kurulmuştur, kısıtı gizleyerek değil.
+Lesson 12'nin runtime-input workload'u ve referans ölçüm sınıflandırıcısı aynı
+kaynaklardan kullanılır. Proje beş farklı workload object'i üretir:
+-O0, -O1, -O2, -O3, -Os. Sadece workload bayrağı değişir; preset'in genel
+Release=-O2 sözleşmesi değişmez. Driver her varyantta checksum=424 doğrular.
 
----
-
-## Problem
-
-"Bu fonksiyon hızlı mı?" sorusu, ölçme yöntemi tanımlanmadan cevaplanamaz.
-Embedded'de yanlış ölçüm, yanlış optimizasyondan daha pahalıdır: insanlar
-gerçekte var olmayan bir kazanç için okunabilirliği feda eder.
-
-Bu projede öğrenilecek şey bir sayı üretmek değil, **ölçümün ne kadarına
-güvenilebileceğini bilmek**.
-
----
-
-## Ölçülen gerçek: DWT durumu
-
-Capability probe çıktısından (QEMU 8.2.2, mps2-an505, cortex-m33):
-
-```text
-[DWT_CYCCNT_IMPLEMENTED] YES
-[T0] 0x00000000
-[T1] 0x00000000
-[DWT_CYCCNT_COUNTING]    NO
+```bash
+cmake --preset debug
+cmake --build --preset debug
+python tests/system-smoke.py
+python tests/profile-report.py
 ```
 
-Register var, yazılabiliyor, okunabiliyor — ama saymıyor.
+Debug/GCC 15.2.1 ölçümü: workload boyutları sırasıyla 70,32,32,32,28 byte;
+statik komut sayıları 35,13,13,13,11. Script gerçek nm/objdump çıktısından
+`build/debug/system-evidence/profile.json` üretir. Bunlar yürütülen komut
+sayısı, cycle, hızlanma veya WCET değildir; toolchain ile değişebilir.
 
-```text
-DWT cycle counting: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
-```
+QEMU 11.1.0 AN505'te DWT ilerlemedi; DWT_RESULT=UNAVAILABLE ölçüldü.
+Model-local dört SysTick boyunca ilerleyen iş sayılır; ölçüm penceresinde
+console I/O yoktur. İterasyonlardan fiziksel throughput veya güvenilir
+optimizasyon sıralaması çıkarılmaz. Daha küçük kod daha hızlı demek değildir.
+FVP de yapılandırmasına göre timing modeline sahiptir; her FVP cycle-accurate
+kabul edilmez. Donanım performansı ayrı ölçüm gerektirir.
 
-Bu, "QEMU bozuk" demek değil. QEMU fonksiyonel bir emülatördür; komutları
-doğru yürütür, **zamanlamayı modellemez**. Cycle-accurate ölçüm için gereken
-yol: Arm FVP, ya da gerçek donanım + SWO/ETM trace.
+Negatif ölçüm sınıflandırması ve öğrenci starter/solution
+[Lesson 12](../../lessons/12-debug-dwt/) içinde korunur. Ayrıntılı GDB ve
+üç-preset karşılaştırması toplu kalite kapısındadır.
 
----
-
-## Architecture
-
-```mermaid
-flowchart TD
-    W["workload()<br/>volatile ile korunmuş"] --> M{"Ölçüm yöntemi"}
-    M -->|QEMU'da geçerli| A["Statik: kod boyutu<br/>arm-none-eabi-size"]
-    M -->|QEMU'da geçerli| B["Statik: komut sayısı<br/>objdump analizi"]
-    M -->|QEMU'da geçerli| C["Dinamik: işlem sayacı<br/>iterasyon/tick"]
-    M -->|QEMU'da geçersiz| D["DWT CYCCNT<br/>NOT SUPPORTED"]
-    A --> R["Karşılaştırma tablosu<br/>-O0 / -O1 / -O2 / -O3 / -Os"]
-    B --> R
-    C --> R
-    D -.->|FVP / gerçek donanım| R
-```
-
----
-
-## Yapılacaklar (student)
-
-1. `workload()` — optimize edilip yok edilmeyecek bir iş yaz. `volatile`
-   olmadan `-O2`'de fonksiyonun tamamen silinebileceğini önce **gör**,
-   sonra düzelt.
-2. `measure_static()` — build çıktılarından kod boyutu ve komut sayısını
-   toplayan script.
-3. `measure_relative()` — SysTick ile "sabit sürede kaç iterasyon" ölçümü.
-   Bu QEMU'da mutlak zaman vermez ama karşılaştırma için kullanılabilir;
-   neden kullanılabildiğini README'ye kendi cümlelerinle yaz.
-4. Ölçüm bölgesinin içinde **console I/O yapma**. UART, ölçmek istediğin
-   işten kat kat pahalıdır.
-
----
-
-## Acceptance criteria
-
-- [ ] Aynı `workload()` beş optimizasyon seviyesinde build ediliyor.
-- [ ] Kod boyutu ve komut sayısı tablosu gerçek çıktıdan üretiliyor.
-- [ ] `volatile`'ın etkisi disassembly üzerinden gösteriliyor.
-- [ ] Rapor, hangi metriğin QEMU'da anlamlı hangisinin anlamsız olduğunu
-      açıkça yazıyor.
-- [ ] Hiçbir yerde uydurulmuş "x2.3 hızlanma" iddiası yok.
-
----
-
-## Dürüstlük kuralı
-
-Bu projede yazılacak her performans cümlesi şu testten geçmeli:
-
-> Bu sayıyı nasıl ölçtüm, ölçüm hangi varsayıma dayanıyor ve bu varsayım
-> gerçek donanımda da geçerli mi?
-
-Cevap veremiyorsan cümleyi silmek, cümleyi hedge'lemekten iyidir.
-
----
-
-## References
-
-- Armv8-M Architecture Reference Manual — DWT
-- Cortex-M33 Devices Generic User Guide — DWT register'ları
-- QEMU documentation — Arm system emulation, mps2 boards
-- [`docs/PERFORMANCE_MEASUREMENT.md`](../../docs/PERFORMANCE_MEASUREMENT.md)
-- [`docs/LIMITATIONS.md`](../../docs/LIMITATIONS.md)
-
----
-
-[← projects/](../README.md) · [Ders 12 — Debug & DWT](../../lessons/12-debug-dwt/README.md)
+[Projects](../README.md)
