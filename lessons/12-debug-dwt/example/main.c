@@ -8,12 +8,24 @@ uint32_t l12_workload(const uint32_t *input, uint32_t count);
 volatile uint32_t g_l12_seed = 1U;
 volatile uint32_t g_l12_sink;
 volatile uint32_t g_l12_ticks;
+/* Debugger fault-injection request in RAM; zero in every normal run. */
+volatile uint32_t g_l12_stop_timer;
 volatile uint32_t g_l12_iterations;
 volatile uint32_t g_l12_io_calls;
 volatile uint32_t g_l12_dwt_start, g_l12_dwt_end;
 volatile uint32_t g_l12_dwt_ctrl, g_l12_demcr;
 
-void SysTick_Handler(void) { ++g_l12_ticks; }
+void SysTick_Handler(void)
+{
+    ++g_l12_ticks;
+    if (g_l12_stop_timer != 0U) {
+        /* CPU MMIO writes work even when an older QEMU gdbstub ignores them. */
+        SysTick->CTRL = 0U;
+        SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk;
+        __DSB();
+        __ISB();
+    }
+}
 
 static void check(const char *name, uint32_t yes)
 {

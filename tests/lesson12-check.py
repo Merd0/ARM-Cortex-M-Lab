@@ -69,12 +69,19 @@ def debugger(elf, evidence, expected, stall_timer=False, expect_io=False):
         port = port_socket.getsockname()[1]
     label = elf.stem + ("-stopped-timer" if stall_timer else "")
     script = evidence / (label + ".gdb")
-    timer_control = """tbreak SysTick_Handler
+    # QEMU 8.2's debug-memory write path skips MMIO. Request the stop in RAM;
+    # the handler performs real CPU MMIO writes. Never fake ticks/iterations.
+    timer_control = """tbreak *SysTick_Handler
 continue
-set {unsigned int}0xE000E010 = 0
-set {unsigned int}0xE000ED04 = 0x02000000
+if (($xpsr & 511) != 15) || (g_l12_ticks != 0) || (g_l12_stop_timer != 0)
+    quit 1
+end
+set variable g_l12_stop_timer = 1
+if g_l12_stop_timer != 1
+    quit 1
+end
 """ if stall_timer else ""
-    timer_failure = "(g_l12_ticks >= 4) || (g_l12_iterations != 200000)" if stall_timer else "g_l12_ticks < 4"
+    timer_failure = "(g_l12_ticks != 1) || (g_l12_iterations != 200000)" if stall_timer else "g_l12_ticks < 4"
     script.write_text(f"""set pagination off
 set confirm off
 set tcp connect-timeout 10

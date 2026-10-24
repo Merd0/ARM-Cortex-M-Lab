@@ -225,7 +225,7 @@ sayısı veya CPU cycle sayısı değildir. Başka GCC sürümünde sayı deği�
 
 20 MHz **bu QEMU platform sözleşmesidir**; evrensel M33 sabiti değildir.
 `SysTick_Config(SystemCoreClock / 1000)` nominal timer periyodunu kurar.
-Handler sadece volatile tick sayacını artırır. Main en az dört tick veya
+Normal koşuda handler volatile tick sayacını artırır. Main en az dört tick veya
 200000 iterasyon sınırına kadar iş yapar; durdurulan timer sessizce hang
 yerine `CHECK_TIMER_PROGRESS` FAIL üretir. Test tam iterasyon sayısını
 veya iki build arasında hız sıralamasını beklemez. Gözlenen handler sayısı
@@ -276,7 +276,11 @@ Yedi hedef ve GDB negatif örneği debug/release/minsize üzerinde doğrulandı.
 Normal örnekte timer açıkken `console_putc` çağrısı olursa GDB kontrolü
 başarısız olur; konfigürasyon mesajı da timer kapatıldıktan sonra yazılır.
 Aynı GDB koruması I/O varyantını gerçekten reddeden negatif kontrolle sınanır.
-Ek negatif kontrolde ilk SysTick handler girişinde timer durdurulur;
+Ek negatif kontrolde ilk SysTick handler girişinde GDB, RAM'deki
+`g_l12_stop_timer` isteğini 1 yapar; handler timer'ı gerçek CPU MMIO yazılarıyla
+durdurur. Normal koşuda bu istek sıfırdır. QEMU 8.2.2'nin GDB bellek yazma
+yolu MMIO yazılarını uygulamadığından doğrudan debugger register yazısına
+güvenilmez. Test tick/iterasyon sayaçlarını değiştirmez: tam bir tick ve
 200000 iterasyonda `CHECK_TIMER_PROGRESS` FAIL ve END beklenir.
 Starter eksik kalır; [referans çözüm](solutions/01-valid-measurement/) ayrı
 hedefte aynı 12 sentetik vakayı geçirir. Yeni CI adımı aynı lesson testini
