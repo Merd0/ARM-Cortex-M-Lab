@@ -54,15 +54,22 @@ def lesson14(build, evidence):
                 "EVENT2": 2 if "broken" in name else 3})
 
 
+def lesson15(build, evidence):
+    folder = build / "lessons/15-mini-kernel"
+    for name, failed in (("15-mini-kernel", ()), ("15-kernel-broken", ("CHECK_REGISTERS",)),
+                         ("15-exercise-frame", ("CHECK_INITIAL_FRAME",)), ("15-solution-frame", ())):
+        verify(folder / (name + ".elf"), evidence, failed)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("lesson", choices=("14",))
+    parser.add_argument("lesson", choices=("14", "15"))
     parser.add_argument("--preset", choices=("debug", "release", "minsize"), default="debug")
     args = parser.parse_args()
     build = ROOT / "build" / args.preset
     evidence = build / "development-evidence"
     evidence.mkdir(parents=True, exist_ok=True)
-    lesson14(build, evidence)
+    {"14": lesson14, "15": lesson15}[args.lesson](build, evidence)
 
 
 if __name__ == "__main__":

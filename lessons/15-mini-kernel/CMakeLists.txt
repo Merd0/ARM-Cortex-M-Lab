@@ -1,0 +1,8 @@
+set(kernel_sources example/main.c example/context.S)
+add_firmware(15-mini-kernel SOURCES ${kernel_sources} example/frame.c OPTIONS -mgeneral-regs-only)
+add_firmware(15-kernel-broken SOURCES ${kernel_sources} example/frame.c DEFINES L15_BROKEN_SAVE=1 OPTIONS -mgeneral-regs-only)
+add_firmware(15-exercise-frame SOURCES ${kernel_sources} exercises/01-initial-frame/frame.c OPTIONS -mgeneral-regs-only)
+add_firmware(15-solution-frame SOURCES ${kernel_sources} solutions/01-initial-frame/frame.c OPTIONS -mgeneral-regs-only)
+foreach(target 15-mini-kernel 15-kernel-broken 15-exercise-frame 15-solution-frame)
+    target_link_options(${target} PRIVATE -Wl,-z,noexecstack)
+endforeach()

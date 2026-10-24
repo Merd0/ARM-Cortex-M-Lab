@@ -1,134 +1,103 @@
-# Lesson 15 — Educational Mini Kernel
+# Lesson 15 â€” Educational Mini Kernel
 
-`[DEEP]` · Day 7 · **STATUS: scaffold**
+`[DEEP]` Â· **STATUS: temel geliÅŸtirme doÄŸrulandÄ±; toplu kalite kapÄ±sÄ± bekliyor**
 
-> Bu ders henüz yazılmadı. Aşağıdaki iskelet neyin kapsanacağını ve hangi
-> deneylerin yapılacağını tanımlar. Ders 02 tam kalite referanstır:
-> [`lessons/02-programmer-model/`](../02-programmer-model/)
+## TEACH â€” Bir task'Ä±n devam edebilmesi iÃ§in ne saklanÄ±r?
 
----
+Ä°ki privileged Thread task'Ä± ayrÄ± PSP stack'leri kullanÄ±r. Handler'lar MSP
+Ã¼zerindedir. DonanÄ±m basic frame'i (R0â€“R3, R12, LR, PC, xPSR), PendSV ise
+R4â€“R11 ve EXC_RETURN'Ã¼ saklar. Sabit round-robin seÃ§iminden sonra yeni PSP ile
+exception return yapÄ±lÄ±r. Bu eÄŸitim Ã§ekirdeÄŸi FPU task context'i, MPU task
+izolasyonu, unprivileged task veya Ã¼retim RTOS garantisi saÄŸlamaz.
 
-## Why This Matters
+[Context assembly](example/context.S), [Ã§ekirdek](example/main.c) ve
+[ilk frame](example/frame.c) birlikte okunmalÄ±dÄ±r. YazÄ±lÄ±m frame'i 9 word,
+hardware frame'i 8 word'dÃ¼r. YazÄ±lÄ±m SP'si 4 mod 8 olabilir; public exception
+boundary'deki hardware SP 8-byte hizalÄ±dÄ±r. Bu farkÄ± kaldÄ±rmak iÃ§in rastgele
+bir padding word eklemek register eÅŸlemesini bozar.
 
-Context switch'i kendi elinle yazmak, RTOS'un altında ne olduğunu kalıcı olarak öğrenmenin tek yolu.
+## SHOW â€” BaÅŸlangÄ±Ã§ ve geÃ§iÅŸ sÄ±nÄ±rlarÄ±
 
----
+Ä°lk SVC, C'ye Ã§aÄŸrÄ± yapmadan CONTROL.SPSEL/PSP/PSPLIM'i kurar, ilk register
+setini yÃ¼kler ve MSP'yi stack top'a getirir. Eski main/MSP frame'i kalÄ±cÄ± olarak
+terk edilir. Ä°lk task hardware frame'inden baÅŸlar; eski C frame'i PSP ile
+devam ettirilmez. SVC'den sonraki bootstrap koduna dÃ¶nÃ¼lmez.
 
-## Core Idea
+PendSV yalnÄ±z 0xFFFFFFFD basic Secure Thread/PSP dÃ¶nÃ¼ÅŸÃ¼nÃ¼ kabul eder. FPU veya
+baÅŸka frame Ã§eÅŸidi sessizce destekleniyor sayÄ±lmaz. STM'den **Ã¶nce** Ã§Ä±kÄ±ÅŸ
+stack sÄ±nÄ±rlarÄ± kontrol edilir; PSPLIM, R0 Ã¼zerinden yapÄ±lan STM iÃ§in koruma
+deÄŸildir. Scheduler'a MSP Ã¼zerinde 8-byte hizalÄ± Ã§aÄŸrÄ± yapÄ±lÄ±r. KÄ±sa seÃ§im
+bÃ¶lÃ¼mÃ¼ eski PRIMASK deÄŸerini korur; yeni context doÄŸrulanmadan yÃ¼klenmez.
 
-Kapsanacak konular:
-
-- Task kontrol bloğu ve ayrı task stack'leri
-- Task stack'ini ilk çalıştırma için elle hazırlamak (sahte exception frame)
-- PendSV içinde R4–R11'i kaydetme/geri yükleme
-- PSP'nin task'lar, MSP'nin kernel için kullanılması
-- Round-robin scheduling
-- SVC ile sistem çağrıları
-- Uzantı: privileged kernel + unprivileged task + MPU izolasyonu
-
----
-
-## Mental Model
-
-<!-- Ders yazılırken doldurulacak: konuyu oturtan basit benzetme -->
-
----
-
-## Visual
-
-<!-- Mermaid diyagram: ders yazılırken eklenecek -->
-
----
-
-## Tiny Example
-
-<!-- İzole, minimum çalışan örnek: example/main.c  (exercise -> exercises/, çözüm -> solutions/) -->
-
----
-
-## Build & Run
+## RUN
 
 ```bash
 cmake --preset debug
-cmake --build --preset debug --target 15-mini-kernel
+cmake --build --preset debug --target 15-mini-kernel 15-kernel-broken 15-exercise-frame 15-solution-frame
 ./scripts/run-qemu.sh build/debug/lessons/15-mini-kernel/15-mini-kernel.elf
+python tests/development-smoke.py 15
 ```
 
----
+## OBSERVE
 
-## Expected Output
+Debug/QEMU Ã§alÄ±ÅŸtÄ±rmasÄ±nda Ã¶rnek ve Ã§Ã¶zÃ¼mÃ¼n sekiz CHECK alanÄ± PASS oldu.
+Kaydedilen bir Ã¶rnek: TASK0_RUNS=1193, TASK1_RUNS=976, TICKS=4,
+SWITCHES=20, ASYNC_SWITCHES=4. Task sayaÃ§larÄ±/model zamanlamasÄ± deÄŸiÅŸebilir;
+test bu rastlantÄ±sal sayÄ±larÄ± sabitlemez.
 
-<!-- Firmware gerçekten çalıştırıldıktan SONRA buraya gerçek çıktı yapıştırılacak.
-     Çalıştırılmadan örnek çıktı uydurulmayacak. -->
+Task'lar ilk sekiz tur SVC #0 ile yield eder. Sonra yield etmeden busy-loop
+yaparlar: ikinci task'Ä±n ilerleyebilmesi iÃ§in gerÃ§ek SysTick/PendSV preemption
+gerekir. ASYNC_SWITCHES, kaydedilen PC yield dÃ¶nÃ¼ÅŸ noktasÄ± olmadÄ±ÄŸÄ±nda sayÄ±lÄ±r.
+R4â€“R11'in her birine task'a Ã¶zgÃ¼ canary konur. Her task'Ä±n alt/Ã¼st stack
+guard'larÄ±, ilerleme, yield ve timer switch'leri bitiÅŸte denetlenir.
 
----
-
-## Observe in GDB
-
-Planlanan gözlem komutları:
+GDB'de isteÄŸe baÄŸlÄ± gÃ¶zlem (bu aÅŸamada kapsamlÄ± GDB kapÄ±sÄ± Ã§alÄ±ÅŸtÄ±rÄ±lmadÄ±):
 
 ```text
-p/x $psp
-p/x $msp
-x/32wx <task_stack>
 break PendSV_Handler
-cm-frame <adres> <EXC_RETURN>
+print/x $psp
+print g_l15_current
+x/17wx g_l15_current->sp
+print g_l15_runs
+print g_l15_bad
 ```
 
-<!-- Her komut için "neye bakmalısın" açıklaması ders yazılırken eklenecek -->
+Handler giriÅŸinde TCB'nin SP'si henÃ¼z gÃ¼ncellenmemiÅŸ olabilir. TCB dump'Ä±nÄ±
+ASM'nin store'undan sonra veya scheduler iÃ§inde al. Breakpoint zamanlamayÄ± etkiler.
 
----
+## MODIFY â†’ BREAK â†’ DEBUG
 
-## Experiment
+`15-kernel-broken` yazÄ±lÄ±m context alanÄ±nÄ± ayÄ±rÄ±r ama R4â€“R11'i yazmaz.
+CHECK_REGISTERS=FAIL olur; task'larÄ±n C gÃ¶zlem Ã§aÄŸrÄ±sÄ± boyunca IRQ maskelenir.
+BÃ¶ylece kasÄ±tlÄ± bozuk restore, askÄ±da kalan C pointer'larÄ±nÄ± bozup rastgele
+Ã§Ã¶kmek yerine ASM canary kontrolÃ¼nde gÃ¶rÃ¼nÃ¼r. Ãœretim scheduler'Ä± iÃ§in bir
+C Ã§aÄŸrÄ±sÄ±nÄ± maskelemek register saklama zorunluluÄŸunu ortadan kaldÄ±rmaz.
 
-1. `TODO(student)`: task stack hazırlama fonksiyonunu yaz
-2. `TODO(student)`: PendSV handler'ını assembly ile yaz
-3. İki task çalıştır, sırayla mesaj bastıklarını gör
-4. Debugger'da her task'ın kendi stack'ini incele
+[AlÄ±ÅŸtÄ±rmada](exercises/01-initial-frame/README.md) ilk frame oluÅŸturucu eksiktir.
+NULL, PSP kurulmadan reddedilir. [Ã‡Ã¶zÃ¼m](solutions/01-initial-frame/README.md)
+ayrÄ± dosyadadÄ±r.
 
----
+## VERIFY
 
-## Break It
-
-Context switch'te R4–R11'i kaydetmeyi atla; bozulmanın hangi task'ta ortaya çıktığını bul.
-
----
-
-## Debug It
-
-<!-- Doğrudan cevap verilmeyecek; teşhis noktaları sırayla gösterilecek -->
-
----
-
-## What I Learned
-
-> Bu bölüm senin. Deneyi yaptıktan sonra doldur.
-
-**Beni şaşırtan şey:**
-
-**Yaptığım hata:**
-
-**Debugger'da gördüğüm davranış:**
-
----
+Debug build ve dÃ¶rt QEMU senaryosu Ã§alÄ±ÅŸtÄ±rÄ±ldÄ±: Ã¶rnek/Ã§Ã¶zÃ¼m PASS, eksik starter
+yalnÄ±z CHECK_INITIAL_FRAME=FAIL, bozuk save yalnÄ±z CHECK_REGISTERS=FAIL.
+Bu testler WCET, adil zaman payÄ±, sonsuz Ã§alÄ±ÅŸma veya donanÄ±m doÄŸrulamasÄ± deÄŸildir.
+ÃœÃ§-preset karÅŸÄ±laÅŸtÄ±rmasÄ±, geniÅŸ negatif set ve baÄŸÄ±msÄ±z audit toplu kapÄ±da yapÄ±lacak.
 
 ## Quick Check
 
-<!-- 3–5 soru, en az biri reasoning gerektiren -->
+1. Exception entry neden R4â€“R11'i kurtarmÄ±yor?
+2. PSPLIM neden PendSV'nin STM adresini ayrÄ±ca doÄŸrulama gereÄŸini kaldÄ±rmÄ±yor?
+3. Ä°lk SVC'nin terk ettiÄŸi MSP frame'ine dÃ¶nmek neden hatadÄ±r?
+4. Yield dÄ±ÅŸÄ±nda switch olduÄŸunu hangi gÃ¶zlem ayÄ±rÄ±r?
 
----
-
-## Takeaway
-
-<!-- 3–5 madde -->
-
----
+[Cevaplar](answers/quick-check.md)
 
 ## References
 
-Armv8-M ARM — Exception entry/return, EXC_RETURN; `projects/mini-kernel/`
+- [Cortex-M33 Devices Generic User Guide](https://documentation-service.arm.com/static/5f16e93d20b7cf4bc524af1d): basic frames, PSP/MSP, exception return.
+- [AAPCS32](https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst): callee-saved registers and public stack alignment.
+- [Lesson 04](../04-stack-msp-psp/): fresh C frame sÄ±nÄ±rÄ±.
+- [Lesson 13](../13-sync-fpu-dsp/): bu Ã§ekirdeÄŸin desteklemediÄŸi FP frame'leri.
 
----
-
-**Previous:** [14 — SysTick & PendSV](../14-systick-pendsv/)
-**Next:** [16 — TrustZone & Advanced Features](../16-trustzone-advanced/)
+**Previous:** [14](../14-systick-pendsv/) Â· **Next:** [16](../16-trustzone-advanced/)
