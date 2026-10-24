@@ -160,13 +160,16 @@ Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
-2026-10-24: Lessons 01–12 `main` üzerinde; PR #8 sonrası üç-preset CI geçti.
-Lesson 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) üzerinde;
-üç preset CI PASS, merge onayı bekliyor. Lessons 14–16, beş birleştirici proje
-ve çalışan Secure Sensor Node yerel dallarda uygulandı. Son
-`codex/final-integration` dalında Debug/Release/MinSize clean build,
-geniş regresyonlar ve kritik GDB kapıları PASS. Yeni geliştirmeler henüz push
-edilmedi; uzak CI/merge ve bağımsız üçüncü taraf audit tamamlandı denmiyor.
+2026-10-24 teknik teslim: 16 ders, beş birleştirici proje ve çalışan Secure
+Sensor Node uygulandı. Debug/Release/MinSize clean build, geniş regresyonlar
+ve kritik GDB kapıları yerelde PASS. Lesson 13, üç preset CI sonrası
+[PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi.
+Lesson 14–16 yayını [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+üzerinden ilerler. Proje/final entegrasyonu dahil her PR yalnız üç preset CI
+başarılıysa `main` dalına alınır. Yayımlanan commit'lerin güncel uzak sonuçları
+[GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions) üzerindedir.
+Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
+doğrulaması olarak sunulmaz.
 Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### Altyapı
@@ -201,19 +204,22 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### İleri Konular
 
-- [x] Synchronization / FPU / DSP (Lesson 13: PR #9, üç preset CI PASS; merge bekliyor)
-- [x] SysTick & PendSV (yerel üç preset/QEMU/GDB PASS; uzak CI bekliyor)
-- [x] Mini kernel & context switching (yerel üç preset/QEMU/GDB PASS; uzak CI bekliyor)
+- [x] Synchronization / FPU / DSP (Lesson 13: PR #9 merge, üç preset CI PASS)
+- [x] SysTick & PendSV (üç preset/QEMU/GDB yerel PASS; uzak kabul kapısı: üç preset CI)
+- [x] Mini kernel & context switching (üç preset/QEMU/GDB yerel PASS; uzak kabul kapısı: üç preset CI)
 - [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; yerel kapılar PASS)
 
 ### Projeler
 
-- [x] Protected Application (yerel doğrulandı; uzak CI bekliyor)
-- [x] Fault Analyzer (yerel doğrulandı; uzak CI bekliyor)
-- [x] From Reset to Main (yerel doğrulandı; uzak CI bekliyor)
-- [x] Performance Profiler (yerel doğrulandı; uzak CI bekliyor)
-- [x] Educational Mini Kernel (yerel doğrulandı; uzak CI bekliyor)
-- [x] Final Project (yerel doğrulandı; uzak CI bekliyor)
+- [x] Protected Application (yerel üç preset PASS)
+- [x] Fault Analyzer (yerel üç preset PASS)
+- [x] From Reset to Main (yerel üç preset PASS)
+- [x] Performance Profiler (yerel üç preset PASS)
+- [x] Educational Mini Kernel (yerel üç preset PASS)
+- [x] Final Project (yerel üç preset PASS)
+
+Projeler/final için uzak kabul kapısı da aynı üç preset CI'dir; güncel sonuçlar
+yukarıdaki Actions bağlantısında, ilgili commit ve PR altında izlenir.
 
 Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 

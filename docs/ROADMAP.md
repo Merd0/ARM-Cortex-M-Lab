@@ -12,7 +12,7 @@ platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
 2. **Lesson 13 — Sync/FPU/DSP:** bu dalda dokuz firmware hedefi; kontrollü
    lost-update/exclusive retry, PRIMASK alıştırması, NOCP, eager/lazy frame,
    DSP ve softfp/hard ABI pozitif/negatif link kontrolleri uygulandı.
-   Yerel üç preset QEMU/GDB ve PR #9 üç preset CI PASS; merge onayı bekliyor.
+   Yerel üç preset QEMU/GDB ve PR #9 üç preset CI PASS; PR #9 merge edildi.
 3. **Lesson 14 — SysTick/PendSV:** uygulandı; Debug build ve dört QEMU
    senaryosu PASS (beklenen starter/bozuk sonuçları dahil). Yerel commit.
 4. **Lesson 15 — Mini Kernel:** PSP/MSP, sentetik ilk frame, assembly
@@ -31,13 +31,13 @@ platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
 
 2026-10-24 kullanıcı kararı: 14 → 15 → 16 aynı yerel geliştirme dalında,
 her biri ayrı commit ve temel build/QEMU/kritik doğruluk kapısıyla ilerledi.
-Sonraki aşama **toplu kalite kapısı**: ayrıntılı GDB, üç preset karşılaştırması,
-geniş smoke/build probes/negatif testler ve bağımsız mimari inceleme.
-Özellikle PendSV stack sınırları, context bütünlüğü ve cross-security
-exception/NSC sınırı yeniden incelenecek.
+Ardından **toplu yerel kalite kapısı** tamamlandı: ayrıntılı GDB, üç preset
+karşılaştırması ve geniş smoke/build probes/negatif testler PASS.
+PendSV stack sınırları, context bütünlüğü ve cross-security exception/NSC
+sınırı incelendi. Bu, bağımsız üçüncü taraf audit veya kart doğrulaması değildir.
 
 Uzak push/PR/merge için ayrıca kullanıcı onayı alınır; CI geçmeden merge yapılmaz.
-Main korunur. Toplu kapıdan sonra beş proje, ardından final entegrasyonu gelir.
+Main korunur. Beş proje ve final entegrasyonu da yerel kapıları geçti.
 Checkpoint etiketi ve Release ayrıca kararlaştırılır.
 
 Önceki auditlerin korunan kabul kriterleri: fresh PSP frame/stack guard,
@@ -103,11 +103,13 @@ Beş proje ve final sensor pipeline uygulandı. Son yerel üç-preset kapıları
 [Progress](PROGRESS.md) içinde: clean build, smoke/probes, 34 yeni runtime
 senaryosu ve kritik GDB gözlemleri PASS. Öğrenci TODO'ları derslerde ayrı kaldı.
 
-Sıradaki işlem yeni müfredat geliştirmek değildir. Onaydan sonra:
-1. CI'si geçmiş PR #9'u mevcut commit geçmişini koruyarak merge et.
-2. Lesson 14–16 dalını yayınla, PR/üç-preset CI; yalnız başarılıysa merge et.
-3. Son entegrasyon dalını yayınla, proje/final CI ve PR kontrolü; yalnız
-   başarılıysa merge et. Merge sonrası main/CI/temiz çalışma ağacını doğrula.
+Kullanıcı sıralı yayınlamayı onayladı. Yeni müfredat eklenmez:
+1. PR #9, üç preset CI sonrası merge edildi; commit geçmişi korundu.
+2. Lesson 14–16 için [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+   açıldı; merge koşulu üç preset CI başarısıdır.
+3. Son entegrasyon dalı proje/final CI ve PR kontrolünden geçer; yalnız
+   başarılıysa merge edilir. Merge sonrası main/CI/temiz çalışma ağacı doğrulanır.
 
-Bu uzak işlemler için kullanıcı onayı henüz yoktur. Yerel inceleme bağımsız
-üçüncü taraf audit diye sunulmaz. Tag/Release ayrıca kararlaştırılacak.
+Güncel uzak sonuçlar [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions)
+üzerindedir. Yerel inceleme ve CI bağımsız üçüncü taraf audit diye sunulmaz.
+Tag/Release ayrıca kararlaştırılacak.

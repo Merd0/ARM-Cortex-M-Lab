@@ -10,15 +10,17 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 5. "What I Learned" dolduruldu
 
 "What I Learned" öğrencinin kişisel kaydıdır; teknik teslim adına doldurulmaz.
-2026-10-24: ders 01–12 main üzerinde. PR #8 merge sonrası main SHA
-`01bc73c51046d09169f68c8cae009df4deb8e433`, üç preset CI PASS
-([run 40074628843](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40074628843)).
-Ders 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) üzerinde;
+2026-10-24 teknik teslim: 16 ders, beş proje ve final sistem uygulandı.
+Ders 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi;
 [run 40079336979](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40079336979)
-debug/release/minsize PASS. PR açık, merge edilmedi.
-Ders 14–16, beş proje ve final sistem yerelde uygulandı. Son çalışma
-`codex/final-integration` dalındadır; aşağıdaki son toplu yerel kapılar geçti.
-Yeni dalların uzak CI/merge'i onay bekliyor. Yerel test/teknik inceleme, bağımsız
+debug/release/minsize PASS. Merge commit'i
+`161d93d94b2aad62f5a31b3454c9d61f76b561d1`.
+Lesson 14–16 için [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+açıldı. Proje/final çalışması `codex/final-integration` dalından yayımlanır;
+aşağıdaki toplu yerel kapılar geçti. Kullanıcı sıralı push/PR/merge için onay
+verdi; her PR'ın merge koşulu üç preset CI başarısıdır. Commit bazındaki uzak
+sonuçlar [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions)
+üzerinden izlenir. Yerel test/teknik inceleme ve CI, bağımsız
 üçüncü taraf audit veya donanım sertifikası değildir. Öğrencinin kişisel
 tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
@@ -39,9 +41,9 @@ tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) i�
 | Target capability probe | ✅ (ölçüldü) |
 | Dokümantasyon temeli | ✅ |
 | Smoke test (`tests/smoke-test.sh`) | ✅ davranışsal regresyon; güncel sonuç aşağıda |
-| CI (`.github/workflows/ci.yml`) | ✅ main/PR #8 ve PR #9 üç preset PASS; yerel 14–16 CI adımı henüz uzakta çalışmadı |
+| CI (`.github/workflows/ci.yml`) | ✅ üç preset; build/regresyon/debugger/proje/final kapıları; uzak sonuçlar yukarıdaki Actions bağlantısında |
 | VS Code tasks + launch | ✅ yazıldı / ⬜ Windows'ta denenmedi |
-| Proje ve final-project tanımları | ✅ kod ve temel/üç-preset kapıları yerelde PASS; uzak CI bekliyor |
+| Proje ve final-project tanımları | ✅ kod ve üç-preset kapıları yerelde PASS; uzak kabul: üç preset CI |
 
 ## Dersler
 
@@ -102,7 +104,8 @@ FPSCR ve çağrı sonrası değer GDB'de karşılaştırılıyor. Bu kontrol kor
 denormal aritmetiğin veya donanım performansının doğrulaması değildir.
 
 Lesson 13 daha sonra PR #9'a push edildi; üç uzak CI işi başarıyla tamamlandı.
-Merge yapılmadı. Bağımsız audit veya donanım doğrulaması tamamlandı denmiyor.
+Ardından kullanıcı onayıyla PR #9 merge edildi. Bağımsız audit veya donanım
+doğrulaması tamamlandı denmiyor.
 
 ### Lessons 14–16 — hızlı geliştirme kapısı, 2026-10-24
 
@@ -120,8 +123,8 @@ Windows / GCC 15.2.1 / QEMU 11.1.0, yerel dal:
 - Seçili eski Debug senaryoları yeniden çalıştırıldı: Lesson 04 PSP çözümü,
   Lesson 08 BusFault snapshot/clear, Lesson 11 startup ve Lesson 13 lazy FP PASS.
   Bu, eski geniş smoke setinin tamamının yeniden çalıştırılması değildir.
-- Yeni hızlı kapı CI workflow'una eklendi; bu dal push edilmediği için
-  yeni adımın uzak CI sonucu yok.
+- Yeni hızlı kapı CI workflow'una eklendi; bu ilk yerel kapı sırasında
+  dal henüz push edilmemişti. Güncel yayın kaydı belgenin başındadır.
 - Geniş smoke/probe paketi, kapsamlı GDB, Release/MinSize karşılaştırmaları,
   geniş negatif testler ve bağımsız mimari audit bu aşamada çalıştırılmadı.
   Toplu kalite kapısı bunları kapsayacak; projeler/final entegrasyonu başlamadı.
@@ -151,12 +154,12 @@ Windows / GCC 15.2.1 / QEMU 11.1.0, yerel dal:
 
 | Proje | Durum |
 |---|---|
-| Protected Application | ✅ yerel üç preset; uzak CI bekliyor |
-| Fault Analyzer | ✅ yerel üç preset; uzak CI bekliyor |
-| From Reset to Main | ✅ yerel üç preset; uzak CI bekliyor |
-| Performance Profiler | ✅ yerel üç preset; uzak CI bekliyor |
-| Mini Kernel | ✅ yerel üç preset; uzak CI bekliyor |
-| Final Project | ✅ yerel üç preset; uzak CI bekliyor |
+| Protected Application | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| Fault Analyzer | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| From Reset to Main | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| Performance Profiler | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| Mini Kernel | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| Final Project | ✅ yerel üç preset; uzak kabul: üç preset CI |
 
 ## Öğrenme hedefi kontrol listesi
 
@@ -215,7 +218,8 @@ Secure Thread kesilirken context değiştirmeden dönüş; sınırlı FP servisi
 Handler-only politika ve açık FP payload/control temizliği.
 
 Sonuçlar yerel GCC 15.2.1 / QEMU 11.1.0 / Arm GDB 16.3.90 ortamındadır.
-GitHub Ubuntu/QEMU 8.2.2 yeni proje/final CI adımları henüz çalışmadı.
+Bu bölüm yerel kapının kaydıdır; GitHub Ubuntu/QEMU 8.2.2 proje/final CI
+sonuçları ilgili PR/commit'in Actions kaydından ayrı izlenir.
 PR #9'un eski üç-preset CI başarısı yeni dalın CI sonucu diye sunulmaz.
-Yeni tag/Release oluşturulmadı; main değişmedi. Bağımsız üçüncü taraf audit,
+Yeni tag/Release oluşturulmadı. Bağımsız üçüncü taraf audit,
 gerçek kart ve genel Secure/FP task switching doğrulaması yapılmadı.
