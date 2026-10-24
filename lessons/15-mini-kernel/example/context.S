@@ -24,7 +24,10 @@ SVC_Handler:
     ldrb r1,[r1,#-2]
 #ifdef L15_CUSTOM_TASKS
     cmp r1,#1
+    bne 7f
+    tst lr,#4          /* Bootstrap is MSP-origin, never a task PSP request. */
     beq 6f
+7:
     mov r1,lr
     b node_svc_dispatch
 6:
@@ -77,7 +80,11 @@ PendSV_Handler:
     ldr r1,=0xFFFFFFFD
 #endif
     cmp lr,r1
+#ifdef L15_NONSECURE
+    bne .Lsecure_context
+#else
     bne l15_panic
+#endif
     mrs r0,psp
     tst r0,#7
     bne l15_panic
@@ -113,6 +120,24 @@ PendSV_Handler:
     msr primask,r12
     isb
     bx lr
+#ifdef L15_NONSECURE
+.Lsecure_context:
+    /* A NS interrupt may arrive during a Thread-origin Secure gateway call.
+     * Do not inspect its Secure stack or switch its owner. Return the original
+     * hardware token unchanged; the next tick/yield requests scheduling again. */
+    ldr r0,=0xFFFFFFC3
+    and r0,r0,lr
+    ldr r1,=0xFFFFFFC0
+    cmp r0,r1
+    bne l15_panic
+    tst lr,#8
+    beq l15_panic
+    ldr r0,=g_l15_secure_deferred
+    ldr r1,[r0]
+    adds r1,r1,#1
+    str r1,[r0]
+    bx lr
+#endif
 .size PendSV_Handler,.-PendSV_Handler
 
 #ifndef L15_CUSTOM_TASKS

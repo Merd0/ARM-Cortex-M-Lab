@@ -17,3 +17,4 @@ void l15_application_report(void)
     console_kv_u32("QUEUE_SUM",sum);
     console_kv_str("CHECK_QUEUE",produced==16U && consumed==16U && head==tail && sum==120U?"PASS":"FAIL");
 }
+uint32_t l15_application_ready(void) { return produced==16U && consumed==16U; }

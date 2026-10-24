@@ -35,6 +35,7 @@ void SysTick_Handler(void)
         ++g_l14_ticks;
         if (g_l14_ticks >= 4U) SysTick->CTRL = 0U;
         SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+        __SEV(); /* Sticky event closes the condition-check / sleep race. */
     }
 }
 
@@ -74,7 +75,10 @@ int main(void)
     before = g_l14_dispatches;
     uint32_t configured = SysTick_Config(SystemCoreClock / 1000U) == 0U;
     l14_priorities(); /* SysTick_Config itself writes the SysTick priority. */
-    for (uint32_t i = 0U; i < 2000000U && g_l14_ticks < 4U; ++i) __NOP();
+    /* Iteration budgets depend on optimization/host speed, not timer time.
+     * SEV in the ISR also covers a final tick between this check and WFE.
+     * The external smoke runner bounds a genuinely stalled timer. */
+    while (g_l14_ticks < 4U) __WFE();
     SysTick->CTRL = 0U;
     SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk;
     __DSB(); __ISB();

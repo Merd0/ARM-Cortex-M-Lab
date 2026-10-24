@@ -21,6 +21,9 @@ node_calibrate:
     vmul.f32 s0,s0,s1
     vcvt.u32.f32 s0,s0
     vmov r0,s0
+    movs r3,#0
+    vmov s0,r3
+    vmov s1,r3
     vmsr fpscr,r2
     bx lr
 .size node_calibrate,.-node_calibrate

@@ -18,6 +18,7 @@ static volatile uint32_t tick_pending;
 extern uint32_t __stack_top;
 __attribute__((weak)) void l15_application_step(uint32_t id) { (void)id; }
 __attribute__((weak)) void l15_application_report(void) { }
+__attribute__((weak)) uint32_t l15_application_ready(void) { return 1U; }
 
 static void check(const char *key, uint32_t ok)
 {
@@ -78,7 +79,7 @@ uint32_t l15_observe(uint32_t id, uint32_t registers_ok)
     if (!registers_ok) g_l15_bad[id] = 1U;
     l15_application_step(id);
     if ((g_l15_runs[0] >= 12U && g_l15_runs[1] >= 12U &&
-         g_l15_ticks >= 4U && g_l15_async >= 2U) ||
+         g_l15_ticks >= 4U && g_l15_async >= 2U && l15_application_ready()) ||
         g_l15_ticks >= 16U || g_l15_switches >= 50000U) return 1U;
     return g_l15_runs[id] <= 8U ? 2U : 0U;
 }

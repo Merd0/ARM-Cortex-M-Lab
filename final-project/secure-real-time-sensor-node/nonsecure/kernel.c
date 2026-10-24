@@ -17,6 +17,7 @@ static stack_t stacks[TASK_COUNT] __attribute__((aligned(32)));
 static task_t tasks[TASK_COUNT];
 task_t *g_l15_current;
 volatile uint32_t g_l15_booted;
+volatile uint32_t g_l15_secure_deferred;
 static volatile uint32_t ticks, switches, preemptions, spin_preemptions, tick_pending;
 static uint32_t runs[TASK_COUNT], bad_register, bad_privilege, rejected;
 static uint32_t thread_control,last_svc_return;
@@ -81,6 +82,7 @@ static void finish(void)
 #endif
 #if NODE_TEST == 6
     check("CHECK_BAD_SVC_REJECT",rejected>0U);
+    check("CHECK_SECURE_CONTEXT_DEFERRED",g_l15_secure_deferred>0U);
 #endif
     l16_report(0x7E000000U);
     for (;;) __WFI();
@@ -88,6 +90,9 @@ static void finish(void)
 void l15_panic(void)
 {
     SysTick->CTRL=0U; __disable_irq();
+    console_kv_hex("PANIC_RETURN",(uint32_t)(uintptr_t)__builtin_return_address(0));
+    console_kv_hex("PANIC_PSP",__get_PSP());
+    console_kv_hex("PANIC_CFSR",SCB->CFSR);
     check("CHECK_KERNEL_STATE",0U);
     console_line("===== END =====");
     for (;;) __WFI();
@@ -210,6 +215,13 @@ void node_step(uint32_t id,uint32_t registers_ok)
 #endif
 #if NODE_TEST == 6
     if(call(0xFFFFFFFFU,0U)!=NODE_ERROR) __asm volatile("svc #4" ::: "memory");
+    register uint32_t boot_result __asm("r0")=0U;
+    __asm volatile("svc #1" : "+r"(boot_result) :: "r1","r2","r3","r12","cc","memory");
+    if(boot_result!=NODE_ERROR) __asm volatile("svc #4" ::: "memory");
+    /* Unprivileged Thread cannot stop the diagnostic channel or write UART. */
+    l16_report(0x7E000000U);
+    l16_report(0x55000021U);
+    if(l16_service(7U)!=L16_DENIED) __asm volatile("svc #4" ::: "memory");
 #endif
     if(id==0U) (void)call(OP_SAMPLE,0U);
     if(id==1U) (void)call(OP_PROCESS,0U);

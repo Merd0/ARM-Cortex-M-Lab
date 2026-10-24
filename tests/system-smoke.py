@@ -57,7 +57,7 @@ def final(build,evidence):
         else:
             keys=prefix+normal+secure
             if mode=="spin": keys+=("CHECK_SPIN_PREEMPTED",)
-            if mode=="bad-svc": keys+=("CHECK_BAD_SVC_REJECT",)
+            if mode=="bad-svc": keys+=("CHECK_BAD_SVC_REJECT","CHECK_DIAGNOSTIC_POLICY","CHECK_SECURE_CONTEXT_DEFERRED")
             # Independent integer oracle for sliding four-sample average and 1.5 gain.
             samples=[i%16 for i in range(32)]
             expected=sum(((sum(samples[max(0,i-3):i+1])//min(i+1,4))*3)//2 for i in range(32))
