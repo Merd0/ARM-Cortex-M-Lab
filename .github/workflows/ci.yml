@@ -58,6 +58,9 @@ jobs:
       - name: Lesson 13 synchronization, FP context and ABI checks
         run: python3 tests/lesson13-check.py ${{ matrix.preset }}
 
+      - name: Lessons 14-16 development gate (tick, context, TrustZone)
+        run: python3 tests/development-smoke.py all --preset ${{ matrix.preset }}
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,4 +72,5 @@ jobs:
             build/${{ matrix.preset }}/**/*.map
             build/${{ matrix.preset }}/lesson12-evidence/
             build/${{ matrix.preset }}/lesson13-evidence/
+            build/${{ matrix.preset }}/development-evidence/
           if-no-files-found: warn

@@ -161,9 +161,11 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
 
 2026-10-24: Lessons 01–12 `main` üzerinde; PR #8 sonrası üç-preset CI geçti.
-Lesson 13 bu geliştirme dalında uygulandı ve yerel QEMU/GDB ile doğrulandı;
-uzak CI/PR onayı bekliyor. Lessons 14–16, beş birleştirici proje ve final
-proje henüz tamamlanmadı.
+Lesson 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) üzerinde;
+üç preset CI PASS, merge onayı bekliyor. Lessons 14–16 yerel
+`codex/lessons-14-16` dalında çalışan örnek/alıştırma/çözümleriyle uygulandı:
+Debug build ve temel QEMU kapısı geçti. Toplu kalite denetimi, uzak CI ve
+merge henüz yapılmadı. Beş birleştirici proje ve final proje planlı.
 Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### Altyapı
@@ -198,10 +200,10 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 
 ### İleri Konular
 
-- [x] Synchronization / FPU / DSP (Lesson 13: yerel doğrulandı; CI/PR bekliyor)
-- [ ] SysTick & PendSV
-- [ ] Mini kernel & context switching
-- [ ] TrustZone & advanced features
+- [x] Synchronization / FPU / DSP (Lesson 13: PR #9, üç preset CI PASS; merge bekliyor)
+- [x] SysTick & PendSV (yerel temel geliştirme; toplu kalite kapısı bekliyor)
+- [x] Mini kernel & context switching (yerel temel geliştirme; toplu kalite kapısı bekliyor)
+- [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; toplu kalite kapısı bekliyor)
 
 ### Projeler
 

@@ -12,13 +12,16 @@ platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
 2. **Lesson 13 — Sync/FPU/DSP:** bu dalda dokuz firmware hedefi; kontrollü
    lost-update/exclusive retry, PRIMASK alıştırması, NOCP, eager/lazy frame,
    DSP ve softfp/hard ABI pozitif/negatif link kontrolleri uygulandı.
-   Yerel üç preset QEMU/GDB doğrulandı; uzak yayınlama ve CI/PR bekliyor.
-3. **Lesson 14 — SysTick/PendSV:** timer, öncelik, pending ve yürütme sırası.
+   Yerel üç preset QEMU/GDB ve PR #9 üç preset CI PASS; merge onayı bekliyor.
+3. **Lesson 14 — SysTick/PendSV:** uygulandı; Debug build ve dört QEMU
+   senaryosu PASS (beklenen starter/bozuk sonuçları dahil). Yerel commit.
 4. **Lesson 15 — Mini Kernel:** PSP/MSP, sentetik ilk frame, assembly
    R4–R11/EXC_RETURN koruması, stack sınırları ve scheduler regresyonları.
+   Uygulandı; Debug ve dört QEMU senaryosu PASS. Yerel commit.
 5. **Lesson 16 — TrustZone:** AN505 üzerinde gerçek Secure/Non-secure imaj,
    SAU/NSC/gateway ve yetkisiz erişim deneyleri; ileri özellikler capability
-   kanıtı olmadan çalışıyor sayılmayacak.
+   kanıtı olmadan çalışıyor sayılmayacak. İki imaj, NSC scalar servis,
+   AUVIOL ve INVEP uygulandı; Debug/dört çift QEMU PASS. Yerel commit.
 6. **Birleştirici projeler:** From Reset to Main (10–11), Fault Analyzer
    (07–08), Protected Application (04–08), Performance Profiler (09/12),
    Educational Mini Kernel (14–15). Her biri ayrı kabul kapısıdır.
@@ -26,11 +29,16 @@ platform tasarlanmıyor; aşağıdaki mevcut kapsam tamamlanacak.
    sentetik sensör, veri işleme ve kontrollü servisler. Güvenlik iddiaları
    negatif testlerle, gerçek zaman iddiaları hedef/model sınırlarıyla raporlanır.
 
-Her aşama: mevcut base kontrolü → ayrı dal → uygulama → üç preset → QEMU
-ve GDB → negatif testler → teknik inceleme → kısa teslim. Uzak push/PR/merge
-için kullanıcı onayı alınır; CI geçmeden merge yapılmaz. Sonraki aşamalar
-bu listede yer aldığı için tamamlanmış kabul edilmez. Checkpoint etiketi
-ve Release ayrıca kararlaştırılır.
+2026-10-24 kullanıcı kararı: 14 → 15 → 16 aynı yerel geliştirme dalında,
+her biri ayrı commit ve temel build/QEMU/kritik doğruluk kapısıyla ilerledi.
+Sonraki aşama **toplu kalite kapısı**: ayrıntılı GDB, üç preset karşılaştırması,
+geniş smoke/build probes/negatif testler ve bağımsız mimari inceleme.
+Özellikle PendSV stack sınırları, context bütünlüğü ve cross-security
+exception/NSC sınırı yeniden incelenecek.
+
+Uzak push/PR/merge için ayrıca kullanıcı onayı alınır; CI geçmeden merge yapılmaz.
+Main korunur. Toplu kapıdan sonra beş proje, ardından final entegrasyonu gelir.
+Checkpoint etiketi ve Release ayrıca kararlaştırılır.
 
 Önceki auditlerin korunan kabul kriterleri: fresh PSP frame/stack guard,
 EXC_RETURN ve fault-frame reddi, M33 HFSR/BFSR kuralları, tam cevap eşitliği,

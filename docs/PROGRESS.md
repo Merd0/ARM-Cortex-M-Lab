@@ -13,7 +13,13 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 2026-10-24: ders 01–12 main üzerinde. PR #8 merge sonrası main SHA
 `01bc73c51046d09169f68c8cae009df4deb8e433`, üç preset CI PASS
 ([run 40074628843](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40074628843)).
-Ders 13 bu dalda yerel doğrulandı; uzak CI/PR sonucu henüz yok. Aşama planı [Roadmap](ROADMAP.md) içinde.
+Ders 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) üzerinde;
+[run 40079336979](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40079336979)
+debug/release/minsize PASS. PR açık, merge edilmedi.
+Ders 14–16 yerel `codex/lessons-14-16` dalında temel geliştirme kapısını geçti.
+Kullanıcı kararıyla bu üç dersin ayrıntılı GDB, üç-preset karşılaştırması ve
+bağımsız audit'i sonraki toplu kalite aşamasına bırakıldı. Öğrencinin kişisel
+tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
 ## Altyapı
 
@@ -32,7 +38,7 @@ Ders 13 bu dalda yerel doğrulandı; uzak CI/PR sonucu henüz yok. Aşama planı
 | Target capability probe | ✅ (ölçüldü) |
 | Dokümantasyon temeli | ✅ |
 | Smoke test (`tests/smoke-test.sh`) | ✅ davranışsal regresyon; güncel sonuç aşağıda |
-| CI (`.github/workflows/ci.yml`) | ✅ main/PR #8 üç preset PASS; Lesson 13 adımı henüz uzakta çalışmadı |
+| CI (`.github/workflows/ci.yml`) | ✅ main/PR #8 ve PR #9 üç preset PASS; yerel 14–16 CI adımı henüz uzakta çalışmadı |
 | VS Code tasks + launch | ✅ yazıldı / ⬜ Windows'ta denenmedi |
 | Proje ve final-project tanımları | ✅ README'ler yazıldı / ⬜ kod yok (planlı) |
 
@@ -52,10 +58,10 @@ Ders 13 bu dalda yerel doğrulandı; uzak CI/PR sonucu henüz yok. Aşama planı
 | 10 | Linker, ELF & Memory | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 11 | Startup (Reset → main) | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | 12 | Debug & DWT | ✅ | ✅ | ✅ main/CI | ✅ üç preset | ⬜ |
-| 13 | Sync, FPU & DSP | ✅ | ✅ | ✅ yerel | ✅ üç preset | ⬜ |
-| 14 | SysTick & PendSV | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
-| 15 | Mini Kernel | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
-| 16 | TrustZone & Advanced | ⬜ scaffold | ⬜ | ⬜ | ⬜ | ⬜ |
+| 13 | Sync, FPU & DSP | ✅ | ✅ | ✅ PR #9 CI | ✅ üç preset | ⬜ |
+| 14 | SysTick & PendSV | ✅ | ✅ | ✅ Debug/QEMU | ⬜ toplu kapı | ⬜ |
+| 15 | Mini Kernel | ✅ | ✅ | ✅ Debug/QEMU | ⬜ toplu kapı | ⬜ |
+| 16 | TrustZone & Advanced | ✅ | ✅ | ✅ Debug/QEMU | ⬜ toplu kapı | ⬜ |
 
 ## Doğrulama kaydı
 
@@ -94,8 +100,30 @@ FP worker'ın gereksiz FPSCR sıfırlaması son AAPCS incelemesinde kaldırıld�
 FPSCR ve çağrı sonrası değer GDB'de karşılaştırılıyor. Bu kontrol koruması,
 denormal aritmetiğin veya donanım performansının doğrulaması değildir.
 
-Lesson 13 henüz push/PR/uzak CI aşamasına geçmedi. Ders 14–16 ve projeler
-planlı kalıyor; bağımsız audit veya donanım doğrulaması tamamlandı denmiyor.
+Lesson 13 daha sonra PR #9'a push edildi; üç uzak CI işi başarıyla tamamlandı.
+Merge yapılmadı. Bağımsız audit veya donanım doğrulaması tamamlandı denmiyor.
+
+### Lessons 14–16 — hızlı geliştirme kapısı, 2026-10-24
+
+Windows / GCC 15.2.1 / QEMU 11.1.0, yerel dal:
+- Debug bütün repository build'i PASS; toplam 80 ELF (16 yeni ELF).
+- `python tests/development-smoke.py all`: 12 QEMU senaryosunun tamamı
+  beklenen sonuçta; CHECK alanlarının tam kümesi ve beklenen FAIL'ler doğrulanır.
+- 14: SysTick/PendSV sırası 1,2,3; yüksek öncelikli PendSV 1,3,2;
+  maskeli çift pending yazması tek dispatch; timer dört tick.
+- 15: iki task PSP üzerinde, gerçek timer preemption, R4–R11 canary'leri,
+  stack guard'ları, SVC yield; eksik frame güvenli ret, bozuk save beklenen FAIL.
+- 16: dört ayrı Secure/NS imaj çifti; geçerli scalar NSC çağrıları,
+  sınır dışı girdilerin reddi, Secure okuma AUVIOL=0x08 ve SG atlama INVEP=0x01.
+  SFARVALID temiz olduğunda SFAR adres diye yorumlanmaz.
+- Seçili eski Debug senaryoları yeniden çalıştırıldı: Lesson 04 PSP çözümü,
+  Lesson 08 BusFault snapshot/clear, Lesson 11 startup ve Lesson 13 lazy FP PASS.
+  Bu, eski geniş smoke setinin tamamının yeniden çalıştırılması değildir.
+- Yeni hızlı kapı CI workflow'una eklendi; bu dal push edilmediği için
+  yeni adımın uzak CI sonucu yok.
+- Geniş smoke/probe paketi, kapsamlı GDB, Release/MinSize karşılaştırmaları,
+  geniş negatif testler ve bağımsız mimari audit bu aşamada çalıştırılmadı.
+  Toplu kalite kapısı bunları kapsayacak; projeler/final entegrasyonu başlamadı.
 
 ## Exercise / Solution / Answers
 
@@ -103,6 +131,9 @@ planlı kalıyor; bağımsız audit veya donanım doğrulaması tamamlandı denm
 |---|---|---|---|
 | 01 | senaryo yazımı (kod yok) | — | `lessons/01-cortex-m-family/answers/reference-answers.md` |
 | 02 | `exercises/01-decode-apsr-flags/` | `solutions/01-decode-apsr-flags/` (çalıştırıldı ✅) | `lessons/02-programmer-model/answers/quick-check.md` |
+| 14 | `exercises/01-defer-work/` (öncelik eksik) | `solutions/01-defer-work/` (Debug PASS) | `lessons/14-systick-pendsv/answers/quick-check.md` |
+| 15 | `exercises/01-initial-frame/` (frame eksik, launch yok) | `solutions/01-initial-frame/` (Debug PASS) | `lessons/15-mini-kernel/answers/quick-check.md` |
+| 16 | `exercises/01-secure-service/` (fail-closed) | `solutions/01-secure-service/` (Debug PASS) | `lessons/16-trustzone-advanced/answers/quick-check.md` |
 | 13 | `exercises/01-critical-update/` (2/6, eksik) | `solutions/01-critical-update/` (6/6 PASS) | `lessons/13-sync-fpu-dsp/answers/quick-check.md` |
 | 12 | `exercises/01-valid-measurement/` (0/12, eksik) | `solutions/01-valid-measurement/` (12/12 PASS) | `lessons/12-debug-dwt/answers/quick-check.md` |
 | 11 | `exercises/01-reset-sequence/` | `solutions/01-reset-sequence/` (çalıştırıldı ✅) | `lessons/11-startup/answers/quick-check.md` |

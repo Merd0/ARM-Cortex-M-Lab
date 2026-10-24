@@ -160,3 +160,12 @@ cihaza ozel IRQ girdileri henuz tanimli degil (bkz. `platform/mps2_an505.h`
 icindeki `IRQn_Type`). Bir cevre birimi kesmesi etkinlestirilirse islemci
 tanimsiz bir vector girdisine dallanir. IRQ girdileri ders 07'de, AN505
 uygulama notuna karsi dogrulandiktan sonra eklenecek.
+
+## Lesson 16: ayrı iki imaj yerleşimi
+
+Yukarıdaki 32 KiB Secure RAM düzeni ortak tek-imaj platformunun varsayımıdır.
+[Lesson 16](../lessons/16-trustzone-advanced/) kendi linker script'leriyle fiziksel
+SRAM'i Secure/NS olarak iki 16 KiB yarıya böler; NS kod 0x00080000'da, NSC
+veneers 0x10070000'da bulunur. MPC blok boyutu runtime okunur. Önceki derslerin
+paylaşılan linker/startup'ı değişmez; iki imajın aynı fiziksel belleğe çakışmadan
+yerleşmesi ve attribution ayrı ayrı kurulur.
