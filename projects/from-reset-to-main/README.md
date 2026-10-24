@@ -1,6 +1,6 @@
 # Project — From Reset to Main
 
-**STATUS: Debug temel kapısı PASS; son toplu kalite kapısı bekliyor.**
+**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
 
 Lesson 10–11'in linker/startup ilişkisini gerçek bir initialized calibration
 dizisi ve sıfırlanan uygulama buffer'ı üzerinde birleştirir. Çalışan reset,

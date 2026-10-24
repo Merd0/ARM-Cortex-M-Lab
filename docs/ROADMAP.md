@@ -96,3 +96,18 @@ olgunlasmis bir RTOS kullanilir. Bu repodaki bilgi o noktada
 ## Gercek donanim
 
 Board alindiginda: `docs/REAL_HARDWARE_MIGRATION.md`
+
+## Yerel tamamlama ve yayınlama sırası — 2026-10-24
+
+Beş proje ve final sensor pipeline uygulandı. Son yerel üç-preset kapıları
+[Progress](PROGRESS.md) içinde: clean build, smoke/probes, 34 yeni runtime
+senaryosu ve kritik GDB gözlemleri PASS. Öğrenci TODO'ları derslerde ayrı kaldı.
+
+Sıradaki işlem yeni müfredat geliştirmek değildir. Onaydan sonra:
+1. CI'si geçmiş PR #9'u mevcut commit geçmişini koruyarak merge et.
+2. Lesson 14–16 dalını yayınla, PR/üç-preset CI; yalnız başarılıysa merge et.
+3. Son entegrasyon dalını yayınla, proje/final CI ve PR kontrolü; yalnız
+   başarılıysa merge et. Merge sonrası main/CI/temiz çalışma ağacını doğrula.
+
+Bu uzak işlemler için kullanıcı onayı henüz yoktur. Yerel inceleme bağımsız
+üçüncü taraf audit diye sunulmaz. Tag/Release ayrıca kararlaştırılacak.

@@ -1,6 +1,6 @@
 # Final — Secure Real-Time Sensor Node
 
-**STATUS: Debug temel entegrasyon kapısı PASS; toplu kalite kapısı sürüyor.**
+**STATUS: yerel üç-preset kalite kapısı PASS; uzak CI/merge onayı bekliyor.**
 
 Çalışan sistem: üç unprivileged Non-secure task sentetik sensör verisini toplar,
 işler ve UART telemetry üretir. Privileged Non-secure kernel queue'ları, MPU'yu
@@ -38,13 +38,20 @@ flowchart LR
   NS varyantı tam EXC_RETURN=0xFFFFFFBC ister; basic same-state NS frame dışında
   context sessizce kabul edilmez. FP task context switching uygulanmaz.
 - FPU yalnız Secure servis içinde kullanılır. NS CPACR/NSACR izni kapalıdır.
-  FPSCR çağıranın durumu korunur; S16–S31 kullanılmaz. CMSE dönüşünü derleyici üretir.
+  Integer ABI'li ASM leaf FPSCR'yi korur, S0/S1 payload'ını sıfırlar;
+  S16–S31 kullanılmaz. General-register-only Secure C hook, önceki FPCA/SFPA
+  durumunu geri getirir. CMSE gateway/return kodunu derleyici üretir.
+  Bu sınırlı Handler servisi, genel amaçlı Secure FP context manager değildir.
 - Lesson 16'nın aynı SAU/IDAU/MPC/NSC boot'u ve linker bölümü kullanılır.
   NS vector/handler'ları kernel için ayrıdır; .data/.bss reset kodu yeniden kullanılır.
 
 Secure/Non-secure ayrımı ile privileged/unprivileged ayrımı iki ayrı sınırdır.
-NSC scalar API bütün NS çağıranlar için güvenli girdi sınırını uygular;
-çağıranın kimliğini doğrulamaz. UART diagnostic kanalı da public scalar kanaldır.
+Kalibrasyon API'si yalnız NS SVC Handler bağlamındaki [0,15] girdiyi kabul eder;
+Thread-origin istek FP komutu çalışmadan L16_DENIED döndürür. Bu context erişim
+politikasıdır, kimlik/kriptografik doğrulama değildir. Diagnostic kanal yalnız
+privileged NS Thread veya Handler'dan UART/bitiş komutu kabul eder. Gateway
+çağıran bayrağı gerçek CMSE entry'de yakalanır; sıradan bir C helper'ın LR'sinden
+çıkarılmaz.
 Secure kalibrasyon kodunun bütünlüğü NS bellek hatalarından ayrılır. Gizli anahtar,
 imza, MAC, secure boot veya uzaktan attestation uygulanmadı.
 
@@ -91,10 +98,13 @@ Hepsi kendi Secure/NS imaj çiftiyle çalışır:
   frame güvenilmez olarak reddedilir. Kernel MSP/guard'ları sağlam kalır.
 - node-spin: dördüncü background task yield etmeden sonsuz döngüde kalır;
   timer onu preempt ederken üç pipeline task'ı 32 örneği bitirir.
-- node-bad-svc: bilinmeyen SVC op kodları NODE_ERROR döndürür; normal veri
-  akışı ve sonuç değişmez.
+- node-bad-svc: bilinmeyen op ve task'tan bootstrap SVC #1 isteği NODE_ERROR
+  döndürür. Unprivileged diagnostic/end istekleri etkisizdir; doğrudan FP
+  servis isteği reddedilir. Secure Thread içinde kontrollü NS SysTick pending
+  yapılarak PendSV'nin owner/token/PSP değiştirmeden dönüşü doğrulanır.
+  Normal veri akışı ve sonuç değişmez.
 
-Bu yedi QEMU senaryosu Debug'da beklenen sonuçları verdi. Fault testleri normal
+Bu yedi QEMU senaryosu Debug/Release/MinSize'da beklenen sonuçları verdi. Fault testleri normal
 sistemde otomatik iyileşme sağlamaz: fault snapshot'ından sonra durulur.
 
 ## Kritik sınırlar
@@ -103,6 +113,13 @@ Stack limiti indirect STM'yi korumaz; PendSV ilk store'dan önce bounds kontrol�
 yapar. Bootstrap eski main/MSP frame'ine dönmez; ilk sentetik frame'den yeni
 task başlatır. Scheduler MPU mapping'ini kısa maskeli bölümde günceller, önceki
 PRIMASK'ı geri getirir. Public C çağrı sınırında MSP 8-byte hizalıdır.
+
+NS IRQ bir Thread-origin Secure gateway'i kesebilir. PendSV böyle bir context'i
+task stack'i sanıp kaydetmez: orijinal hardware EXC_RETURN ile aynı Secure
+çağrıya döner, sonraki tick/yield scheduling'i tekrar ister. GDB owner, TCB SP,
+NS PSP/PSPLIM ve token'ın değişmediğini, Secure devam noktasına dönüldüğünü
+doğrular. Secure çağrılar bounded olmalıdır; uzun/sonsuz Secure işlem için
+genel TrustZone-aware task switching desteği yoktur.
 
 Fault Analyzer same-state basic frame'leri destekler. FP/cross-security frame
 tahmin edilerek dereference edilmez. SecureFault için SFSR/SFAR validity
@@ -120,7 +137,7 @@ DWT CYCCNT burada ilerlemez; performans/WCET sonucu uydurulmaz.
 ## Toplu kalite kapısı
 
 [System smoke](../../tests/system-smoke.py), [GDB gate](../../tests/integration-check.py)
-ve mevcut lesson/probe testleriyle üç preset üzerinde doğrulama yapılacak.
+ve mevcut lesson/probe testleri üç preset üzerinde geçti.
 Ham kanıtlar ignored build/<preset>/system-evidence altında saklanır.
 GDB kayıtları context save, MPU ihlali ve SecureFault geçişini ayrı gösterir;
 yerel kontrol bağımsız üçüncü taraf audit diye sunulmaz.

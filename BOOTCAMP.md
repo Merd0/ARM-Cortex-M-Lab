@@ -11,8 +11,9 @@ DEEP TRACK'e bırak.
 Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
 otomatik işaretlenmez. Repository teslim durumu: ders 01–12 `main` üzerinde;
 ders 13 PR #9'da üç preset CI'yi geçti, merge bekliyor. Ders 14–16 yerel
-dalda temel Debug/QEMU kabulünü geçti; toplu kalite denetimi ve uzak yayınlama
-henüz yapılmadı. Projeler planlı. Güncel teknik durum: [Progress](docs/PROGRESS.md).
+dalda üç-preset/QEMU ve kritik GDB kabulünü geçti. Beş proje ve final sensor
+node da yerelde çalışıyor; uzak yayınlama/CI/merge bekliyor.
+Öğrenci çalışma kutuları teknik teslim adına otomatik doldurulmaz. Güncel teknik durum: [Progress](docs/PROGRESS.md).
 
 ---
 

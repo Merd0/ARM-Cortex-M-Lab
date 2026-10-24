@@ -1,6 +1,6 @@
 # Lesson 15 — Educational Mini Kernel
 
-`[DEEP]` · **STATUS: temel geliştirme doğrulandı; toplu kalite kapısı bekliyor**
+`[DEEP]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
 
 ## TEACH — Bir task'ın devam edebilmesi için ne saklanır?
 
@@ -103,3 +103,11 @@ Bu testler WCET, adil zaman payı, sonsuz çalışma veya donanım doğrulaması
 - [Lesson 13](../13-sync-fpu-dsp/): bu çekirdeğin desteklemediği FP frame'leri.
 
 **Previous:** [14](../14-systick-pendsv/) · **Next:** [16](../16-trustzone-advanced/)
+
+## Son toplu kapı
+
+Üç preset clean build/dört QEMU senaryosu PASS; GDB public MSP hizasını, kaydedilen
+ve restore edilen R4–R11/PSP/PSPLIM/EXC_RETURN'ü karşılaştırdı.
+Proje hook'larının default'u no-op/ready'dir. Son sistem aynı ASM'yi NS ve
+unprivileged varyantta kullanır; Secure context aktifken switch ertelenir.
+Önceki Debug-only kaydı tarihsel aşamadır; [Progress](../../docs/PROGRESS.md) güncel sonuçları içerir.

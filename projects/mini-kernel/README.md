@@ -1,10 +1,11 @@
 # Project — Educational Mini Kernel
 
-**STATUS: Debug temel kapısı PASS; son toplu kalite kapısı bekliyor.**
+**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
 
 Lesson 15 kernel/frame/context kaynakları değiştirilmiş kopyalar yerine doğrudan
-derlenir. İki küçük weak uygulama hook'u yalnız bounded iş ve sonuç raporlaması
-ekler; dersin varsayılan davranışı değişmez. [application.c](src/application.c)
+derlenir. Üç küçük weak uygulama hook'u yalnız bounded iş ve sonuç raporlaması
+ekler; dersin varsayılan davranışı değişmez. Ready hook'u queue boşalmadan
+bitişe izin vermez; testin beklediği 16 örnek azaltılmaz. [application.c](src/application.c)
 iki task arasında sekiz slot'lu ring buffer kullanır: producer 0..15 üretir,
 consumer toplamı hesaplar. Counter ve queue güncellemesi mevcut kısa observation
 kritik bölümünde yapılır; UART yalnız bitiş Handler'ındadır.

@@ -113,3 +113,22 @@ Yeni kapı üç CI preset'ine bağlandı; uzak sonuç ancak dal push edilince ol
 Bu aşamada Debug çalıştırıldı; `--preset release` / `--preset minsize` seçenekleri
 toplu kapıda kullanılacak. Mevcut smoke, build-probes ve GDB script'leri
 azaltılmadı. Bu hızlı test tam mimari/security audit veya donanım testi değildir.
+
+## Projeler ve final entegrasyon kapısı
+
+```bash
+python tests/system-smoke.py --preset debug
+python tests/integration-check.py --preset debug
+python tests/profile-report.py --preset debug
+```
+
+Aynı komutlar release/minsize için de çalıştırıldı. System gate: 15 proje +
+7 final senaryosu. GDB gate: dokuz oturum; R4–R11 save/restore ve EXC_RETURN,
+PSP/PSPLIM/MSP alignment, FP payload/control, MPU/STKOF ve Secure geçişleri.
+Kontrollü NS SysTick, Secure Thread devam noktasının sahibi değiştirilmeden
+korunduğunu sınar; GDB tail-chaining'i anında Thread'e dönüş sanmaz.
+
+Diagnostic API privilege testi ve Thread-origin FP servis reddi beklenen
+politikayı ölçer. Queue tamamlanma kontrolü örnek sayısını azaltarak geçilmez.
+Yeni CI adımları her üç preset'e bağlandı; onay öncesinde uzak sonuç yoktur.
+Yerel kapılar üçüncü taraf bağımsız audit veya kart testi değildir.

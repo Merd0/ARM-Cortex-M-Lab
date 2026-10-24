@@ -1,6 +1,6 @@
 # Project — Performance Profiler
 
-**STATUS: Debug temel kapısı PASS; son toplu kalite kapısı bekliyor.**
+**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
 
 Lesson 12'nin runtime-input workload'u ve referans ölçüm sınıflandırıcısı aynı
 kaynaklardan kullanılır. Proje beş farklı workload object'i üretir:

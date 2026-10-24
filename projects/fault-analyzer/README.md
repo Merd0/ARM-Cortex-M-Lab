@@ -1,6 +1,6 @@
 # Project — Fault Analyzer
 
-**STATUS: Debug temel kapısı PASS; son toplu kalite kapısı bekliyor.**
+**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
 
 [diagnostic.c](diagnostic.c) Lesson 08'in referans decoder'ını yeniden kullanır.
 Önüne konservatif frame capture sınırı ekler: trusted stack bounds, desteklenen

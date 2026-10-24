@@ -1,6 +1,6 @@
 # Lesson 14 — SysTick & PendSV
 
-`[STANDARD]` · **STATUS: temel geliştirme doğrulandı; toplu kalite kapısı bekliyor**
+`[STANDARD]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
 
 ## TEACH — Tick bir scheduler değildir
 
@@ -44,6 +44,10 @@ Debug/QEMU'da ölçülen ana sonuçlar:
 20 MHz platform saati / 1000 için LOAD=19999. Bu, donanım üzerinde ölçülmüş
 duvar saati doğruluğu iddiası değildir. Dört tick beklenir; PendSV çağrı sayısı
 tick başına tam bir olmak zorunda değildir. Pending olayları birleşebilir.
+ISR SEV üretir, Thread WFE ile bekler: son tick koşul kontrolüyle uyku arasına
+girse bile sticky event kaybolmaz. Optimizasyona/host hızına bağlı bir spin
+iteration bütçesi timer süresi gibi kullanılmaz; durmuş timer dış test timeout'u
+ile başarısız sayılır.
 
 GDB ile isteğe bağlı inceleme (ayrıntılı GDB kapısı bu aşamada çalıştırılmadı):
 
@@ -91,3 +95,9 @@ karşılaştırması toplu kalite aşamasındadır.
 - [CMSIS implementation](../../external/CMSIS/Core/Include/core_cm33.h): SysTick_Config.
 
 **Previous:** [13](../13-sync-fpu-dsp/) · **Next:** [15](../15-mini-kernel/)
+
+## Son toplu kapı
+
+Debug/Release/MinSize clean build ve dört QEMU senaryosu PASS. GDB'de PendSV
+girişinde SysTick bitmiş/inside_tick=0 ve ilk olaylar 1,2 doğrulandı.
+Önceki Debug kaydı yukarıdadır; geniş repo doğrulaması [Progress](../../docs/PROGRESS.md) içindedir.
