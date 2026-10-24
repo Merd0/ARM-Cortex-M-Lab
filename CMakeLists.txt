@@ -21,6 +21,7 @@ add_subdirectory(external)
 add_subdirectory(platform/mps2-an505)
 add_subdirectory(tools/capability-probe)
 add_subdirectory(lessons)
+add_subdirectory(projects)
 
 message(STATUS "-----------------------------------------------------")
 message(STATUS " Target      : Cortex-M33 / QEMU mps2-an505")

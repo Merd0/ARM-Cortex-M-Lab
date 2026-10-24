@@ -1,0 +1,5 @@
+add_subdirectory(from-reset-to-main)
+add_subdirectory(fault-analyzer)
+add_subdirectory(protected-application)
+add_subdirectory(performance-profiler)
+add_subdirectory(mini-kernel)
