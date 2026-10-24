@@ -15,8 +15,11 @@ Ders 13 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edil
 [run 40079336979](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40079336979)
 debug/release/minsize PASS. Merge commit'i
 `161d93d94b2aad62f5a31b3454c9d61f76b561d1`.
-Lesson 14–16 için [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
-açıldı. Proje/final çalışması `codex/final-integration` dalından yayımlanır;
+Lesson 14–16, [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10) ile
+üç preset CI sonrası merge edildi
+([run 40101724183](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40101724183));
+merge commit'i `669257b11a672bbcd5abf718e0360b891c5e9547`.
+Proje/final çalışması `codex/final-integration` dalından yayımlanır;
 aşağıdaki toplu yerel kapılar geçti. Kullanıcı sıralı push/PR/merge için onay
 verdi; her PR'ın merge koşulu üç preset CI başarısıdır. Commit bazındaki uzak
 sonuçlar [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions)

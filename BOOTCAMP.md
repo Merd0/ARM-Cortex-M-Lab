@@ -11,8 +11,8 @@ DEEP TRACK'e bırak.
 Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
 otomatik işaretlenmez. Repository teknik teslimi: 16 ders, beş proje ve final
 sensor node uygulandı; yerel üç-preset/QEMU ve kritik GDB kapıları geçti.
-Ders 13 PR #9 ile üç preset CI sonrası merge edildi. Lesson 14–16 ve
-proje/final PR'ları için de merge koşulu üç preset CI başarısıdır. Güncel
+Ders 13 PR #9, Lesson 14–16 PR #10 ile üç preset CI sonrası merge edildi.
+Proje/final PR'ı için de merge koşulu üç preset CI başarısıdır. Güncel
 yayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.md) içindedir.
 Öğrenci çalışma kutuları teknik teslim adına otomatik doldurulmaz. Güncel teknik durum: [Progress](docs/PROGRESS.md).
 

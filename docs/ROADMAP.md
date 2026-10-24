@@ -105,8 +105,8 @@ senaryosu ve kritik GDB gözlemleri PASS. Öğrenci TODO'ları derslerde ayrı k
 
 Kullanıcı sıralı yayınlamayı onayladı. Yeni müfredat eklenmez:
 1. PR #9, üç preset CI sonrası merge edildi; commit geçmişi korundu.
-2. Lesson 14–16 için [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
-   açıldı; merge koşulu üç preset CI başarısıdır.
+2. Lesson 14–16 [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10) ile
+   üç preset CI sonrası merge edildi.
 3. Son entegrasyon dalı proje/final CI ve PR kontrolünden geçer; yalnız
    başarılıysa merge edilir. Merge sonrası main/CI/temiz çalışma ağacı doğrulanır.
 

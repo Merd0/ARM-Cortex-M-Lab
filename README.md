@@ -164,8 +164,8 @@ Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
 Sensor Node uygulandı. Debug/Release/MinSize clean build, geniş regresyonlar
 ve kritik GDB kapıları yerelde PASS. Lesson 13, üç preset CI sonrası
 [PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi.
-Lesson 14–16 yayını [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
-üzerinden ilerler. Proje/final entegrasyonu dahil her PR yalnız üç preset CI
+Lesson 14–16 da [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+ile üç preset CI sonrası merge edildi. Proje/final entegrasyonu dahil her PR yalnız üç preset CI
 başarılıysa `main` dalına alınır. Yayımlanan commit'lerin güncel uzak sonuçları
 [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions) üzerindedir.
 Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
