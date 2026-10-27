@@ -1,69 +1,75 @@
-# Lesson 13 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-## 1. Volatile sayaç artışı neden bir güncelleme kaybediyor?
+# Lesson 13 — Quick Check Answers
 
-Load ve store ayrı komutlardır. Handler arada 0→1 yapar; Thread'in önceden
-okuduğu 0'dan ürettiği 1, handler sonucunun üzerine yazılır. Volatile bu
-işlemleri atomik yapmaz. Deneyde DSB/ISB de kayıp güncellemeyi engellemez.
+## 1. Why does incrementing a volatile counter lose an update?
 
-## 2. STREX niçin başarısız ve retry neyi değiştiriyor?
+Load and store are separate instructions. The Handler changes 0→1 between them;
+the 1 produced from the 0 previously read by Thread overwrites the handler's result.
+Volatile does not make these operations atomic. In the experiment, DSB/ISB do not
+prevent the lost update either.
 
-Exception giriş/çıkış süreci local exclusive monitor'ı temizler. İlk STREX
-1 döndürür ve yazmaz. Retry yeni değeri LDREX ile tekrar okur, başarılı
-STREX iki artışı korur. Yalnız store'u tekrarlamak yeterli değildir.
-Lab'ın sınırlı attempt sayısı tükenirse fonksiyon başarısızlık döndürür;
-genel ilerleme veya WCET garantisi yoktur. DMA/global monitor kapsamı ayrı
-bir sistem problemidir; bu test onları doğrulamaz.
+## 2. Why does STREX fail, and what does retry change?
 
-## 3. Önceki PRIMASK neden geri yükleniyor?
+The exception entry/exit process clears the local exclusive monitor. The first
+STREX returns 1 and does not write. Retry reads the new value again with LDREX;
+a successful STREX preserves both increments. Retrying only the store is insufficient.
+If the lab's bounded attempt count is exhausted, the function returns failure;
+there is no general progress or WCET guarantee. DMA/global-monitor behavior is a
+separate system concern; this test does not verify it.
 
-Çağıran zaten maskeliyse koşulsuz enable dıştaki kritik bölümü açar.
-Sürücünün ikinci çağrısı bunu yakalar. PRIMASK NMI ve HardFault'u maskelemez.
-Memory barrier atomiklik veya karşılıklı dışlama sağlamaz: DMB bellek
-sıralamasını, DSB tamamlanmayı, ISB sonraki komutların güncel yürütme
-bağlamını kullanmasını ele alır. Bu modelde barrier kaldırınca reordering
-görülmemesi mimari gereksizliğin kanıtı değildir.
+## 3. Why is the previous PRIMASK restored?
 
-## 4. FPU'yu açmak tek başına extended frame üretir mi?
+If the caller was already masked, unconditional enable opens the outer critical
+section. The driver's second call catches this. PRIMASK does not mask NMI or
+HardFault. A memory barrier does not provide atomicity or mutual exclusion: DMB
+addresses memory ordering, DSB completion, and ISB the use of the current execution
+context by subsequent instructions. Failure to observe reordering after removing
+a barrier in this model does not prove the barrier is architecturally unnecessary.
 
-Hayır. Basic örnekte CPACR açılır fakat SVC öncesi FP komutu yoktur:
-FPCA=0, EXC_RETURN=0xFFFFFFF9, 32 byte. FP kullanan Thread'de FPCA=1,
-EXC_RETURN=0xFFFFFFE9, 104 byte ölçüldü. Bu boyutlar Secure→Secure,
-MSP, TS=0, 8-byte hizalı giriş ve padding olmayan bu deney içindir.
+## 4. Does enabling the FPU alone produce an extended frame?
 
-## 5. Lazy frame'de ayrılmış alan neden henüz FP verisi değil?
+No. In the basic example, CPACR is enabled, but no FP instruction precedes SVC:
+FPCA=0, EXC_RETURN=0xFFFFFFF9, 32 bytes. In the Thread that uses FP, measured values
+were FPCA=1, EXC_RETURN=0xFFFFFFE9, 104 bytes. These sizes apply to this experiment:
+Secure→Secure, MSP, TS=0, 8-byte-aligned entry, and no padding.
 
-LSPACT=1 iken hardware yer ayırmıştır ama register'ları henüz yazmamış
-olabilir. Deneyde ham S0 slot'u 0xA5A5A5A5 kalır. Handler'ın ilk FP komutu
-saklamayı tetikler; LSPACT=0 olur ve slot'ta eski Thread S0=0x3FC00000
-görülür. Handler'ın canlı S0=8.0 değeri ile stack'teki 1.5 farklıdır;
-exception dönüşünde 1.5 geri gelir. Reserved word geçerli FP verisi değildir.
+## 5. Why is allocated lazy-frame space not yet FP data?
 
-## 6. NOCP mi, FORCED HardFault mu?
+With LSPACT=1, hardware has allocated space but may not yet have written the
+registers. In the experiment, the raw S0 slot remains 0xA5A5A5A5. The Handler's
+first FP instruction triggers the save; LSPACT becomes 0, and the slot shows the
+old Thread S0=0x3FC00000. The Handler's live S0=8.0 differs from the 1.5 on the stack;
+1.5 is restored on exception return. The reserved word is not valid FP data.
 
-UsageFault bu deneyde etkin. İlk izinsiz FP komutunda CFSR=0x00080000
-(UFSR.NOCP), HFSR=0, IPSR=6. PC aynı komutu gösterir. Otomatik olarak
-HardFault/FORCED demek yanlıştır; escalation, enable/priority koşullarına bağlıdır.
+## 6. NOCP or FORCED HardFault?
 
-## 7. Soft, softfp ve hard aynı şey mi?
+UsageFault is enabled in this experiment. At the first unauthorized FP instruction,
+CFSR=0x00080000 (UFSR.NOCP), HFSR=0, IPSR=6. PC points to that instruction.
+Automatically calling it HardFault/FORCED is wrong; escalation depends on
+enable/priority conditions.
 
-Soft C FP işlemleri için yazılım yardımcıları kullanır; softfp hardware FP'ye
-izin verir ve base AAPCS çağrı düzenini korur. Hard FP parametre/sonuçları
-VFP düzeniyle aktarır. CPACR izni bunlardan ayrı bir runtime koşuludur. FPSCR kontrol bitleri de
-çağrı sözleşmesinin parçasıdır: lab'da ortam destek fonksiyonu FZ=1 seçer;
-aritmetik worker bunu değiştirmez ve stacked/call-return FPSCR karşılaştırılır.
-Bu lab assembly adaptöründe iki convention'ı açıkça seçer; rastgele karışık
-nesneleri güvenli yapmaz. Link probe'ları iki yöndeki uyumsuzluğu reddeder.
-S16–S31 normal AAPCS'de callee-saved'dir; bu assembly yalnız S0–S2'yi kullanır.
-TS=0 hardware frame'i tüm FP register'larının scheduler için saklandığı
-anlamına gelmez. Ders 15'teki context switching ayrı bir kabul kapısıdır.
+## 7. Are soft, softfp, and hard the same thing?
 
-## 8. DSP neden bir hız kanıtı değil?
+Soft uses software helpers for C FP operations; softfp permits hardware FP and
+preserves the base AAPCS calling convention. Hard passes FP parameters/results
+using the VFP convention. CPACR permission is a separate runtime condition.
+FPSCR control bits are also part of the calling contract: in the lab, an environment
+support function selects FZ=1; the arithmetic worker does not change it, and
+stacked/call-return FPSCR values are compared. This lab explicitly selects the two
+conventions in its assembly adapter; it does not make arbitrary mixed objects safe.
+Link probes reject incompatibility in both directions. S16–S31 are callee-saved
+under normal AAPCS; this assembly uses only S0–S2. A TS=0 hardware frame does not
+mean that all FP registers have been saved for the scheduler. Context switching
+in Lesson 15 is a separate acceptance gate.
 
-SMLAD iki signed 16-bit lane'in çarpımlarını toplar; QADD taşmayı saturate
-edip sticky Q bitini set edebilir. Düz C referansı bu dört sınırlı örnekte
-signed overflow üretmez. Her iki yol -36000 verir; QADD iki yönde sınanır.
-Disassembly, komutların üretildiğini gösterir. QEMU'da cycle ölçümü yapılmadı;
-daha hızlı veya gerçek zamanlı olduğu sonucu çıkarılmaz.
+## 8. Why is DSP not proof of speed?
 
-[← Ders](../README.md)
+SMLAD sums the products of two signed 16-bit lanes; QADD can saturate overflow and
+set the sticky Q bit. The plain C reference does not produce signed overflow in
+these four bounded examples. Both paths produce -36000; QADD is tested in both
+directions. Disassembly shows that the instructions were emitted. No cycle
+measurement was made in QEMU; no conclusion of greater speed or real-time
+performance follows.
+
+[← Lesson](../README.md)

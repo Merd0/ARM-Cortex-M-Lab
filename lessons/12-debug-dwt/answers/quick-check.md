@@ -1,51 +1,55 @@
-# Lesson 12 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-## 1. Watchpoint neden source breakpoint'ten farklıdır?
+# Lesson 12 — Quick Check Answers
 
-Breakpoint belli bir yürütme adresinde durdurur. `watch -l g_l12_watch`,
-seçilen bellekte değer değişince durdurur; yazan fonksiyonu önceden bilmek
-gerekmez. `rwatch` okuma erişimini izler. GDB'deki "hardware" etiketi QEMU
-TCG gdbstub desteğini anlatır; fiziksel DWT comparator sayısını kanıtlamaz.
+## 1. Why is a watchpoint different from a source breakpoint?
 
-## 2. CTRL.NOCYCCNT=0 ve CYCCNT=0 neyi kanıtlar?
+A breakpoint stops at a particular execution address. `watch -l g_l12_watch`
+stops when the value in the selected memory changes; you do not need to know
+the writing function in advance. `rwatch` watches read accesses. GDB's "hardware"
+label describes QEMU TCG gdbstub support; it does not establish the number of
+physical DWT comparators.
 
-Tek başına çalışan cycle counter'ı kanıtlamaz. QEMU 11.1.0 testinde CTRL ve
-DEMCR yazılarının enable bitleri de geri okunmadı; iş yükünden önce/sonra
-CYCCNT sıfır kaldı. Register snapshot'ı ile gözlenen davranış ayrı yazılır.
-"İş sıfır cycle sürdü" sonucu çıkarılmaz.
+## 2. What do CTRL.NOCYCCNT=0 and CYCCNT=0 prove?
 
-## 3. `0xFFFFFFF0` → `0x10` farkı kaçtır?
+They do not by themselves prove a working cycle counter. In the QEMU 11.1.0 test,
+the enable bits written to CTRL and DEMCR did not read back either; CYCCNT stayed
+zero before/after the workload. The register snapshot and observed behavior are
+recorded separately. This does not mean "the work took zero cycles."
 
-`uint32_t` modüler çıkarma ile 32. Bunun gerçek elapsed count olması için
-aralık `2^32` artıştan kısa olmalı. Aynı uçlar sıfır ilerleme ile tam turu
-ayıramaz. Eşit uçları bu deney kullanılabilir ölçüm olarak kabul etmez.
+## 3. What is the difference from `0xFFFFFFF0` → `0x10`?
 
-## 4. O2 iş yükü daha küçükse donanımda daha hızlı mı?
+32 with `uint32_t` modular subtraction. For this to be the actual elapsed count,
+the interval must be shorter than `2^32` increments. Equal endpoints cannot
+distinguish no progress from a full wrap. This experiment does not accept equal
+endpoints as a usable measurement.
 
-Bu deney bunu kanıtlamaz. 70/32 byte ve 35/13 statik disassembly komutu
-bu GCC build'inin kod ölçüleridir; döngülerin dinamik kaç kez yürütüldüğü
-ve komutların donanım latency'si farklı konulardır. QEMU SysTick iterasyon
-oranını fiziksel Cortex-M33 hız oranına çevirmek de geçersizdir.
+## 4. If the O2 workload is smaller, is it faster on hardware?
 
-## 5. Ölçüm aralığındaki console yazısı neden sorun?
+This experiment does not prove that. 70/32 bytes and 35/13 static disassembly
+instructions describe this GCC build's code; dynamic loop execution counts and
+hardware instruction latency are separate questions. Converting the QEMU SysTick
+iteration ratio into a physical Cortex-M33 speed ratio is also invalid.
 
-İş yüküne UART sürücüsü ve çıktı beklemeleri eklenir. `12-profile-io`
-sonuç checksum'ını bozmaz ama `CHECK_CLEAN_WINDOW` FAIL olur. Her koşulda
-daha az iterasyon bekleyen test yazılmaz: host yükü ve emülatör zamanlaması
-sonuçları etkiler. Ölçüm kapsamının değişmesi tek başına teşhistir.
+## 5. Why is console output inside the measurement interval a problem?
 
-## 6. `bt` ve stack dump neden aynı şey değildir?
+The UART driver and output waits are added to the workload. `12-profile-io` does
+not corrupt the result checksum, but `CHECK_CLEAN_WINDOW` FAILs. Do not write a
+test that expects fewer iterations under every condition: host load and emulator
+timing affect results. The change in measurement scope is itself the diagnosis.
 
-`bt` debug/unwind bilgisi ve prolog çözümlemesiyle frame'leri çıkarır.
-Stack'te her Flash benzeri word dönüş adresi değildir; veri de olabilir.
-Leaf fonksiyon LR'yi stack'e hiç yazmayabilir. Bu derste `l12_middle` ve
-`l12_outer` prolog/epilogları disassembly ile okunup kaydedilmiş LR'ler
-çağrı yerleriyle karşılaştırılır. Bir build'in offset'leri diğerine taşınmaz.
+## 6. Why are `bt` and a stack dump not the same thing?
 
-## 7. Öğretim header'ı CMSIS'in tam karşılığı mı?
+`bt` reconstructs frames using debug/unwind information and prologue analysis.
+Not every Flash-like word on the stack is a return address; it may be data.
+A leaf function may never write LR to the stack. In this lesson, the prologues/
+epilogues of `l12_middle` and `l12_outer` are read through disassembly, and saved
+LRs are compared with call sites. Offsets from one build do not carry over to another.
 
-Hayır. İki seçilmiş read fonksiyonunun aynı makine kodu üretmesi yalnızca
-o fonksiyonları, bu flag'leri ve bu toolchain'i kapsar. SAU korumaları,
-eksik register'lar ve makrolar gibi farklar devam eder.
+## 7. Is the teaching header a complete equivalent of CMSIS?
 
-[← Ders](../README.md)
+No. Identical machine code from two selected read functions establishes only
+those functions, these flags, and this toolchain. Differences such as SAU guards,
+missing registers, and macros remain.
+
+[← Lesson](../README.md)

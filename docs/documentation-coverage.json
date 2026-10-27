@@ -519,15 +519,21 @@
       "english": "lessons/12-debug-dwt/README.md",
       "turkish": "lessons/12-debug-dwt/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "63f9a199ad84168d4d058959f16781abda0719fccc34f7607592c23e33997e76"
+      "state": "translated",
+      "source_sha256": "63f9a199ad84168d4d058959f16781abda0719fccc34f7607592c23e33997e76",
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "f963b735ccafa08cc6d0726110ceef168a873ef992790a6439262b01675a64aa",
+          "reason": "Mermaid human-readable labels translated; nodes, connections and direction unchanged."
+        }
+      }
     },
     {
       "original": "lessons/12-debug-dwt/answers/quick-check.md",
       "english": "lessons/12-debug-dwt/answers/quick-check.md",
       "turkish": "lessons/12-debug-dwt/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "a1bae125a0b5eaebe7e380189b4e8e5c25fd7b48f4bf73412615adbf2508beb2"
     },
     {
@@ -535,7 +541,7 @@
       "english": "lessons/12-debug-dwt/exercises/01-valid-measurement/README.md",
       "turkish": "lessons/12-debug-dwt/exercises/01-valid-measurement/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "395059944fc7c78eb5e5d12155ce808569a356a1b707f0e890d898c90701ff88"
     },
     {
@@ -543,7 +549,7 @@
       "english": "lessons/12-debug-dwt/solutions/01-valid-measurement/README.md",
       "turkish": "lessons/12-debug-dwt/solutions/01-valid-measurement/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "e25abad98a01b64bebc28611654c37c1e140ebdabdb2506e8b5e39e7017a82b9"
     },
     {
@@ -551,7 +557,7 @@
       "english": "lessons/13-sync-fpu-dsp/README.md",
       "turkish": "lessons/13-sync-fpu-dsp/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "fd63860d7c1911ef6b8049892712003cd30b1e5cf45a826b8ae24021a08e8c67"
     },
     {
@@ -559,7 +565,7 @@
       "english": "lessons/13-sync-fpu-dsp/answers/quick-check.md",
       "turkish": "lessons/13-sync-fpu-dsp/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "bb23e09822d4db7a6922ac192f5515da7fc2459ebcace115fb21162236bba672"
     },
     {
@@ -567,7 +573,7 @@
       "english": "lessons/13-sync-fpu-dsp/exercises/01-critical-update/README.md",
       "turkish": "lessons/13-sync-fpu-dsp/exercises/01-critical-update/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "708dcabbfc82d0c1bfd63c38e51efc176cf3e6382158b562ff2dfbbeeab37323"
     },
     {
@@ -575,7 +581,7 @@
       "english": "lessons/13-sync-fpu-dsp/solutions/01-critical-update/README.md",
       "turkish": "lessons/13-sync-fpu-dsp/solutions/01-critical-update/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "60aa325eb1a51390f4c8aecb95a07adfc8a735a9c2d65af269066a44af003705"
     },
     {
