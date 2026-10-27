@@ -1,6 +1,13 @@
 # Roadmap
 
-## Tamamlama sırası — 2026-10-23
+## Güncel durum — 2026-10-27
+
+16 ders, beş proje ve final sistem main üzerinde. PR #9–11 merge edildi;
+11fde900 için üç preset CI PASS. [İç mühendislik denetimi](ENGINEERING_AUDIT.md)
+düzeltmeleri ve release hazırlığını kaydeder. Denetim yayın/CI/merge kaydı
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) üzerindedir. Yeni tag/Release oluşturulmadı.
+
+## Tarihsel tamamlama sırası — 2026-10-23
 
 Başlangıç: `main` = `266642efb55e881a275a1034a01923ecbd17a3fa`.
 Ders 01–11 ve önceki audit düzeltmeleri korunur. Yeni bir müfredat veya
@@ -107,8 +114,8 @@ Kullanıcı sıralı yayınlamayı onayladı. Yeni müfredat eklenmez:
 1. PR #9, üç preset CI sonrası merge edildi; commit geçmişi korundu.
 2. Lesson 14–16 [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10) ile
    üç preset CI sonrası merge edildi.
-3. Son entegrasyon dalı proje/final CI ve PR kontrolünden geçer; yalnız
-   başarılıysa merge edilir. Merge sonrası main/CI/temiz çalışma ağacı doğrulanır.
+3. Proje/final entegrasyonu PR #11 ile merge edildi; main `11fde900`,
+   [merge sonrası üç preset CI PASS](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630).
 
 Güncel uzak sonuçlar [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions)
 üzerindedir. Yerel inceleme ve CI bağımsız üçüncü taraf audit diye sunulmaz.

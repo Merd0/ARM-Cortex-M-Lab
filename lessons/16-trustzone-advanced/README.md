@@ -1,6 +1,6 @@
 # Lesson 16 — TrustZone & Advanced Features
 
-`[DEEP]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
+`[DEEP]` · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 ## TEACH — İki güvenlik durumu, aynı işlemci
 

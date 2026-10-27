@@ -1,6 +1,6 @@
 # Lesson 15 — Educational Mini Kernel
 
-`[DEEP]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
+`[DEEP]` · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 ## TEACH — Bir task'ın devam edebilmesi için ne saklanır?
 

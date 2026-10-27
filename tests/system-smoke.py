@@ -17,7 +17,9 @@ def projects(build, evidence):
         ("CHECK_DATA","CHECK_BSS","CHECK_ORDER","CHECK_VECTORS","CHECK_VTOR","CHECK_LMA"))
     run("fault-analyzer","project-fault-cases",("CHECK_VALID_PSP","CHECK_VALID_MSP","CHECK_VALID_NS",
         "CHECK_STACK_ERROR_REJECT","CHECK_FP_REJECT","CHECK_CROSS_SECURITY_REJECT","CHECK_BOUNDS_REJECT",
-        "CHECK_INVALID_ADDRESS","CHECK_MMFAR"))
+        "CHECK_INVALID_ADDRESS","CHECK_MMFAR","CHECK_ALIGNMENT_REJECT","CHECK_PADDING",
+        "CHECK_MODE_REJECT","CHECK_VALID_HANDLER","CHECK_HANDLER_MODE_REJECT",
+        "CHECK_PC_REJECT","CHECK_THUMB_REJECT"))
     for kind in ("udf","unaligned","bus","mpu","escalated"):
         run("fault-analyzer","project-fault-"+kind,("CHECK_CAUSE","CHECK_FRAME","CHECK_PRIVILEGE","CHECK_CLEAR"))
     for kind in ("normal","denied"):

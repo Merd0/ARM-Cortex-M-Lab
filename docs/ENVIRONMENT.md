@@ -5,29 +5,24 @@ edebilmek.
 
 ---
 
-## ⚠️ Doğrulama durumu — önce bunu oku
+## Doğrulama ortamları
 
-Bu repository'nin **tüm build / QEMU / GDB doğrulamaları Linux container
-içinde yapıldı.** Somut olarak:
+Bootstrap Linux container üzerinde yapıldı. Proje/final entegrasyon commit'i `11fde900` için
+Ubuntu 24.04 GitHub Actions üç preset geçti. Yerel mühendislik doğrulaması
+Windows üzerinde native Arm GCC/QEMU/GDB ve MSYS2 Bash ile yürütülür;
+[son kapı kaydı](ENGINEERING_AUDIT.md) yerel sonuçları ayrıca gösterir.
 
-| Ortam | Durum |
-|---|---|
-| Ubuntu 24.04.4 LTS (x86_64) container | ✅ configure, build, QEMU çalıştırma, GDB breakpoint, smoke test — doğrulandı |
-| Windows 11 + PowerShell | ⬜ **TEST EDİLMEDİ** |
-| WSL2 (Ubuntu) | ⬜ test edilmedi (Linux ile aynı olması bekleniyor) |
-| macOS | ⬜ test edilmedi |
+- Windows: native CMake/Ninja build, Python QEMU/GDB kapıları;
+  Bash testleri MSYS2 ile çalıştırılır. `scripts/check-environment.ps1`
+  2026-10-27'de çalıştırıldı ve tüm araçları buldu.
+- Ubuntu: CI'da build, QEMU, GDB ve regresyon kapıları.
+- WSL2 ve macOS: bu son kapıda doğrulanmadı. WSL servisinin bulunmaması
+  native Windows testleri için engel değildir.
+- VS Code tasks/launch etkileşimli akışı ve sıfırdan paket kurulumu bu
+  denetimde sınanmadı; bütün `.ps1` araçları test edilmiş sayılmaz.
 
-Bunun pratik sonuçları:
-
-- `scripts/*.ps1` dosyaları yazıldı ama **Windows'ta bir kez bile
-  çalıştırılmadı.** Çalışmazlarsa bu beklenen bir durumdur.
-- `.vscode/tasks.json` ve `launch.json` Windows'ta denenmedi.
-- Aşağıdaki Windows komutları resmi dokümantasyona ve standart paket
-  isimlerine dayanır; bu makinede doğrulanmamıştır.
-- `docs/TOOL_VERSIONS.md` içindeki Windows tablosu **bilerek boştur**.
-  Kurulumu yapan kişi orayı kendi çıktılarıyla dolduracak.
-
-Kısacası: Linux tarafı ölçüm, Windows tarafı talimat. İkisi karıştırılmıyor.
+Gerçekte kullanılan sürümler [Tool Versions](TOOL_VERSIONS.md) içindedir.
+QEMU sürümleri arasındaki model farkları fiziksel Cortex-M33 garantisi değildir.
 
 ---
 
@@ -114,8 +109,8 @@ Beşi de sürüm basıyorsa hazırsın. Repo'daki script aynı şeyi yapar:
 .\scripts\check-environment.ps1
 ```
 
-> Bu script Windows'ta test edilmedi. Hata verirse yukarıdaki beş komutu elle
-> çalıştır — asıl kontrol odur.
+> Bu script mevcut Windows ortamında geçti. Başka bir kurulumda araç
+> eksikse yukarıdaki komutlarla PATH ve sürümleri kontrol et.
 
 ## A6. Build ve çalıştır
 
@@ -232,9 +227,9 @@ Bu komut dizisinin container'daki sonucu: **26 PASS / 0 FAIL.**
 
 ## Kurulumu bitirince
 
-`docs/TOOL_VERSIONS.md` içindeki Windows tablosunu kendi çıktılarınla doldur.
-Bu repo'nun kuralı: **ölçmediğin şeyi yazma.** O tablo şu an boş, çünkü henüz
-kimse Windows'ta ölçmedi.
+`docs/TOOL_VERSIONS.md` içindeki doğrulanmış Windows sürümlerini kendi
+çıktılarınla karşılaştır. Farklı bir ortamın sonuçlarını ayrı kaydet; ölçülmüş
+sürüm kaydını varsayımlarla değiştirme.
 
 ---
 

@@ -41,6 +41,49 @@ def debugger(elf,evidence,label,commands,ns=None):
                 try: q.wait(timeout=3)
                 except subprocess.TimeoutExpired: q.kill();q.wait()
 
+def frame_decoder(elf,evidence):
+    # Synthetic RAM fixtures, not claims of real fault injection. Stop before main.
+    cmd='tbreak main\ncontinue\nsource scripts/gdb/cortex-m.gdb\n'
+    cmd+='set $cm_ram_start=0x30006000\nset $cm_ram_end=0x30006100\n'
+    cmd+='set {unsigned int}0x30006018=0x10000100\nset {unsigned int}0x3000601c=0x01000000\n'
+    for ret in ('0xFFFFFFFD','0xFFFFFFF9','0xFFFFFFBC'):
+        cmd+='cm-frame 0x30006000 '+ret+'\n'+assertion('$cm_ok==1','valid basic frame')
+    cmd+='set {unsigned int}0x3000601c=0x10000100\nset {unsigned int}0x30006020=0x01000000\n'
+    cmd+='cm-frame 0x30006004 0xFFFFFFFD\n'+assertion('$cm_ok==0','reject four-byte-only alignment')
+    cmd+='set {unsigned int}0x3000601c=0x01000200\nset $cm_ram_end=0x30006020\n'
+    cmd+='cm-frame 0x30006000 0xFFFFFFFD\n'+assertion('$cm_ok==0','reject missing padding')
+    cmd+='set $cm_ram_end=0x30006024\ncm-frame 0x30006000 0xFFFFFFFD\n'
+    cmd+=assertion('$cm_ok==1','accept bounded padding')
+    cmd+='set {unsigned int}0x3000601c=0x0100000f\ncm-frame 0x30006000 0xFFFFFFFD\n'
+    cmd+=assertion('$cm_ok==0','reject Thread token with Handler IPSR')
+    cmd+='cm-frame 0x30006000 0xFFFFFFF1\n'+assertion('$cm_ok==1','valid Handler MSP')
+    cmd+='set {unsigned int}0x3000601c=0x01000000\ncm-frame 0x30006000 0xFFFFFFF1\n'
+    cmd+=assertion('$cm_ok==0','reject Handler token with Thread IPSR')
+    debugger(elf,evidence,'frame-decoder-boundaries',cmd)
+
+def gateway_entry(elf,ns,evidence,entry,offset=0):
+    symbols=subprocess.check_output(["arm-none-eabi-nm",str(ns)],text=True)
+    match=re.search(r"^([0-9a-f]+) A "+entry+r"$",symbols,re.M)
+    assert match,"imported NSC gateway must exist"
+    address=(int(match[1],16)&~1)+offset
+    # Synthetic interrupted PC at SG, before the security-state transition.
+    # Use a real Thread/PSP hardware frame captured at SysTick entry; no special
+    # register writes or privileged debugger access from unprivileged Thread.
+    cmd='tbreak *SysTick_Handler if $lr==0xFFFFFFBC\ncontinue\n'
+    cmd+=assertion('$lr==0xFFFFFFBC','NS Thread basic frame')
+    cmd+='set $entry_sp=$psp_ns\nset $resume_sp=$entry_sp+32+((*(unsigned int*)($entry_sp+28)&512)!=0)*4\n'
+    cmd+='set {unsigned int}($entry_sp+24)='+hex(address)+'\n'
+    cmd+='break *l15_panic\ntbreak *'+hex(address)+' if $psp_ns==$resume_sp\ncontinue\n'
+    if offset:
+        cmd+=assertion('$pc==((unsigned int)&l15_panic & ~1)','reject Secure instruction after SG')
+    else:
+        cmd+=assertion('$pc=='+hex(address)+' && ($xpsr & 511)==0','resume NSC entry without scheduler panic')
+        cmd+=assertion('$control_ns==3 && $psp_ns==$resume_sp','unprivileged NS task restored')
+        cmd+='stepi\n'
+        cmd+=assertion('$pc=='+hex(address+4)+' && ($lr & 1)==0 && $control==$control_s',
+                       'SG executes and enters Secure state')
+    debugger(elf,evidence,'gateway-entry-'+entry+('-invalid' if offset else ''),cmd,ns)
+
 def context(elf,evidence,label,ret,ns=None):
     image=ns or elf
     disasm=subprocess.check_output(["arm-none-eabi-objdump","-d","--disassemble=PendSV_Handler",str(image)],text=True)
@@ -71,6 +114,7 @@ def main():
     parser.add_argument("--preset",choices=("debug","release","minsize"),default="debug")
     args=parser.parse_args()
     build=ROOT/"build"/args.preset;evidence=build/"system-evidence";evidence.mkdir(parents=True,exist_ok=True)
+    frame_decoder(build/"projects/fault-analyzer/project-fault-cases.elf",evidence)
     l14=build/"lessons/14-systick-pendsv/14-systick-pendsv.elf"
     cmd="tbreak *PendSV_Handler\ncontinue\n"
     cmd+=assertion("($xpsr & 511)==14 && g_l14_phase==1 && g_l14_inside_tick==0","deferred PendSV")
@@ -78,6 +122,9 @@ def main():
     debugger(l14,evidence,"lesson14-deferred",cmd)
     context(build/"lessons/15-mini-kernel/15-mini-kernel.elf",evidence,"lesson15-context",0xFFFFFFFD)
     folder=build/"final-project/secure-real-time-sensor-node"
+    for entry in ('l16_report','l16_service'):
+        gateway_entry(folder/'node-bad-svc-secure.elf',folder/'node-bad-svc-nonsecure.elf',evidence,entry)
+    gateway_entry(folder/'node-bad-svc-secure.elf',folder/'node-bad-svc-nonsecure.elf',evidence,'l16_report',4)
     s=folder/"node-normal-secure.elf";n=folder/"node-normal-nonsecure.elf"
     context(s,evidence,"node-context",0xFFFFFFBC,n)
     cmd="tbreak *l16_transform\ncontinue\nset $fp_state_before=$control_s & 12\nset $transform_return=$lr & ~1\n"

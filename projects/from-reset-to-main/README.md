@@ -1,6 +1,6 @@
 # Project — From Reset to Main
 
-**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 Lesson 10–11'in linker/startup ilişkisini gerçek bir initialized calibration
 dizisi ve sıfırlanan uygulama buffer'ı üzerinde birleştirir. Çalışan reset,

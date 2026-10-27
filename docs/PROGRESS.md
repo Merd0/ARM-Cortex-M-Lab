@@ -19,11 +19,12 @@ Lesson 14–16, [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10) ile
 üç preset CI sonrası merge edildi
 ([run 40101724183](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40101724183));
 merge commit'i `669257b11a672bbcd5abf718e0360b891c5e9547`.
-Proje/final çalışması `codex/final-integration` dalından yayımlanır;
-aşağıdaki toplu yerel kapılar geçti. Kullanıcı sıralı push/PR/merge için onay
-verdi; her PR'ın merge koşulu üç preset CI başarısıdır. Commit bazındaki uzak
-sonuçlar [GitHub Actions](https://github.com/Merd0/ARM-Cortex-M-Lab/actions)
-üzerinden izlenir. Yerel test/teknik inceleme ve CI, bağımsız
+Proje/final çalışması [PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11)
+ile merge edildi: `11fde900835d4443a55d0e7da64438ea4da4c690`.
+[Main CI 40105930630](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630)
+debug/release/minsize PASS. 2026-10-27 iç mühendislik denetiminin teknik kaydı
+[ayrı raporda](ENGINEERING_AUDIT.md), yayın/CI/merge durumu
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) üzerinde izlenir. Yerel test/teknik inceleme ve CI, bağımsız
 üçüncü taraf audit veya donanım sertifikası değildir. Öğrencinin kişisel
 tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
@@ -40,13 +41,13 @@ tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) i�
 | QEMU'da çalışan firmware | ✅ (doğrulandı) |
 | GDB bağlantısı + breakpoint | ✅ (doğrulandı) |
 | Cortex-M GDB yardımcı komutları | ✅ (doğrulandı) |
-| Environment check scriptleri | ✅ bash doğrulandı / ⬜ PowerShell Windows'ta test edilmeli |
+| Environment check scriptleri | ✅ Bash ve PowerShell environment check doğrulandı (2026-10-27) |
 | Target capability probe | ✅ (ölçüldü) |
 | Dokümantasyon temeli | ✅ |
 | Smoke test (`tests/smoke-test.sh`) | ✅ davranışsal regresyon; güncel sonuç aşağıda |
 | CI (`.github/workflows/ci.yml`) | ✅ üç preset; build/regresyon/debugger/proje/final kapıları; uzak sonuçlar yukarıdaki Actions bağlantısında |
 | VS Code tasks + launch | ✅ yazıldı / ⬜ Windows'ta denenmedi |
-| Proje ve final-project tanımları | ✅ kod ve üç-preset kapıları yerelde PASS; uzak kabul: üç preset CI |
+| Proje ve final-project tanımları | ✅ main üzerinde; üç-preset CI PASS (11fde900) |
 
 ## Dersler
 
@@ -86,6 +87,10 @@ Lesson 12 teslimi, 2026-10-23 Windows / GCC 15.2.1 / QEMU 11.1.0:
 | `tests/lesson12-check.py` | ✅ üç preset; write/read watchpoint, backtrace, single-step, stopped-timer ve I/O negatif kontrolleri, header/optimizasyon karşılaştırması |
 | Lesson 04 PSP cozumu (debug/release/minsize) | ✅ SPSEL + REGION + GUARD hepsi PASS |
 | GDB frame cozumu (MSP/PSP kaynakli + reddedilen vakalar) | ✅ |
+
+## Tarihsel teslim kayıtları
+
+Aşağıdaki tarihli kayıtlar teslim anını anlatır; güncel yayın durumu yukarıdadır.
 
 ## Lesson 13 yerel teslim — 2026-10-24
 
@@ -157,12 +162,12 @@ Windows / GCC 15.2.1 / QEMU 11.1.0, yerel dal:
 
 | Proje | Durum |
 |---|---|
-| Protected Application | ✅ yerel üç preset; uzak kabul: üç preset CI |
-| Fault Analyzer | ✅ yerel üç preset; uzak kabul: üç preset CI |
-| From Reset to Main | ✅ yerel üç preset; uzak kabul: üç preset CI |
-| Performance Profiler | ✅ yerel üç preset; uzak kabul: üç preset CI |
-| Mini Kernel | ✅ yerel üç preset; uzak kabul: üç preset CI |
-| Final Project | ✅ yerel üç preset; uzak kabul: üç preset CI |
+| Protected Application | ✅ main üç preset CI PASS (11fde900) |
+| Fault Analyzer | ✅ main üç preset CI PASS (11fde900) |
+| From Reset to Main | ✅ main üç preset CI PASS (11fde900) |
+| Performance Profiler | ✅ main üç preset CI PASS (11fde900) |
+| Mini Kernel | ✅ main üç preset CI PASS (11fde900) |
+| Final Project | ✅ main üç preset CI PASS (11fde900) |
 
 ## Öğrenme hedefi kontrol listesi
 

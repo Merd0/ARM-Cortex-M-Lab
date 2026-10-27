@@ -34,15 +34,15 @@ Ikisi de Cortex-M remote debug icin yeterlidir.
 .\scripts\check-environment.ps1 | Tee-Object docs\tool-versions-local.txt
 ```
 
-## Windows ortamim (doldur)
+## Windows yerel denetim ortamı — 2026-10-27
 
 | Arac | Surum | Tarih |
 |---|---|---|
-| arm-none-eabi-gcc | | |
-| qemu-system-arm | | |
-| cmake | | |
-| ninja | | |
-| arm-none-eabi-gdb | | |
+| arm-none-eabi-gcc | xPack 15.2.1 20251203 | 2026-10-27 |
+| qemu-system-arm | 11.1.0 (e470268ff4) | 2026-10-27 |
+| cmake | 4.3.2 | 2026-10-27 |
+| ninja | 1.13.2 | 2026-10-27 |
+| arm-none-eabi-gdb | 16.3.90.20250906-git | 2026-10-27 |
 
 ## Vendored kutuphane surumleri
 

@@ -51,8 +51,14 @@ static uint32_t valid(const task_t *task)
 {
     uintptr_t sp=(uintptr_t)task->sp;
     if(sp<(uintptr_t)task->low || sp>(uintptr_t)task->high-68U || ((sp+36U)&7U)) return 0U;
+    /* An interrupt can precede SG: the frame still belongs to NS Thread,
+     * but its return PC is a gateway entry outside the ordinary NS image.
+     * Accept only the imported SG entry points, never arbitrary Secure code. */
+    uint32_t pc=task->sp[15];
+    uint32_t entry=pc==((uint32_t)(uintptr_t)&l16_service&~1U) ||
+                   pc==((uint32_t)(uintptr_t)&l16_report&~1U);
     return task->sp[8]==L15_EXC_RETURN && (task->sp[16]&(1U<<24)) &&
-           task->sp[15]>=0x80000U && task->sp[15]<0xA0000U;
+           !(pc&1U) && ((pc>=0x80000U && pc<0xA0000U) || entry);
 }
 static void finish(void) __attribute__((noreturn));
 static void finish(void)

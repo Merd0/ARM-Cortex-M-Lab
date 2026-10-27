@@ -1,6 +1,6 @@
 # Project — Educational Mini Kernel
 
-**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 Lesson 15 kernel/frame/context kaynakları değiştirilmiş kopyalar yerine doğrudan
 derlenir. Üç küçük weak uygulama hook'u yalnız bounded iş ve sonuç raporlaması

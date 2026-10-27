@@ -1,6 +1,6 @@
 # Final Project
 
-**STATUS: çalışan yerel entegrasyon; üç-preset kapısı PASS, uzak CI/merge bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 Tek bir proje: [`secure-real-time-sensor-node/`](secure-real-time-sensor-node/)
 

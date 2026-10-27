@@ -1,6 +1,6 @@
 # Project — Performance Profiler
 
-**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 Lesson 12'nin runtime-input workload'u ve referans ölçüm sınıflandırıcısı aynı
 kaynaklardan kullanılır. Proje beş farklı workload object'i üretir:

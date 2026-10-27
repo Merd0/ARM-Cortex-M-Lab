@@ -1,6 +1,6 @@
 # Project — Protected Application
 
-**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 [main.c](src/main.c), protected counter için sınırlı bir SVC API kurar.
 Lesson 06'nın gerçek PSP geçişi, SVC entry ve tek-store probe assembly kaynakları

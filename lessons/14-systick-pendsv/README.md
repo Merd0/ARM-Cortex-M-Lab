@@ -1,6 +1,6 @@
 # Lesson 14 — SysTick & PendSV
 
-`[STANDARD]` · **STATUS: yerel üç-preset kapısı PASS; uzak CI/merge bekliyor**
+`[STANDARD]` · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 ## TEACH — Tick bir scheduler değildir
 
