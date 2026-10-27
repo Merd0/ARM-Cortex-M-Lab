@@ -1,4 +1,4 @@
-**Dil / Language:** [English](README.md) · **Türkçe**
+**Dil:** [English](README.md) | Türkçe
 
 # ARM Cortex-M — Practical Learning Lab
 
@@ -74,7 +74,7 @@ flowchart TB
     QEMU <--> GDB
 ```
 
-Katmanların neden böyle ayrıldığı: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+Katmanların neden böyle ayrıldığı: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.tr.md)
 
 ---
 
@@ -90,7 +90,7 @@ Katmanların neden böyle ayrıldığı: [`docs/ARCHITECTURE.md`](docs/ARCHITECT
 ./scripts/check-environment.sh      # Linux / macOS / WSL
 ```
 
-Eksik varsa: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
+Eksik varsa: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.tr.md)
 
 Gerekenler: Arm GNU Toolchain (`arm-none-eabi`), CMake, Ninja, QEMU, GDB.
 
@@ -124,12 +124,12 @@ arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
 
 ### 5. Nereden başlamalı?
 
-**[`BOOTCAMP.md`](BOOTCAMP.md)** — günlük çalışma planı.
-İlk ders: [`lessons/01-cortex-m-family/`](lessons/01-cortex-m-family/) — kod
+**[`BOOTCAMP.md`](BOOTCAMP.tr.md)** — günlük çalışma planı.
+İlk ders: [`lessons/01-cortex-m-family/`](lessons/01-cortex-m-family/README.tr.md) — kod
 yazmadan, hedefin kendini nasıl tanıttığını okuyarak başlar.
-Ardından [`lessons/02-programmer-model/`](lessons/02-programmer-model/).
+Ardından [`lessons/02-programmer-model/`](lessons/02-programmer-model/README.tr.md).
 
-Günlük plan: [BOOTCAMP.md](BOOTCAMP.md) — giriş noktası orasıdır ve
+Günlük plan: [BOOTCAMP.md](BOOTCAMP.tr.md) — giriş noktası orasıdır ve
 `lessons/01` ile başlar.
 
 ---
@@ -149,8 +149,8 @@ Günlük plan: [BOOTCAMP.md](BOOTCAMP.md) — giriş noktası orasıdır ve
 **Simülatör ile gerçek donanımın davranışları farklı olabilir.** Bu hedefte
 ölçülen özellikler ve sınırlar aşağıdaki belgelerde yer alıyor:
 
-- [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) — ölçülmüş capability matrisi
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — simülatör ile donanım farkları
+- [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.tr.md) — ölçülmüş capability matrisi
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.tr.md) — simülatör ile donanım farkları
 
 En önemli sınır: **DWT cycle counter bu target'ta saymıyor** (ölçüldü).
 Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
@@ -171,10 +171,10 @@ ile üç preset CI sonrası merge edildi. Beş proje ve final entegrasyonu
 [PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11) ile main üzerinde.
 `11fde900835d4443a55d0e7da64438ea4da4c690` için
 [merge sonrası üç preset CI](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630) PASS.
-Son iç denetim düzeltmeleri [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) ile izlenir. Teknik kayıt: [Engineering Audit](docs/ENGINEERING_AUDIT.md).
+Son iç denetim düzeltmeleri [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) ile izlenir. Teknik kayıt: [Engineering Audit](docs/ENGINEERING_AUDIT.tr.md).
 Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
 doğrulaması olarak sunulmaz.
-Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
+Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.tr.md).
 
 ### Altyapı
 
@@ -225,7 +225,7 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 Projeler/final için üç preset CI sonucu yukarıdaki main commit'ine aittir.
 Denetim tesliminin yerel testleri, PR #12 CI ve merge kayıtlarından ayrı kaydedilir.
 
-Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
+Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.tr.md)
 
 ---
 
@@ -235,12 +235,12 @@ Birden fazla dersin konularını birleştiren projeler; her birinin ayrı README
 
 | Proje | Birleştirdiği konular | Durum |
 |---|---|---|
-| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Main üç-preset CI PASS |
-| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decode + CFSR/HFSR analizi | Main üç-preset CI PASS |
-| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Main üç-preset CI PASS |
-| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi + compiler optimizasyonu | Main üç-preset CI PASS |
-| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Main üç-preset CI PASS |
-| [Final Project](final-project/) | Hepsinin entegrasyonu | Main üç-preset CI PASS |
+| [Protected Application](projects/protected-application/README.tr.md) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Main üç-preset CI PASS |
+| [Fault Analyzer](projects/fault-analyzer/README.tr.md) | Exception frame decode + CFSR/HFSR analizi | Main üç-preset CI PASS |
+| [From Reset to Main](projects/from-reset-to-main/README.tr.md) | Vector table + startup + linker script | Main üç-preset CI PASS |
+| [Performance Profiler](projects/performance-profiler/README.tr.md) | Ölçüm metodolojisi + compiler optimizasyonu | Main üç-preset CI PASS |
+| [Mini Kernel](projects/mini-kernel/README.tr.md) | SysTick + PendSV + SVC + context switch | Main üç-preset CI PASS |
+| [Final Project](final-project/README.tr.md) | Hepsinin entegrasyonu | Main üç-preset CI PASS |
 
 ---
 
@@ -269,24 +269,24 @@ tests/          smoke test
 
 | Belge | İçerik |
 |---|---|
-| [BOOTCAMP.md](BOOTCAMP.md) | 7 günlük çalışma planı ve kontrol listesi |
-| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Sıfırdan Windows kurulumu |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Repo mimarisi ve tasarım gerekçeleri |
-| [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md) | Doğrulanmış bellek haritası |
-| [docs/TARGET_CAPABILITIES.md](docs/TARGET_CAPABILITIES.md) | Ölçülmüş capability matrisi |
-| [docs/DEBUGGING.md](docs/DEBUGGING.md) | Cortex-M teşhis akışları |
-| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Simülatör sınırları |
-| [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) | Ölçüm metodolojisi |
-| [docs/GLOSSARY.md](docs/GLOSSARY.md) | İngilizce terim + kısa Türkçe karşılık |
-| [docs/COURSE_MAP.md](docs/COURSE_MAP.md) | Kurs konuları ↔ ders eşlemesi |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Uzun vadeli plan |
-| [docs/REAL_HARDWARE_MIGRATION.md](docs/REAL_HARDWARE_MIGRATION.md) | Board alınınca ne değişir |
-| [docs/REFERENCES.md](docs/REFERENCES.md) | Resmi kaynaklar |
-| [docs/TOOL_VERSIONS.md](docs/TOOL_VERSIONS.md) | Doğrulanan araç sürümleri |
-| [docs/PROGRESS.md](docs/PROGRESS.md) | İlerleme tablosu |
-| [external/README.md](external/README.md) | Vendored CMSIS-Core: sürüm ve güncelleme |
-| [projects/README.md](projects/README.md) | Birleştirici projeler |
-| [tests/README.md](tests/README.md) | Smoke test |
+| [BOOTCAMP.md](BOOTCAMP.tr.md) | 7 günlük çalışma planı ve kontrol listesi |
+| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.tr.md) | Sıfırdan Windows kurulumu |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.tr.md) | Repo mimarisi ve tasarım gerekçeleri |
+| [docs/MEMORY_MAP.md](docs/MEMORY_MAP.tr.md) | Doğrulanmış bellek haritası |
+| [docs/TARGET_CAPABILITIES.md](docs/TARGET_CAPABILITIES.tr.md) | Ölçülmüş capability matrisi |
+| [docs/DEBUGGING.md](docs/DEBUGGING.tr.md) | Cortex-M teşhis akışları |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.tr.md) | Simülatör sınırları |
+| [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.tr.md) | Ölçüm metodolojisi |
+| [docs/GLOSSARY.md](docs/GLOSSARY.tr.md) | İngilizce terim + kısa Türkçe karşılık |
+| [docs/COURSE_MAP.md](docs/COURSE_MAP.tr.md) | Kurs konuları ↔ ders eşlemesi |
+| [docs/ROADMAP.md](docs/ROADMAP.tr.md) | Uzun vadeli plan |
+| [docs/REAL_HARDWARE_MIGRATION.md](docs/REAL_HARDWARE_MIGRATION.tr.md) | Board alınınca ne değişir |
+| [docs/REFERENCES.md](docs/REFERENCES.tr.md) | Resmi kaynaklar |
+| [docs/TOOL_VERSIONS.md](docs/TOOL_VERSIONS.tr.md) | Doğrulanan araç sürümleri |
+| [docs/PROGRESS.md](docs/PROGRESS.tr.md) | İlerleme tablosu |
+| [external/README.md](external/README.tr.md) | Vendored CMSIS-Core: sürüm ve güncelleme |
+| [projects/README.md](projects/README.tr.md) | Birleştirici projeler |
+| [tests/README.md](tests/README.tr.md) | Smoke test |
 
 ---
 
@@ -309,7 +309,7 @@ Amaç: hem konuyu hem de resmi dokümantasyonu okumak için gereken
 Açıklamalar, diyagramlar, kod ve deneyler bu repo için hazırlanmıştır.
 Teknik açıklamalar resmi Arm / CMSIS / QEMU dokümantasyonuyla doğrulanır;
 ölçülebilen davranışlar deneylerle kontrol edilir
-([`docs/REFERENCES.md`](docs/REFERENCES.md)).
+([`docs/REFERENCES.md`](docs/REFERENCES.tr.md)).
 
 Çalıştırılmamış bir kodun çıktısı "gerçek çıktı" olarak sunulmaz.
 Doğrulanmamış bilgi `OLCULMEDI` olarak işaretlenir.

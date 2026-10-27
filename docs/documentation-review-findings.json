@@ -1,0 +1,39 @@
+{
+  "baseline": "9017f2bc87b410d7e2e2f333237a4d9c570d71df",
+  "substantive_edits_applied": false,
+  "findings": [
+    {
+      "id": "I18N-001",
+      "path": "docs/ARCHITECTURE.md",
+      "status": "confirmed-stale",
+      "english": "Platform scope claims Secure-only and says -mcmse will be enabled in Lesson 16. Lesson 16 already links distinct Secure/Non-secure images and applies -mcmse. The original remains preserved pending a separate substantive correction.",
+      "turkish": "Platform kapsamı yalnız Secure varsayıyor ve -mcmse kullanımını Ders 16 için gelecekte gösteriyor. Ders 16 ayrı Secure/Non-secure imajlar linkliyor ve -mcmse kullanıyor. Özgün metin, ayrı içerik düzeltmesi yapılana kadar korunuyor.",
+      "evidence": [
+        "lessons/16-trustzone-advanced/CMakeLists.txt:16",
+        "lessons/16-trustzone-advanced/CMakeLists.txt:17"
+      ]
+    },
+    {
+      "id": "I18N-002",
+      "path": "docs/RELEASE_NOTES_DRAFT.md",
+      "status": "historical-publication-state",
+      "english": "This is a retained pre-release draft, not current publication status. Remote v1.0.0 is a published stable release; annotated tag peels to 2b2e1dc752c74f07f0550437b4b879763602daa7. Preserve the historical text; a separate current-status annotation is reviewable independently.",
+      "turkish": "Bu belge korunmuş bir yayımlama öncesi taslaktır; güncel yayımlama durumunu göstermez. Uzak v1.0.0 kararlı sürüm olarak yayımlanmış; annotated tag 2b2e1dc752c74f07f0550437b4b879763602daa7 commit’ine açılıyor. Tarihsel metin korunuyor; ayrı güncel durum notu bağımsız değerlendirilebilir.",
+      "evidence": [
+        "https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0"
+      ]
+    },
+    {
+      "id": "I18N-003",
+      "path": "BOOTCAMP.md",
+      "status": "historical-checkpoints",
+      "english": "BOOTCAMP, Lesson 14–16 and project status lines retain the earlier 11fde900 integration checkpoint. Later final-gate paragraphs and the v1.0.0 release are separate evidence. Do not silently relabel earlier observations as measurements from the release commit.",
+      "turkish": "BOOTCAMP, Ders 14–16 ve proje durum satırları önceki 11fde900 entegrasyon noktasını koruyor. Son toplu kapı paragrafları ve v1.0.0 sürümü ayrı kanıttır. Eski gözlemler sessizce sürüm commit’inde ölçülmüş gibi etiketlenmemelidir.",
+      "evidence": [
+        "BOOTCAMP.md",
+        "lessons/14-systick-pendsv/README.md",
+        "docs/ENGINEERING_AUDIT.md"
+      ]
+    }
+  ]
+}
