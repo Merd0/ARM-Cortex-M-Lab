@@ -24,6 +24,13 @@ def source_at(revision, path):
     return subprocess.check_output(["git", "show", f"{revision}:{path}"], cwd=ROOT)
 
 
+def markdown_inventory():
+    output = subprocess.check_output(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "--", "*.md"],
+        cwd=ROOT, text=True)
+    return set(output.splitlines())
+
+
 def preserved_prose(text):
     """Ignore only the switch and navigation destinations, never link labels."""
     text = SWITCH.sub("", text)
@@ -93,6 +100,9 @@ def main():
     completed = 0
     paths = set()
     paired_paths = {r[k] for r in data["documents"] for k in ("english", "turkish")}
+    for path in markdown_inventory():
+        if path not in paired_paths and not path.startswith("external/CMSIS/"):
+            failures.append(f"uninventoried first-party Markdown: {path}")
     for row in data["documents"]:
         en, tr = row["english"], row["turkish"]
         for path in (en, tr):
@@ -150,6 +160,10 @@ def main():
         number_pattern = r"(?<![\w])\d+(?:[.,]\d+)*(?![\w])"
         if Counter(re.findall(number_pattern, prose(source))) != Counter(re.findall(number_pattern, prose(english))):
             failures.append(f"numerical observation mismatch: {en}")
+        references = lambda text: Counter(m[2] for m in LINK.finditer(text)
+                                          if m[2].startswith(("https://", "http://")))
+        if references(source) != references(english):
+            failures.append(f"official/external reference changed: {en}")
         completed += 1
     print(f"{completed}/{len(data['documents'])} translated pairs checked")
     print("Turkish preservation, source hashes, switches, blocks, headings, CHECK/hex values, navigation/anchors")
