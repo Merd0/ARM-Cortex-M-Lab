@@ -145,8 +145,11 @@ kalibrasyondur; kriptografik kimlik, DMA/debugger saldırıları, code injection
 genel Secure/FP task switching ve üretim RTOS güvenilirliği doğrulanmadı.
 VS Code etkileşimli akışı ve fiziksel kart kurulumu bu kapının parçası değildir.
 
-Yerel mühendislik kapısı geçti; **onaylı PR ve yeni CI için hazırdır**.
-Doğrudan release hedefi olarak eski main kullanılmamalı: H1 düzeltmesi yereldir.
-Release yayını yeni PR'ın CI sonucu ve merge/tag onayına bağlıdır. Mevcut main
-CI başarılı olsa da yerel düzeltmeler henüz yayımlanmadı. Tag/Release/merge
-ve görünürlük değişikliği yapılmadı. [Release notes taslağı](RELEASE_NOTES_DRAFT.md).
+Yerel teslim anında mühendislik kapısı geçti; düzeltmeler henüz yayımlanmamıştı.
+Bu tarihsel sonuç, uzak CI veya merge gerçekleştiği iddiası değildir.
+
+Sonraki yayın süreci [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12)
+ile izlenir: üç preset CI geçmeden merge edilmez; merge sonrası main CI da
+doğrulanır. Kesin merge SHA ve uzak sonuçlar PR/Actions kayıtlarının parçasıdır.
+Eski `11fde900` H1 düzeltmesini içermez ve v1.0.0 hedefi değildir.
+Tag/Release ve görünürlük değişikliği bu teslimin dışında, ayrıca onaya bağlıdır. [Release notes taslağı](RELEASE_NOTES_DRAFT.md).

@@ -7,7 +7,7 @@ edebilmek.
 
 ## Doğrulama ortamları
 
-Bootstrap Linux container üzerinde yapıldı. Güncel main `11fde900` için
+Bootstrap Linux container üzerinde yapıldı. Proje/final entegrasyon commit'i `11fde900` için
 Ubuntu 24.04 GitHub Actions üç preset geçti. Yerel mühendislik doğrulaması
 Windows üzerinde native Arm GCC/QEMU/GDB ve MSYS2 Bash ile yürütülür;
 [son kapı kaydı](ENGINEERING_AUDIT.md) yerel sonuçları ayrıca gösterir.
@@ -227,9 +227,9 @@ Bu komut dizisinin container'daki sonucu: **26 PASS / 0 FAIL.**
 
 ## Kurulumu bitirince
 
-`docs/TOOL_VERSIONS.md` içindeki Windows tablosunu kendi çıktılarınla doldur.
-Bu repo'nun kuralı: **ölçmediğin şeyi yazma.** O tablo şu an boş, çünkü henüz
-kimse Windows'ta ölçmedi.
+`docs/TOOL_VERSIONS.md` içindeki doğrulanmış Windows sürümlerini kendi
+çıktılarınla karşılaştır. Farklı bir ortamın sonuçlarını ayrı kaydet; ölçülmüş
+sürüm kaydını varsayımlarla değiştirme.
 
 ---
 

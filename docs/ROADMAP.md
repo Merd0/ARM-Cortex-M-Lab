@@ -4,7 +4,8 @@
 
 16 ders, beş proje ve final sistem main üzerinde. PR #9–11 merge edildi;
 11fde900 için üç preset CI PASS. [İç mühendislik denetimi](ENGINEERING_AUDIT.md)
-yerel düzeltme ve release hazırlığını kaydeder. Yeni tag/Release oluşturulmadı.
+düzeltmeleri ve release hazırlığını kaydeder. Denetim yayın/CI/merge kaydı
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) üzerindedir. Yeni tag/Release oluşturulmadı.
 
 ## Tarihsel tamamlama sırası — 2026-10-23
 

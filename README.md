@@ -169,7 +169,7 @@ ile üç preset CI sonrası merge edildi. Beş proje ve final entegrasyonu
 [PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11) ile main üzerinde.
 `11fde900835d4443a55d0e7da64438ea4da4c690` için
 [merge sonrası üç preset CI](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630) PASS.
-Son iç denetim ve yerel düzeltmelerin durumu: [Engineering Audit](docs/ENGINEERING_AUDIT.md).
+Son iç denetim düzeltmeleri [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) ile izlenir. Teknik kayıt: [Engineering Audit](docs/ENGINEERING_AUDIT.md).
 Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
 doğrulaması olarak sunulmaz.
 Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
@@ -221,7 +221,7 @@ Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
 - [x] Final Project (main üç preset CI PASS)
 
 Projeler/final için üç preset CI sonucu yukarıdaki main commit'ine aittir.
-Henüz yayımlanmayan denetim dalının yerel testleri ayrı kaydedilir.
+Denetim tesliminin yerel testleri, PR #12 CI ve merge kayıtlarından ayrı kaydedilir.
 
 Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 

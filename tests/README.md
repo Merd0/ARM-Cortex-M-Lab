@@ -129,8 +129,8 @@ korunduğunu sınar; GDB tail-chaining'i anında Thread'e dönüş sanmaz.
 
 Diagnostic API privilege testi ve Thread-origin FP servis reddi beklenen
 politikayı ölçer. Queue tamamlanma kontrolü örnek sayısını azaltarak geçilmez.
-CI adımları her üç preset'e bağlıdır. Yayımlanmayan denetim düzeltmelerinin
-yerel sonuçları main CI başarısından ayrı tutulur; [denetim kaydı](../docs/ENGINEERING_AUDIT.md).
+CI adımları her üç preset'e bağlıdır. Denetim düzeltmelerinin
+yerel sonuçları PR/main CI başarısından ayrı tutulur; [denetim kaydı](../docs/ENGINEERING_AUDIT.md).
 Yerel kapılar üçüncü taraf bağımsız audit veya kart testi değildir.
 
 Frame regresyonları: 8-byte M33 hizası, padding sınırı, Thread/Handler IPSR

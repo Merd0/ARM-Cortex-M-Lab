@@ -3,7 +3,9 @@
 Öneri: **v1.0.0 — ARM Cortex-M Practical Lab**. Bu eğitim kapsamının ilk tam
 sürüm önerisidir; production RTOS veya donanım sertifikası anlamına gelmez.
 Tag ve GitHub Release oluşturulmadı. Kesin hedef SHA, denetim düzeltmeleri
-onaylı PR üzerinden CI geçip main'e alındıktan sonra seçilir.
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) merge commit'i
+ve ardından main üç-preset CI sonucu doğrulanarak seçilir. v1.0.0 tag/Release
+için ayrıca kullanıcı onayı gerekir.
 
 - Cortex-M33 / QEMU mps2-an505 üzerinde 16 uygulamalı ders; ayrı eksik
   alıştırmalar ve referans çözümler, kontrollü Break It / Debug It deneyleri.

@@ -22,8 +22,9 @@ merge commit'i `669257b11a672bbcd5abf718e0360b891c5e9547`.
 Proje/final çalışması [PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11)
 ile merge edildi: `11fde900835d4443a55d0e7da64438ea4da4c690`.
 [Main CI 40105930630](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630)
-debug/release/minsize PASS. 2026-10-27 iç mühendislik denetimi ve henüz
-yayımlanmayan yerel düzeltmeler [ayrı raporda](ENGINEERING_AUDIT.md) izlenir. Yerel test/teknik inceleme ve CI, bağımsız
+debug/release/minsize PASS. 2026-10-27 iç mühendislik denetiminin teknik kaydı
+[ayrı raporda](ENGINEERING_AUDIT.md), yayın/CI/merge durumu
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) üzerinde izlenir. Yerel test/teknik inceleme ve CI, bağımsız
 üçüncü taraf audit veya donanım sertifikası değildir. Öğrencinin kişisel
 tamamlama kriterleri bundan ayrı kalır. Aşama planı [Roadmap](ROADMAP.md) içinde.
 
