@@ -1,25 +1,29 @@
-# Release notes taslağı — v1.0.0
+**Language:** English | [Türkçe](RELEASE_NOTES_DRAFT.tr.md)
 
-Öneri: **v1.0.0 — ARM Cortex-M Practical Lab**. Bu eğitim kapsamının ilk tam
-sürüm önerisidir; production RTOS veya donanım sertifikası anlamına gelmez.
-Tag ve GitHub Release oluşturulmadı. Kesin hedef SHA, denetim düzeltmeleri
-[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) merge commit'i
-ve ardından main üç-preset CI sonucu doğrulanarak seçilir. v1.0.0 tag/Release
-için ayrıca kullanıcı onayı gerekir.
+# Release notes draft — v1.0.0
 
-- Cortex-M33 / QEMU mps2-an505 üzerinde 16 uygulamalı ders; ayrı eksik
-  alıştırmalar ve referans çözümler, kontrollü Break It / Debug It deneyleri.
-- Beş birleştirici proje: Protected Application, Fault Analyzer,
+Proposal: **v1.0.0 — ARM Cortex-M Practical Lab**. This is the first complete
+release proposal for this educational scope; it does not imply a production RTOS
+or hardware certification. The tag and GitHub Release have not been created.
+The exact target SHA is selected by verifying the merge commit of the audit fixes
+in [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) and then the main
+three-preset CI result. The v1.0.0 tag/Release requires separate user approval.
+
+- 16 practical lessons on Cortex-M33 / QEMU mps2-an505; separate incomplete
+  exercises and reference solutions, controlled Break It / Debug It experiments.
+- Five integration projects: Protected Application, Fault Analyzer,
   From Reset to Main, Performance Profiler, Educational Mini Kernel.
-- Secure/Non-secure sensor node: üç unprivileged görev, MPU stack izolasyonu,
-  SVC servisleri, PendSV scheduling ve sınırlı Secure DSP/FP kalibrasyonu.
-- Debug/Release/MinSize build, davranışsal smoke/probes, negatif senaryolar
-  ve GDB kapıları. Son sonuç ve gerçek bulgular [iç denetim kaydında](ENGINEERING_AUDIT.md).
-- Frame hizası, padding/mode doğrulaması ve stack-error negatif testleri güçlendirildi.
-- SG girişinde henüz Non-secure durumda kesilen task'ın yanlış scheduler
-  panic üretmesi giderildi; yalnız bilinen gateway girişleri kabul edilir.
+- Secure/Non-secure sensor node: three unprivileged tasks, MPU stack isolation,
+  SVC services, PendSV scheduling, and limited Secure DSP/FP calibration.
+- Debug/Release/MinSize builds, behavioral smoke/probes, negative scenarios,
+  and GDB gates. Final results and actual findings are in the
+  [internal audit record](ENGINEERING_AUDIT.md).
+- Frame alignment, padding/mode validation, and stack-error negative tests were strengthened.
+- The erroneous scheduler panic for a task interrupted at SG entry while still
+  Non-secure was fixed; only known gateway entry addresses are accepted.
 
-Sınırlar: sentetik sensör; donanım testi ve üçüncü taraf audit yoktur.
-QEMU cycle-accurate değildir; DWT CYCCNT'den performans veya WCET iddiası yoktur.
-Genel TrustZone/FP-aware RTOS, kriptografik güvence ve fiziksel saldırı koruması
-bu sürümün kapsamı değildir. İlk kurulum için [README](../README.md).
+Limits: synthetic sensor; no hardware testing or third-party audit.
+QEMU is not cycle-accurate; no performance or WCET claim is based on DWT CYCCNT.
+A general TrustZone/FP-aware RTOS, cryptographic assurance, and protection against
+physical attacks are outside this release's scope. For initial setup, see the
+[README](../README.md).

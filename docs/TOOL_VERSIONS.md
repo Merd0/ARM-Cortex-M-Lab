@@ -1,19 +1,20 @@
+**Language:** English | [Türkçe](TOOL_VERSIONS.tr.md)
+
 # Tool Versions
 
-Neden onemli: derleyici surumu degisince uretilen assembly de degisir.
-Bir derste "su komutu goreceksin" diyorsak, hangi surumle dogruladigimiz
-yazili olmali.
+Why it matters: changing the compiler version changes the generated assembly.
+If a lesson says "you will see this instruction," the version used to verify
+that observation must be recorded.
 
-## Bootstrap dogrulamasinin yapildigi ortam
+## Bootstrap verification environment
 
-> **Dikkat:** Asagidaki dogrulama **Linux (Ubuntu 24.04 x86_64)** uzerinde
-> yapildi. Windows uzerinde ayni surumler kullanilsa bile derleyici
-> ciktisinda kucuk farklar gorulebilir. Windows'ta kendi surumlerini
-> asagidaki tabloya ekle.
+> **Note:** The verification below was performed on **Linux (Ubuntu 24.04 x86_64)**.
+> Even with the same versions on Windows, compiler output can differ slightly.
+> Add your own Windows versions to the table below.
 
-| Arac | Surum | Kaynak |
+| Tool | Version | Source |
 |---|---|---|
-| arm-none-eabi-gcc | 13.2.1 20231009 (paket 15:13.2.rel1-2) | Ubuntu 24.04 `gcc-arm-none-eabi` |
+| arm-none-eabi-gcc | 13.2.1 20231009 (package 15:13.2.rel1-2) | Ubuntu 24.04 `gcc-arm-none-eabi` |
 | arm-none-eabi-binutils (as/ld/objdump) | 2.42 | Ubuntu 24.04 |
 | qemu-system-arm | 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18) | Ubuntu 24.04 |
 | cmake | 3.28.3 | Ubuntu 24.04 |
@@ -21,10 +22,10 @@ yazili olmali.
 | gdb-multiarch | 15.1 | Ubuntu 24.04 |
 | OS | Ubuntu 24.04.4 LTS, x86_64 | - |
 
-`arm-none-eabi-gdb` bu ortamda paketle gelmedi; `gdb-multiarch` kullanildi.
-Ikisi de Cortex-M remote debug icin yeterlidir.
+`arm-none-eabi-gdb` was not included in the package in this environment;
+`gdb-multiarch` was used. Both are sufficient for Cortex-M remote debugging.
 
-## Kendi ortamini kaydet
+## Record your own environment
 
 ```bash
 ./scripts/check-environment.sh | tee docs/tool-versions-local.txt
@@ -34,9 +35,9 @@ Ikisi de Cortex-M remote debug icin yeterlidir.
 .\scripts\check-environment.ps1 | Tee-Object docs\tool-versions-local.txt
 ```
 
-## Windows yerel denetim ortamı — 2026-10-27
+## Windows local audit environment — 2026-10-27
 
-| Arac | Surum | Tarih |
+| Tool | Version | Date |
 |---|---|---|
 | arm-none-eabi-gcc | xPack 15.2.1 20251203 | 2026-10-27 |
 | qemu-system-arm | 11.1.0 (e470268ff4) | 2026-10-27 |
@@ -44,10 +45,10 @@ Ikisi de Cortex-M remote debug icin yeterlidir.
 | ninja | 1.13.2 | 2026-10-27 |
 | arm-none-eabi-gdb | 16.3.90.20250906-git | 2026-10-27 |
 
-## Vendored kutuphane surumleri
+## Vendored library versions
 
-| Bilesen | Surum | Kaynak | Lisans |
+| Component | Version | Source | License |
 |---|---|---|---|
 | CMSIS-Core(M) | 6.3 | ARM-software/CMSIS_6, `main`, 2026-09-19 | Apache-2.0 |
 
-Ayrinti ve guncelleme adimlari: [`external/README.md`](../external/README.md).
+Details and update steps: [`external/README.md`](../external/README.md).

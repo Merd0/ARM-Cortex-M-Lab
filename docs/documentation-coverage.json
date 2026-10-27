@@ -31,7 +31,7 @@
       "english": "docs/COURSE_MAP.md",
       "turkish": "docs/COURSE_MAP.tr.md",
       "category": "reference",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "05b7e48040b8ea0c8e65fafc7df016558d987f250502d8032a1fd6076996541e"
     },
     {
@@ -119,7 +119,7 @@
       "english": "docs/RELEASE_NOTES_DRAFT.md",
       "turkish": "docs/RELEASE_NOTES_DRAFT.tr.md",
       "category": "historical",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "974e8140ac711050b78149c232d26428852f7a9e76aa5606b51738fbf5fc99f9"
     },
     {
@@ -143,7 +143,7 @@
       "english": "docs/TOOL_VERSIONS.md",
       "turkish": "docs/TOOL_VERSIONS.tr.md",
       "category": "reference",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "be612ee034c265b8677f4dc7754bd8f217d85a40405e501d31c0fdb0a039d4df"
     },
     {
