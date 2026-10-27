@@ -159,7 +159,7 @@
       "english": "final-project/README.md",
       "turkish": "final-project/README.tr.md",
       "category": "final-project",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "f1f6bfe66585d630673f4e01bbb54bd6d5fdef39fc9dbee46c06fdf49969bd2b"
     },
     {
@@ -167,7 +167,7 @@
       "english": "final-project/secure-real-time-sensor-node/README.md",
       "turkish": "final-project/secure-real-time-sensor-node/README.tr.md",
       "category": "final-project",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "173ed873be56f58aa99c2353e8fbf08bb1532dbfeb5947b1f5b230be643221f2"
     },
     {
@@ -679,15 +679,21 @@
       "english": "projects/README.md",
       "turkish": "projects/README.tr.md",
       "category": "projects",
-      "state": "pending",
-      "source_sha256": "f1c611d90b8f7fb5faa57e3e2bdf36c7cb9743dd78485bee7015eb3d6a3018a6"
+      "state": "translated",
+      "source_sha256": "f1c611d90b8f7fb5faa57e3e2bdf36c7cb9743dd78485bee7015eb3d6a3018a6",
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "727394d451fdeec3d7f42d9667c93f5d5400ca1fe8b5f1ec07f82e8314714f4e",
+          "reason": "Directory schematic annotations only; paths and tree unchanged. Not executable code or observed output."
+        }
+      }
     },
     {
       "original": "projects/fault-analyzer/README.md",
       "english": "projects/fault-analyzer/README.md",
       "turkish": "projects/fault-analyzer/README.tr.md",
       "category": "projects",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "03b3e4e444c8cf2e87b790c9f9c3dbf97d3185f75c12294af991c0c58b8bf485"
     },
     {
@@ -695,7 +701,7 @@
       "english": "projects/from-reset-to-main/README.md",
       "turkish": "projects/from-reset-to-main/README.tr.md",
       "category": "projects",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "105d2a80f4374679bd8a06d8cab84646a7beeda50544aab0ea4ce5432529c09e"
     },
     {
@@ -703,7 +709,7 @@
       "english": "projects/mini-kernel/README.md",
       "turkish": "projects/mini-kernel/README.tr.md",
       "category": "projects",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "0e0a333064957859236ed6be970b324da8005356b83628ecd155a110efc9c79a"
     },
     {
@@ -711,7 +717,7 @@
       "english": "projects/performance-profiler/README.md",
       "turkish": "projects/performance-profiler/README.tr.md",
       "category": "projects",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "611be7ee1af8dbc8a7d7575c536e2de520bea625a8f3f0a814abff05d4426c1a"
     },
     {
@@ -719,7 +725,7 @@
       "english": "projects/protected-application/README.md",
       "turkish": "projects/protected-application/README.tr.md",
       "category": "projects",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "ba716aba1811cecbc0283019fb53bc1d6c0410fd44b90d511ef35193dbf65b1d"
     },
     {

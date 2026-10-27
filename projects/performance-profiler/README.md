@@ -1,11 +1,13 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Project — Performance Profiler
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-Lesson 12'nin runtime-input workload'u ve referans ölçüm sınıflandırıcısı aynı
-kaynaklardan kullanılır. Proje beş farklı workload object'i üretir:
--O0, -O1, -O2, -O3, -Os. Sadece workload bayrağı değişir; preset'in genel
-Release=-O2 sözleşmesi değişmez. Driver her varyantta checksum=424 doğrular.
+Lesson 12's runtime-input workload and reference measurement classifier are reused
+from the same sources. The project produces five different workload objects:
+-O0, -O1, -O2, -O3, -Os. Only the workload flag changes; the preset's general
+Release=-O2 contract remains unchanged. The driver verifies checksum=424 in every variant.
 
 ```bash
 cmake --preset debug
@@ -14,20 +16,21 @@ python tests/system-smoke.py
 python tests/profile-report.py
 ```
 
-Debug/GCC 15.2.1 ölçümü: workload boyutları sırasıyla 70,32,32,32,28 byte;
-statik komut sayıları 35,13,13,13,11. Script gerçek nm/objdump çıktısından
-`build/debug/system-evidence/profile.json` üretir. Bunlar yürütülen komut
-sayısı, cycle, hızlanma veya WCET değildir; toolchain ile değişebilir.
+Debug/GCC 15.2.1 measurement: workload sizes are 70,32,32,32,28 bytes respectively;
+static instruction counts are 35,13,13,13,11. The script produces
+`build/debug/system-evidence/profile.json` from actual nm/objdump output.
+These are not executed instruction counts, cycles, speedups, or WCET;
+they may change with the toolchain.
 
-QEMU 11.1.0 AN505'te DWT ilerlemedi; DWT_RESULT=UNAVAILABLE ölçüldü.
-Model-local dört SysTick boyunca ilerleyen iş sayılır; ölçüm penceresinde
-console I/O yoktur. İterasyonlardan fiziksel throughput veya güvenilir
-optimizasyon sıralaması çıkarılmaz. Daha küçük kod daha hızlı demek değildir.
-FVP de yapılandırmasına göre timing modeline sahiptir; her FVP cycle-accurate
-kabul edilmez. Donanım performansı ayrı ölçüm gerektirir.
+DWT did not advance on QEMU 11.1.0 AN505; DWT_RESULT=UNAVAILABLE was measured.
+The work progressing over four model-local SysTicks is counted; there is no
+console I/O in the measurement window. Iterations do not establish physical
+throughput or a reliable optimization ranking. Smaller code does not mean faster
+code. FVP timing models also depend on configuration; not every FVP is assumed
+cycle-accurate. Hardware performance requires separate measurement.
 
-Negatif ölçüm sınıflandırması ve öğrenci starter/solution
-[Lesson 12](../../lessons/12-debug-dwt/) içinde korunur. Ayrıntılı GDB ve
-üç-preset karşılaştırması toplu kalite kapısındadır.
+Negative measurement classification and the student starter/solution are preserved
+in [Lesson 12](../../lessons/12-debug-dwt/). Detailed GDB checks and the
+three-preset comparison belong to the combined quality gate.
 
 [Projects](../README.md)

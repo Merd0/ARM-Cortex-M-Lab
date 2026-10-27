@@ -1,26 +1,28 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Project — Fault Analyzer
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-[diagnostic.c](diagnostic.c) Lesson 08'in referans decoder'ını yeniden kullanır.
-Önüne konservatif frame capture sınırı ekler: trusted stack bounds, desteklenen
-EXC_RETURN, minimum uzunluk, hizalama, xPSR.T/exception mode ve padding.
-MSTKERR, STKERR, STKOF, unstack/lazy-save hatalarında **pointer dereference edilmez**.
-Basic same-state Secure ve Non-secure frame desteklenir. FP ve cross-security
-frame'ler sessizce yanlış decode edilmek yerine reddedilir.
+[diagnostic.c](diagnostic.c) reuses Lesson 08's reference decoder.
+It adds a conservative frame-capture boundary in front of it: trusted stack bounds,
+supported EXC_RETURN, minimum length, alignment, xPSR.T/exception mode, and padding.
+On MSTKERR, STKERR, STKOF, unstack/lazy-save errors, **the pointer is not dereferenced**.
+Basic same-state Secure and Non-secure frames are supported. FP and cross-security
+frames are rejected instead of silently decoded incorrectly.
 
-## Kritik düzeltme
+## Critical correction
 
-`0xFFFFFFFD` bu temel Secure bağlamda **Thread Mode / PSP / basic frame**
-dönüşüdür. Handler/MSP dönüşü değildir. Non-secure same-state karşılığı
-`0xFFFFFFBC` olur; security bitlerini yok sayarak aynı sabit kullanılamaz.
+In this basic Secure context, `0xFFFFFFFD` is a **Thread Mode / PSP / basic frame**
+return. It is not a Handler/MSP return. Its Non-secure same-state counterpart is
+`0xFFFFFFBC`; the same constant cannot be used while ignoring the security bits.
 
-Örneğin CFSR=0x9200 hem PRECISERR hem STKERR ve BFARVALID içerir.
-HFSR.FORCED=1 yükseltilmiş fault'u gösterir. BFAR ancak validity bitiyle adres
-kanıtıdır; stacking başarısız olduğundan stacked PC **güvenilir değildir**.
-Bitlerin birlikte bulunması tek başına olayların nedensel sırasını kanıtlamaz.
+For example, CFSR=0x9200 contains PRECISERR, STKERR, and BFARVALID.
+HFSR.FORCED=1 indicates an escalated fault. BFAR is address evidence only with its
+validity bit; since stacking failed, the stacked PC is **not trustworthy**.
+The coexistence of these bits alone does not prove the causal order of events.
 
-## Çalıştırma
+## Running
 
 ```bash
 cmake --preset debug
@@ -29,22 +31,24 @@ cmake --build --preset debug
 python tests/system-smoke.py
 ```
 
-Gerçek firmware'ler: project-fault-udf, -unaligned, -bus, -mpu, -escalated.
-Ayrı project-fault-cases, sentetik negatif snapshot testlerini çalıştırır.
-Bunlar gerçek stacking fault üretilmiş gibi sunulmaz.
+Real firmware scenarios: project-fault-udf, -unaligned, -bus, -mpu, -escalated.
+The separate project-fault-cases runs synthetic negative snapshot tests.
+These are not presented as if real stacking faults had been generated.
 
-Debug/QEMU'da beş gerçek fault senaryosunda CAUSE/FRAME/PRIVILEGE/CLEAR PASS;
-sentetik kontrollerde MSP/PSP/NS basic frame, stack-error reddi, FP/cross-state
-reddi, bounds ve MMFAR/BFAR validity PASS. HFSR temizliği Cortex-M33 DEBUGEVT=1
-yazma kuralını korur; generic CMSIS IMPRECISERR sabiti M33 BFSR bit2 uygulanmış
-gibi yorumlanmaz. Raw CFSR/HFSR kaybolmaz; birincil sınıf bütün root-cause zinciri değildir.
+In Debug/QEMU, CAUSE/FRAME/PRIVILEGE/CLEAR PASS in five real fault scenarios;
+synthetic checks PASS for MSP/PSP/NS basic frames, stack-error rejection,
+FP/cross-state rejection, bounds, and MMFAR/BFAR validity. HFSR clearing preserves
+the Cortex-M33 rule to write DEBUGEVT=1; the generic CMSIS IMPRECISERR constant is
+not interpreted as evidence that M33 BFSR bit2 is implemented. Raw CFSR/HFSR are
+retained; the primary classification is not the entire root-cause chain.
 
-Handler privilege CONTROL.nPRIV'den çıkarılmaz. Handler her zaman privileged'dır.
-Capture, corrupt MSP üzerinde güvenli bir emergency-stack mekanizması değildir;
-böyle bir durumda exception entry/raporlama zaten çalışamayabilir.
+Handler privilege is not inferred from CONTROL.nPRIV. Handler is always privileged.
+Capture is not a safe emergency-stack mechanism on a corrupt MSP;
+exception entry/reporting may already be unable to work in that situation.
 
-Genişletilmiş negatif set ve GDB frame sınır testleri iç denetim kapısına
-eklendi; [sonuçlar](../../docs/ENGINEERING_AUDIT.md) ayrı kaydedilir. Öğrenci starter'ı ve referans
-decoder [Lesson 08](../../lessons/08-faults/) içinde ayrı kalır.
+The expanded negative set and GDB frame-boundary tests were added to the internal
+audit gate; [results](../../docs/ENGINEERING_AUDIT.md) are recorded separately.
+The student starter and reference decoder remain separate in
+[Lesson 08](../../lessons/08-faults/).
 
 [Projects](../README.md)

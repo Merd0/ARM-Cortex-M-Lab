@@ -1,13 +1,15 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Final Project
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-Tek bir proje: [`secure-real-time-sensor-node/`](secure-real-time-sensor-node/)
+One project: [`secure-real-time-sensor-node/`](secure-real-time-sensor-node/)
 
-Bu dizin, `lessons/` ve `projects/` altındaki her şeyin **tek bir çalışan
-sistemde** birleştiği yerdir. Kural şu: bir özellik buraya ancak gerçek bir
-probleme karşılık geliyorsa girer. CV'de iyi göründüğü için değil.
+This directory brings everything under `lessons/` and `projects/` together in
+**one working system**. The rule is that a feature belongs here only if it solves
+a real problem, not because it looks good on a CV.
 
 ---
 
-[← Ana sayfa](../README.md)
+[← Home](../README.md)

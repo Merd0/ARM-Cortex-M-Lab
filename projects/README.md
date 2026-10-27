@@ -1,72 +1,75 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Projects
 
-`lessons/` tek bir kavramı izole eder. `projects/` ise **birden fazla dersi
-birleştirip** çalışan bir şey üretir. Aradaki fark önemli:
+`lessons/` isolates one concept. `projects/` **combines several lessons** to build
+something that works. The distinction matters:
 
 | | `lessons/` | `projects/` |
 |---|---|---|
-| Kapsam | Tek kavram | Birleşik davranış |
-| Kod boyutu | Minimum | Orta |
-| Amaç | Anlamak | Kurabildiğini kanıtlamak |
-| Ne zaman | Konuyu ilk görürken | İlgili dersler bitince |
+| Scope | One concept | Combined behavior |
+| Code size | Minimal | Moderate |
+| Goal | Understand | Prove you can build it |
+| When | First encountering a topic | After completing the relevant lessons |
 
-Her proje, bağımlı olduğu dersler tamamlanmadan başlatılmamalı. Bağımlılık
-tablosu aşağıda.
+Do not start a project before completing the lessons it depends on.
+The dependency table is below.
 
 ---
 
-## Proje listesi
+## Project list
 
-| Proje | Ne yapar | Gerekli dersler | Durum |
+| Project | What it does | Required lessons | Status |
 |---|---|---|---|
-| [protected-application](protected-application/) | Unprivileged thread + PSP + MPU + SVC | 04, 05, 06, 07, 08 | Main üzerinde; üç-preset CI PASS |
-| [fault-analyzer](fault-analyzer/) | Crash'i okunur rapora çevirir | 07, 08 | Main üzerinde; üç-preset CI PASS |
-| [from-reset-to-main](from-reset-to-main/) | Sıfırdan startup + linker script | 10, 11 | Main üzerinde; üç-preset CI PASS |
-| [performance-profiler](performance-profiler/) | Ölçüm metodolojisi + optimizasyon karşılaştırması | 09, 12 | Main üzerinde; üç-preset CI PASS |
-| [mini-kernel](mini-kernel/) | SysTick + PendSV + SVC round-robin scheduler | 14, 15 | Main üzerinde; üç-preset CI PASS |
+| [protected-application](protected-application/) | Unprivileged thread + PSP + MPU + SVC | 04, 05, 06, 07, 08 | On main; three-preset CI PASS |
+| [fault-analyzer](fault-analyzer/) | Turns a crash into a readable report | 07, 08 | On main; three-preset CI PASS |
+| [from-reset-to-main](from-reset-to-main/) | Startup + linker script from scratch | 10, 11 | On main; three-preset CI PASS |
+| [performance-profiler](performance-profiler/) | Measurement methodology + optimization comparison | 09, 12 | On main; three-preset CI PASS |
+| [mini-kernel](mini-kernel/) | SysTick + PendSV + SVC round-robin scheduler | 14, 15 | On main; three-preset CI PASS |
 
-Hepsinin birleşimi: [`final-project/`](../final-project/)
-
----
-
-## Ortak kural: student vs infrastructure
-
-Projelerin src/ dizinleri çalışan referans uygulamalardır. Aynı mekanizma
-yalnız ayrı proje görünümü için kopyalanmaz: Lesson 06, 08, 11, 12 ve 15
-kaynakları ilgili hedeflerde yeniden derlenir. `TODO(student)` alıştırmaları
-ve ayrı çözümler lessons/ altında korunur; referans proje kodu starter'a sızdırılmaz.
-
-Bitirdiğinde `review mode` diyebilirsin — kodu architectural correctness,
-AAPCS, register preservation, stack alignment, volatile, privilege ve MPU
-açısından gözden geçiririm; önce sorunu ve severity'sini söylerim, çözümü
-doğrudan yazmam.
+All of them combined: [`final-project/`](../final-project/)
 
 ---
 
-## Proje şablonu
+## Shared rule: student vs infrastructure
 
-Her proje dizini şunu içerir:
+The projects' src/ directories contain working reference applications. The same
+mechanism is not copied solely to create a separate project view: Lesson 06, 08,
+11, 12, and 15 sources are recompiled in the relevant targets. `TODO(student)`
+exercises and separate solutions are preserved under lessons/; reference project
+code is not leaked into the starter.
+
+When you finish, you can say `review mode` — I will review the code for
+architectural correctness, AAPCS, register preservation, stack alignment, volatile,
+privilege, and MPU usage; I will first state the problem and its severity, rather
+than writing the solution directly.
+
+---
+
+## Project template
+
+Each project directory contains:
 
 ```text
 <proje>/
-    README.md        problem tanımı + mimari diyagram + kabul kriterleri
-    src/             çalışan referans entegrasyon
-    CMakeLists.txt   add_firmware() çağrısı
+    README.md        problem definition + architecture diagram + acceptance criteria
+    src/             working reference integration
+    CMakeLists.txt   add_firmware() call
 ```
 
-`README.md` içinde en az:
+At a minimum, `README.md` contains:
 
-- **Problem** — hangi gerçek ihtiyaç?
-- **Architecture** — mermaid diyagram
-- **Acceptance criteria** — "bitti" ne demek, ölçülebilir şekilde
-- **Bağımlı dersler**
-- **Doğrulama** — QEMU çıktısı ve GDB'de ne görülmeli
+- **Problem** — what real need does it address?
+- **Architecture** — a mermaid diagram
+- **Acceptance criteria** — what "done" means in measurable terms
+- **Lesson dependencies**
+- **Verification** — QEMU output and what should be visible in GDB
 
 ---
 
-[← Ana sayfa](../README.md) · [Bootcamp](../BOOTCAMP.md)
+[← Home](../README.md) · [Bootcamp](../BOOTCAMP.md)
 
-## Ortak doğrulama
+## Shared verification
 
 ```bash
 cmake --preset debug
@@ -75,5 +78,5 @@ python tests/system-smoke.py --group projects
 python tests/profile-report.py
 ```
 
-Her proje bağımsız ELF üretir. System smoke 15 senaryoda bütün beklenen
-CHECK alanlarını doğrular; ayrıntılı kayıt [Progress](../docs/PROGRESS.md) içindedir.
+Each project produces an independent ELF. System smoke verifies all expected
+CHECK fields in 15 scenarios; the detailed record is in [Progress](../docs/PROGRESS.md).
