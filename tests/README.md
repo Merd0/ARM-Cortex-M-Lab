@@ -109,9 +109,8 @@ SFAR yalnız SFARVALID set ise adres olarak kullanılır. Ham kayıtlar ignored
 `build/<preset>/development-evidence/` altında tutulur. Süreçler yalnız testin
 başlattığı QEMU'ya ait PID üzerinden kapatılır.
 
-Yeni kapı üç CI preset'ine bağlandı; uzak sonuç ancak dal push edilince oluşur.
-Bu aşamada Debug çalıştırıldı; `--preset release` / `--preset minsize` seçenekleri
-toplu kapıda kullanılacak. Mevcut smoke, build-probes ve GDB script'leri
+Kapı üç CI preset'ine bağlıdır; main 11fde900 için üç preset CI geçti.
+`--preset release` / `--preset minsize` aynı kapıyı diğer optimizasyonlarda çalıştırır. Mevcut smoke, build-probes ve GDB script'leri
 azaltılmadı. Bu hızlı test tam mimari/security audit veya donanım testi değildir.
 
 ## Projeler ve final entegrasyon kapısı
@@ -123,12 +122,18 @@ python tests/profile-report.py --preset debug
 ```
 
 Aynı komutlar release/minsize için de çalıştırıldı. System gate: 15 proje +
-7 final senaryosu. GDB gate: dokuz oturum; R4–R11 save/restore ve EXC_RETURN,
+7 final senaryosu. GDB gate: 13 oturum (frame sınırları ve üç SG giriş/ret testi dahil); R4–R11 save/restore ve EXC_RETURN,
 PSP/PSPLIM/MSP alignment, FP payload/control, MPU/STKOF ve Secure geçişleri.
 Kontrollü NS SysTick, Secure Thread devam noktasının sahibi değiştirilmeden
 korunduğunu sınar; GDB tail-chaining'i anında Thread'e dönüş sanmaz.
 
 Diagnostic API privilege testi ve Thread-origin FP servis reddi beklenen
 politikayı ölçer. Queue tamamlanma kontrolü örnek sayısını azaltarak geçilmez.
-Yeni CI adımları her üç preset'e bağlandı; onay öncesinde uzak sonuç yoktur.
+CI adımları her üç preset'e bağlıdır. Yayımlanmayan denetim düzeltmelerinin
+yerel sonuçları main CI başarısından ayrı tutulur; [denetim kaydı](../docs/ENGINEERING_AUDIT.md).
 Yerel kapılar üçüncü taraf bağımsız audit veya kart testi değildir.
+
+Frame regresyonları: 8-byte M33 hizası, padding sınırı, Thread/Handler IPSR
+uyumu, T/PC ve yedi stacking/unstack/lazy hata biti. Geçerli tamponla hata
+bitleri sınanır; yalnız geçersiz pointer kullanmak bounds kontrolü yüzünden
+hatalı status kontrolünü gizler. STKERR veto mutasyonu yeni testi FAIL yapar.

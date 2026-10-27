@@ -1,6 +1,6 @@
 # Project — Fault Analyzer
 
-**STATUS: yerel Debug/Release/MinSize PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 [diagnostic.c](diagnostic.c) Lesson 08'in referans decoder'ını yeniden kullanır.
 Önüne konservatif frame capture sınırı ekler: trusted stack bounds, desteklenen
@@ -34,7 +34,7 @@ Ayrı project-fault-cases, sentetik negatif snapshot testlerini çalıştırır.
 Bunlar gerçek stacking fault üretilmiş gibi sunulmaz.
 
 Debug/QEMU'da beş gerçek fault senaryosunda CAUSE/FRAME/PRIVILEGE/CLEAR PASS;
-dokuz sentetik kontrolde MSP/PSP/NS basic frame, stack-error reddi, FP/cross-state
+sentetik kontrollerde MSP/PSP/NS basic frame, stack-error reddi, FP/cross-state
 reddi, bounds ve MMFAR/BFAR validity PASS. HFSR temizliği Cortex-M33 DEBUGEVT=1
 yazma kuralını korur; generic CMSIS IMPRECISERR sabiti M33 BFSR bit2 uygulanmış
 gibi yorumlanmaz. Raw CFSR/HFSR kaybolmaz; birincil sınıf bütün root-cause zinciri değildir.
@@ -43,7 +43,8 @@ Handler privilege CONTROL.nPRIV'den çıkarılmaz. Handler her zaman privileged'
 Capture, corrupt MSP üzerinde güvenli bir emergency-stack mekanizması değildir;
 böyle bir durumda exception entry/raporlama zaten çalışamayabilir.
 
-GDB ve geniş negatif set son kapıda yapılacak. Öğrenci starter'ı ve referans
+Genişletilmiş negatif set ve GDB frame sınır testleri iç denetim kapısına
+eklendi; [sonuçlar](../../docs/ENGINEERING_AUDIT.md) ayrı kaydedilir. Öğrenci starter'ı ve referans
 decoder [Lesson 08](../../lessons/08-faults/) içinde ayrı kalır.
 
 [Projects](../README.md)

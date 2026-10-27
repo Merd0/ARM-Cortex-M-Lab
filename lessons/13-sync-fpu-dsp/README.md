@@ -1,6 +1,6 @@
 # Lesson 13 — Synchronization, FPU & DSP
 
-`[DEEP]` · Day 6 · **STATUS: implemented; local validation below, remote CI pending**
+`[DEEP]` · Day 6 · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 **TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY**
 

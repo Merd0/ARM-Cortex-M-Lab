@@ -1,6 +1,6 @@
 # Final — Secure Real-Time Sensor Node
 
-**STATUS: yerel üç-preset kalite kapısı PASS; uzak CI/merge onayı bekliyor.**
+**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
 
 Çalışan sistem: üç unprivileged Non-secure task sentetik sensör verisini toplar,
 işler ve UART telemetry üretir. Privileged Non-secure kernel queue'ları, MPU'yu
@@ -120,6 +120,12 @@ task stack'i sanıp kaydetmez: orijinal hardware EXC_RETURN ile aynı Secure
 NS PSP/PSPLIM ve token'ın değişmediğini, Secure devam noktasına dönüldüğünü
 doğrular. Secure çağrılar bounded olmalıdır; uzun/sonsuz Secure işlem için
 genel TrustZone-aware task switching desteği yoktur.
+
+SG komutu henüz yürütülmediyse kesilen context Non-secure kalır; stacked PC
+NSC girişini gösterebilir. Scheduler normal NS flash'a ek olarak yalnız iki
+import edilen SG giriş adresini kabul eder. Secure fonksiyon gövdesi veya
+SG+4 kabul edilmez. Bu sınırın eski panic'i ve regresyonu
+[iç denetim kaydında](../../docs/ENGINEERING_AUDIT.md) açıklanır.
 
 Fault Analyzer same-state basic frame'leri destekler. FP/cross-security frame
 tahmin edilerek dereference edilmez. SecureFault için SFSR/SFAR validity
