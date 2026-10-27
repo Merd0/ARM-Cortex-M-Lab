@@ -294,9 +294,9 @@ define cm-frame
 
     # --- 4) adres bicimi ---------------------------------------------------
     if $cm_ok
-      if ($cm_fa & 0x3) != 0
-        printf "REDDEDILDI [GECERSIZ FRAME ADRESI]: 0x%08x word hizali degil.\n", $cm_fa
-        printf "  Frame adresi 4'un kati olmali.\n"
+      if ($cm_fa & 0x7) != 0
+        printf "REDDEDILDI [GECERSIZ FRAME ADRESI]: 0x%08x 8-byte hizali degil.\n", $cm_fa
+        printf "  Cortex-M33 CCR[9] RES1: frame adresi 8'in kati olmali.\n"
         set $cm_ok = 0
       end
     end
@@ -343,6 +343,19 @@ define cm-frame
         printf "  (0x%08x .. 0x%08x). Verdigin adres buyuk olasilikla bir\n", $cm_code_start, $cm_code_end
         printf "  exception frame'i degil (ornegin handler'in kendi yerel verisi).\n"
         printf "  Baska bir platformdaysan $cm_code_start / $cm_code_end ayarla.\n"
+        set $cm_ok = 0
+      end
+    end
+
+    if $cm_ok
+      if (($cm_xpsr & 0x200) != 0) && (($cm_fa + 36) > $cm_ram_end)
+        printf "REDDEDILDI [GECERSIZ FRAME ICERIGI]: alignment padding RAM penceresi disinda.\n"
+        set $cm_ok = 0
+      end
+    end
+    if $cm_ok
+      if ((($cm_er & 8) != 0) && (($cm_xpsr & 0x1ff) != 0)) || ((($cm_er & 8) == 0) && (($cm_xpsr & 0x1ff) == 0))
+        printf "REDDEDILDI [GECERSIZ FRAME ICERIGI]: EXC_RETURN Mode ve stacked IPSR uyusmuyor.\n"
         set $cm_ok = 0
       end
     end

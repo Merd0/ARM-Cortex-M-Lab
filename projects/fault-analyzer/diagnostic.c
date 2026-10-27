@@ -19,7 +19,8 @@ int fa_capture(fault_snapshot_t *s, uintptr_t address, uintptr_t low, uintptr_t 
     s->frame_valid = 0;
     s->frame_address = (uint32_t)address;
     if (!status_safe(s) || high < low || high - low < sizeof(exception_frame_t) ||
-        (address & 3U) || address < low || address > high - sizeof(exception_frame_t)) return 0;
+        /* Cortex-M33 CCR[9] is RES1: exception frames are eight-byte aligned. */
+        (address & 7U) || address < low || address > high - sizeof(exception_frame_t)) return 0;
     const exception_frame_t *frame = (const exception_frame_t *)address;
     uint32_t xpsr = frame->xpsr;
     uint32_t pad = xpsr & (1U << 9) ? 4U : 0U;
