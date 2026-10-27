@@ -1,0 +1,324 @@
+**Dil / Language:** [English](README.md) · **Türkçe**
+
+# ARM Cortex-M — Practical Learning Lab
+
+Cortex-M33 mimarisini **çalıştırarak, debug ederek ve bilerek bozarak**
+öğrenmek için kurulmuş bir laboratuvar. Her konu QEMU'da çalışan bir
+firmware'e ve GDB'de gözlemlenebilir bir davranışa karşılık gelir.
+
+Fiziksel geliştirme kartı gerekmez. Target: **Cortex-M33 / QEMU `mps2-an505`**.
+
+---
+
+## Bu repo ne?
+
+Repo üç amaçla kullanılıyor:
+
+1. **Kişisel Cortex-M laboratuvarı** — her kavram için ölçülmüş, gözlemlenmiş
+   bir deney.
+2. **Uygulamalı eğitim kaynağı** — daha önce Cortex-M görmemiş bir geliştirici
+   de takip edebilsin diye yazıldı.
+3. **Portfolyo projesi** — uygulama, hata teşhisi ve doğrulama çalışmalarının kaydı.
+
+Her ders şu döngüyü izler:
+
+```text
+TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
+```
+
+Yani bir konu sadece anlatılmaz: çalıştırılır, debugger'da görülür,
+kontrollü şekilde bozulur ve hata teşhis edilir.
+
+---
+
+## Ne öğretiyor?
+
+| Alan | Konular |
+|---|---|
+| **Mimari** | Programmer model, register'lar, MSP/PSP, Thread/Handler Mode, privilege, CONTROL |
+| **Koruma** | MPU, SVC, privileged/unprivileged ayrımı, TrustZone |
+| **Exception** | Vector table, NVIC, hardware stacking, EXC_RETURN, fault'lar ve escalation |
+| **Build** | Compiler, optimizasyon, AAPCS, linker script, ELF, map file, startup |
+| **Debug** | GDB ile teşhis akışı, disassembly, watchpoint, fault analizi |
+| **Gerçek zamanlı** | SysTick, PendSV, context switching, eğitim amaçlı mini kernel |
+
+---
+
+## Mimari
+
+```mermaid
+flowchart TB
+    subgraph LEARN["Öğrenme katmanı"]
+        LS["lessons/<br/>16 ders"]
+        PR["projects/<br/>birleştirici projeler"]
+        FP["final-project/"]
+    end
+
+    subgraph SW["Yazılım katmanı"]
+        CM["common/<br/>console · tiny libc"]
+        PL["platform/mps2-an505/<br/>startup · UART · linker script"]
+        CMSIS["external/CMSIS/<br/>resmi CMSIS-Core (baseline)"]
+        CO["core/<br/>cm33_teaching.h — eğitim amaçlı<br/>minimal register tanımları"]
+    end
+
+    subgraph TOOL["Araç katmanı"]
+        CMK["CMake + Ninja<br/>arm-none-eabi"]
+        QEMU["QEMU<br/>mps2-an505"]
+        GDB["GDB<br/>cortex-m.gdb"]
+    end
+
+    LEARN --> CM --> PL --> CMSIS
+    LS -.->|register'ın kendisi konuysa| CO
+    LEARN -.-> CMK
+    CMK --> QEMU
+    QEMU <--> GDB
+```
+
+Katmanların neden böyle ayrıldığı: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+---
+
+## Başlarken
+
+### 1. Ortamı kontrol et
+
+```powershell
+.\scripts\check-environment.ps1     # Windows
+```
+
+```bash
+./scripts/check-environment.sh      # Linux / macOS / WSL
+```
+
+Eksik varsa: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
+
+Gerekenler: Arm GNU Toolchain (`arm-none-eabi`), CMake, Ninja, QEMU, GDB.
+
+### 2. Build et
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+```
+
+### 3. Çalıştır
+
+```bash
+./scripts/run-qemu.sh build/debug/lessons/02-programmer-model/02-programmer-model.elf
+```
+
+Çıkış: `Ctrl-A` sonra `X`.
+
+### 4. Debug et
+
+```bash
+# Terminal 1
+./scripts/debug-qemu.sh build/debug/lessons/02-programmer-model/02-programmer-model.elf
+
+# Terminal 2
+arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
+    build/debug/lessons/02-programmer-model/02-programmer-model.elf
+(gdb) cm-connect
+(gdb) cm-regs
+```
+
+### 5. Nereden başlamalı?
+
+**[`BOOTCAMP.md`](BOOTCAMP.md)** — günlük çalışma planı.
+İlk ders: [`lessons/01-cortex-m-family/`](lessons/01-cortex-m-family/) — kod
+yazmadan, hedefin kendini nasıl tanıttığını okuyarak başlar.
+Ardından [`lessons/02-programmer-model/`](lessons/02-programmer-model/).
+
+Günlük plan: [BOOTCAMP.md](BOOTCAMP.md) — giriş noktası orasıdır ve
+`lessons/01` ile başlar.
+
+---
+
+## Target
+
+| | |
+|---|---|
+| İşlemci | Cortex-M33 (Armv8-M Mainline, TrustZone + DSP + FPU) |
+| Platform | QEMU `mps2-an505` (Arm Application Note AN505 / IoT Kit) |
+| Kod bölgesi | `0x10000000` (Secure alias), 512 KB |
+| RAM | `0x30000000` (Secure alias), 32 KB |
+| Konsol | CMSDK APB UART0 @ `0x50200000` |
+| Doğrulanan MPU | 8 bölge (ölçüldü) |
+| Doğrulanan SAU | 8 bölge (ölçüldü) |
+
+**Simülatör ile gerçek donanımın davranışları farklı olabilir.** Bu hedefte
+ölçülen özellikler ve sınırlar aşağıdaki belgelerde yer alıyor:
+
+- [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) — ölçülmüş capability matrisi
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — simülatör ile donanım farkları
+
+En önemli sınır: **DWT cycle counter bu target'ta saymıyor** (ölçüldü).
+Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
+
+---
+
+## Progress
+
+Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
+çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
+
+2026-10-24 teknik teslim: 16 ders, beş birleştirici proje ve çalışan Secure
+Sensor Node uygulandı. Debug/Release/MinSize clean build, geniş regresyonlar
+ve kritik GDB kapıları yerelde PASS. Lesson 13, üç preset CI sonrası
+[PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi.
+Lesson 14–16 da [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
+ile üç preset CI sonrası merge edildi. Beş proje ve final entegrasyonu
+[PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11) ile main üzerinde.
+`11fde900835d4443a55d0e7da64438ea4da4c690` için
+[merge sonrası üç preset CI](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630) PASS.
+Son iç denetim düzeltmeleri [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) ile izlenir. Teknik kayıt: [Engineering Audit](docs/ENGINEERING_AUDIT.md).
+Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
+doğrulaması olarak sunulmaz.
+Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
+
+### Altyapı
+
+- [x] Build sistemi (CMake + Ninja + arm-none-eabi)
+- [x] MPS2-AN505 platform portu (startup, linker script, UART)
+- [x] QEMU'da çalışan firmware
+- [x] GDB bağlantısı + Cortex-M yardımcı komutları
+- [x] Target capability probe (ölçülmüş)
+- [x] Dokümantasyon temeli
+
+### Temeller
+
+- [x] Cortex-M family & processor selection
+- [x] Programmer model & registers
+- [x] C ↔ Assembly
+- [x] Stack / MSP / PSP
+
+### Mimari
+
+- [x] Privilege & SVC
+- [x] MPU
+- [x] Exceptions & NVIC
+- [x] Faults (birleştirici Fault Analyzer projesi aşağıda ayrı izlenir)
+
+### Yazılım Geliştirme
+
+- [x] Compiler & AAPCS
+- [x] Linker / ELF / memory layout
+- [x] Startup from scratch
+- [x] Debugging & DWT
+
+### İleri Konular
+
+- [x] Synchronization / FPU / DSP (Lesson 13: PR #9 merge, üç preset CI PASS)
+- [x] SysTick & PendSV (üç preset QEMU/GDB ve main CI PASS)
+- [x] Mini kernel & context switching (üç preset QEMU/GDB ve main CI PASS)
+- [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; main CI PASS)
+
+### Projeler
+
+- [x] Protected Application (main üç preset CI PASS)
+- [x] Fault Analyzer (main üç preset CI PASS)
+- [x] From Reset to Main (main üç preset CI PASS)
+- [x] Performance Profiler (main üç preset CI PASS)
+- [x] Educational Mini Kernel (main üç preset CI PASS)
+- [x] Final Project (main üç preset CI PASS)
+
+Projeler/final için üç preset CI sonucu yukarıdaki main commit'ine aittir.
+Denetim tesliminin yerel testleri, PR #12 CI ve merge kayıtlarından ayrı kaydedilir.
+
+Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
+
+---
+
+## Major Projects
+
+Birden fazla dersin konularını birleştiren projeler; her birinin ayrı README'si var:
+
+| Proje | Birleştirdiği konular | Durum |
+|---|---|---|
+| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Main üç-preset CI PASS |
+| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decode + CFSR/HFSR analizi | Main üç-preset CI PASS |
+| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Main üç-preset CI PASS |
+| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi + compiler optimizasyonu | Main üç-preset CI PASS |
+| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Main üç-preset CI PASS |
+| [Final Project](final-project/) | Hepsinin entegrasyonu | Main üç-preset CI PASS |
+
+---
+
+## Repo yapısı
+
+```text
+lessons/        16 ders — her biri kendi başına anlaşılır
+projects/       birden fazla dersi birleştiren projeler
+final-project/  specialization sonu entegrasyon
+external/       vendored CMSIS-Core (Arm, Apache-2.0) — baseline core API
+core/           cm33_teaching.h — eğitim amaçlı minimal register tanımları
+platform/       board'a özel kod: startup, UART, linker script
+common/         console ve minimal libc parçaları
+tools/          capability probe
+cmake/          toolchain dosyası ve build yardımcıları
+scripts/        environment check, QEMU, GDB
+docs/           kalıcı referans belgeler
+tests/          smoke test
+.github/        CI workflow
+.vscode/        build/run/debug task ve launch tanımları
+```
+
+---
+
+## Dokümantasyon
+
+| Belge | İçerik |
+|---|---|
+| [BOOTCAMP.md](BOOTCAMP.md) | 7 günlük çalışma planı ve kontrol listesi |
+| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Sıfırdan Windows kurulumu |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Repo mimarisi ve tasarım gerekçeleri |
+| [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md) | Doğrulanmış bellek haritası |
+| [docs/TARGET_CAPABILITIES.md](docs/TARGET_CAPABILITIES.md) | Ölçülmüş capability matrisi |
+| [docs/DEBUGGING.md](docs/DEBUGGING.md) | Cortex-M teşhis akışları |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Simülatör sınırları |
+| [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) | Ölçüm metodolojisi |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | İngilizce terim + kısa Türkçe karşılık |
+| [docs/COURSE_MAP.md](docs/COURSE_MAP.md) | Kurs konuları ↔ ders eşlemesi |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Uzun vadeli plan |
+| [docs/REAL_HARDWARE_MIGRATION.md](docs/REAL_HARDWARE_MIGRATION.md) | Board alınınca ne değişir |
+| [docs/REFERENCES.md](docs/REFERENCES.md) | Resmi kaynaklar |
+| [docs/TOOL_VERSIONS.md](docs/TOOL_VERSIONS.md) | Doğrulanan araç sürümleri |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | İlerleme tablosu |
+| [external/README.md](external/README.md) | Vendored CMSIS-Core: sürüm ve güncelleme |
+| [projects/README.md](projects/README.md) | Birleştirici projeler |
+| [tests/README.md](tests/README.md) | Smoke test |
+
+---
+
+## Dil politikası
+
+Kod, tanımlayıcılar ve dosya isimleri **İngilizce**. Anlatım ağırlıklı
+**Türkçe**, teknik terimler İngilizce korunur ve ilk kullanımda kısa Türkçe
+karşılığı verilir:
+
+> `exception entry (istisnaya giriş)`, `callee-saved register (çağrılan
+> fonksiyonun koruması gereken register)`
+
+Amaç: hem konuyu hem de resmi dokümantasyonu okumak için gereken
+İngilizce terminolojiyi öğrenmek.
+
+---
+
+## Özgünlük
+
+Açıklamalar, diyagramlar, kod ve deneyler bu repo için hazırlanmıştır.
+Teknik açıklamalar resmi Arm / CMSIS / QEMU dokümantasyonuyla doğrulanır;
+ölçülebilen davranışlar deneylerle kontrol edilir
+([`docs/REFERENCES.md`](docs/REFERENCES.md)).
+
+Çalıştırılmamış bir kodun çıktısı "gerçek çıktı" olarak sunulmaz.
+Doğrulanmamış bilgi `OLCULMEDI` olarak işaretlenir.
+
+---
+
+## Lisans
+
+MIT — bkz. [LICENSE](LICENSE).
+
+`external/CMSIS/` altındaki dosyalar Arm'a aittir ve Apache-2.0 ile
+lisanslıdır; kendi lisans metni korunur ([external/CMSIS/LICENSE](external/CMSIS/LICENSE)).
