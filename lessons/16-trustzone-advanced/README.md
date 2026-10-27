@@ -1,41 +1,45 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 16 — TrustZone & Advanced Features
 
-`[DEEP]` · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+`[DEEP]` · **STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-## TEACH — İki güvenlik durumu, aynı işlemci
+## TEACH — Two security states, one processor
 
-Secure/Non-secure state, privileged/unprivileged ayrımından farklıdır.
-SAU, platform IDAU'su ve bus tarafındaki MPC birlikte çalışır. Yalnız SAU
-ayarlamak Non-secure RAM'i kullanılabilir yapmaz. NSC alanına giriş SG ile,
-Secure'den Non-secure çağrı BLXNS ile, gateway dönüşü BXNS ile yapılır.
-CMSE derleyicisi geçişe ait register temizleme/koruma kodunu da üretir.
+Secure/Non-secure state is distinct from privileged/unprivileged execution.
+The SAU, the platform IDAU, and the bus-side MPC work together. Configuring only
+the SAU does not make Non-secure RAM usable. Entry into an NSC region uses SG,
+a Secure-to-Non-secure call uses BLXNS, and gateway return uses BXNS.
+The CMSE compiler also generates the register clearing/preservation code for the
+transition.
 
-Bu ders tek Secure firmware içinde TrustZone varmış gibi davranmaz: her
-senaryo ayrı link edilmiş iki ELF yükler. [Secure başlangıç](secure/main.c),
-[Non-secure başlangıç](nonsecure/startup.c) ve [NS uygulaması](nonsecure/main.c)
-ayrıdır. Paylaşılan platform/startup ve önceki derslerin linker script'i değişmez.
+This lesson does not pretend to demonstrate TrustZone inside a single Secure
+firmware image: each scenario loads two separately linked ELFs. The
+[Secure startup](secure/main.c), [Non-secure startup](nonsecure/startup.c), and
+[NS application](nonsecure/main.c) are separate. Shared platform/startup code and
+the linker script used by earlier lessons remain unchanged.
 
-## SHOW — Bu hedefin bellek bölümü
+## SHOW — This target's memory partition
 
-- Secure kod: 0x10000000, 448 KiB bütçe.
-- NSC veneers: 0x10070000, 4 KiB bütçe; gerçek kullanılan alan 32 byte.
-- Non-secure kod: 0x00080000, 128 KiB.
-- Secure RAM: 0x30000000–0x30003FFF; son 4 KiB MSP.
-- Non-secure RAM: 0x20004000–0x20007FFF; son 4 KiB MSP_NS.
+- Secure code: 0x10000000, 448 KiB budget.
+- NSC veneers: 0x10070000, 4 KiB budget; actual space used is 32 bytes.
+- Non-secure code: 0x00080000, 128 KiB.
+- Secure RAM: 0x30000000–0x30003FFF; last 4 KiB for MSP.
+- Non-secure RAM: 0x20004000–0x20007FFF; last 4 KiB for MSP_NS.
 
-Bunlar AN505 alias'larıdır; fiziksel RAM'ler ikinci kopya değildir.
-Secure linker RAM bütçesini 16 KiB ile sınırlayarak NS yarısıyla çakışmayı önler.
-Her iki imajın initialized .data LMA'sı kendi FLASH bölgesine tahsis edilir.
+These are AN505 aliases; the physical RAM is not a second copy. The Secure linker
+limits the RAM budget to 16 KiB to avoid overlapping the NS half. Each image's
+initialized .data LMA is allocated in its own FLASH region.
 
-IoT Kit NSCCFG.CODENSC, IDAU'nun Code NSC kullanımına izin verir; SAU yalnız
-veneer alanını NSC yapar. SSRAM MPC (0x58007000) NS kod bloklarını, SRAM MPC
-(0x50083000) NS RAM bloklarını açar. Blok boyu BLK_CFG'den okunur; QEMU'nun
-blok boyutu FPGA için sabit kabul edilmez. Diğer bloklar reset'teki Secure
-durumunda kalır. NS UART/PPC açılmaz; güvenilir sabit etiketleri Secure taraf basar.
+IoT Kit NSCCFG.CODENSC permits the IDAU's Code NSC usage; the SAU marks only the
+veneer region NSC. The SSRAM MPC (0x58007000) opens NS code blocks, and the SRAM MPC
+(0x50083000) opens NS RAM blocks. The block size is read from BLK_CFG; QEMU's block
+size is not assumed to be fixed for the FPGA. Other blocks remain Secure as at
+reset. NS UART/PPC access is not enabled; the Secure side prints trusted fixed labels.
 
-[API](api.h) yalnız scalar alır; pointer, buffer veya secret döndürmez.
-Servis [0,15] girdilerini 2*x+1'e dönüştürür, diğerlerini L16_DENIED ile reddeder.
-Bu oyuncak politika kimlik doğrulama, secure boot veya ürün güvenliği değildir.
+The [API](api.h) accepts only scalars; it does not return pointers, buffers, or
+secrets. The service maps inputs [0,15] to 2*x+1 and rejects others with L16_DENIED.
+This toy policy is not authentication, secure boot, or product security.
 
 ## RUN
 
@@ -45,7 +49,7 @@ cmake --build --preset debug
 python tests/development-smoke.py 16
 ```
 
-Bir çifti elle çalıştırmak için (tek Secure ELF yeterli değildir):
+To run a pair manually (a single Secure ELF is not enough):
 
 ```bash
 qemu-system-arm -M mps2-an505 -cpu cortex-m33 -nographic -monitor none -serial stdio \
@@ -53,13 +57,13 @@ qemu-system-arm -M mps2-an505 -cpu cortex-m33 -nographic -monitor none -serial s
   -device loader,file=build/debug/lessons/16-trustzone-advanced/16-trustzone-nonsecure.elf
 ```
 
-CMake Secure link'ten CMSE import nesnesini üretir; Non-secure link bu nesneye
-bağımlıdır. Aynı senaryonun iki imajını kullan. GCC/ld SG veneers üretir;
-gateway gövdesine elle normal branch yazılmaz.
+CMake generates the CMSE import object from the Secure link; the Non-secure link
+depends on this object. Use both images from the same scenario. GCC/ld generate SG
+veneers; do not manually write an ordinary branch into the gateway body.
 
 ## OBSERVE
 
-Debug / QEMU 11.1.0 çalıştırmasında:
+In the Debug / QEMU 11.1.0 run:
 
 ```text
 [CHECK_PARTITION] PASS
@@ -76,27 +80,28 @@ Debug / QEMU 11.1.0 çalıştırmasında:
 [CHECK_NO_ESCALATION] PASS
 ```
 
-NS startup kendi .data/.bss'sini kurar. Beş gateway çağrısı 0,7,15 için doğru
-sonuçları; 16,0xFFFFFFFF için reddi sınar. Secure taraf cmse_nonsecure_caller
-ile çağrıların NS kökenini de kontrol eder. NS'nin bildirdiği sonuç bitleri
-güvenlik attestation'ı değildir; bu kontrollü testin gözlemleridir.
+NS startup initializes its own .data/.bss. Five gateway calls test correct results
+for 0,7,15 and rejection for 16,0xFFFFFFFF. The Secure side also checks the calls'
+NS origin using cmse_nonsecure_caller. Result bits reported by NS are not security
+attestation; they are observations from this controlled test.
 
-Ardından NS kod 0x30000000 okumayı dener. SFSR.AUVIOL=1, Secure handler IPSR=7
-ve CFSR/HFSR=0 ölçüldü. **SFARVALID=0 olduğundan SFAR bir fault adresi olarak
-kullanılmaz.** Test SFARVALID set ise adresi de doğrular; set olmasını zorlamaz.
-İzin verilen gateway ve reddedilen doğrudan erişim ayrı kanıtlardır.
+NS code then attempts to read 0x30000000. Measured values were SFSR.AUVIOL=1,
+Secure handler IPSR=7, and CFSR/HFSR=0. **Since SFARVALID=0, SFAR is not used as a
+fault address.** The test also validates the address if SFARVALID is set; it does
+not require the bit to be set. An allowed gateway call and rejected direct access
+are separate pieces of evidence.
 
 ## MODIFY → BREAK → DEBUG
 
-`16-invalid-entry` çifti SG'nin dört byte sonrasına dallanır. Ölçülen
-SFSR=0x00000001 (INVEP), SFAR=INVALID; servis gövdesi çalışmaz, secret korunur.
-Beklenen fault bu senaryonun PASS sonucudur.
+The `16-invalid-entry` pair branches four bytes past SG. Measured values are
+SFSR=0x00000001 (INVEP), SFAR=INVALID; the service body does not run, and the secret
+is preserved. The expected fault is this scenario's PASS result.
 
-[Alıştırma](exercises/01-secure-service/README.md) yalnız scalar girdi politikasını
-tamamlatır; fail-closed starter geçerli girdiyi de reddeder.
-[Referans çözüm](solutions/01-secure-service/README.md) ayrıdır.
+The [exercise](exercises/01-secure-service/README.md) asks only for completion of
+the scalar input policy; the fail-closed starter also rejects valid input.
+The [reference solution](solutions/01-secure-service/README.md) is separate.
 
-GDB'de isteğe bağlı gözlem (bu aşamada kapsamlı GDB kapısı çalıştırılmadı):
+Optional GDB observation (the comprehensive GDB gate was not run at this stage):
 
 ```text
 break SecureFault_Handler
@@ -107,55 +112,56 @@ print from_ns
 disassemble l16_service
 ```
 
-Secure ELF sembolleri gateway/handler'ı gösterir; NS sembolleri için
-`add-symbol-file build/debug/lessons/16-trustzone-advanced/16-trustzone-nonsecure.elf`
-kullanılabilir. cm-frame/cm-fault helper'larının tüm cross-security frame'leri
-decode ettiği varsayılmaz. Bu ders frame pointer'ını tahmin ederek dereference etmez.
+Secure ELF symbols show the gateway/handler; for NS symbols, use
+`add-symbol-file build/debug/lessons/16-trustzone-advanced/16-trustzone-nonsecure.elf`.
+Do not assume the cm-frame/cm-fault helpers decode all cross-security frames.
+This lesson does not guess and dereference a frame pointer.
 
-## Advanced features — hedef sınırı
+## Advanced features — target limits
 
-M33, MVE/Helium içermez; M55/M85 sonuçları bu hedefe taşınmaz. M33 çekirdeğinde
-entegre cache bulunmaz; sistem seviyesinde cache bulunabilmesi ayrı platform
-konusudur. PACBTI için burada bir runtime deney yapılmadı; mevcut capability
-tablosundaki OLCULMEDI durumu korunur. Başka CPU'nun instruction desteği bu
-laboratuvarda başarı kanıtı değildir.
+M33 does not include MVE/Helium; M55/M85 results do not carry over to this target.
+The M33 core has no integrated cache; possible system-level caches are a separate
+platform matter. No PACBTI runtime experiment was performed here; the OLCULMEDI
+status in the current capability table is preserved. Another CPU's instruction
+support is not evidence of success in this lab.
 
-FPU/DSP'nin çalışan kontrolleri [Lesson 13](../13-sync-fpu-dsp/), DWT'nin
-ilerlemeyen CYCCNT sınırı [Lesson 12](../12-debug-dwt/) ve
-[capability kaydı](../../docs/TARGET_CAPABILITIES.md) içindedir. Bu derste
-cycle/performance, MVE, PACBTI veya cache hızlandırması gösterilmez.
+Working FPU/DSP checks are in [Lesson 13](../13-sync-fpu-dsp/); the DWT limitation
+of a non-advancing CYCCNT is in [Lesson 12](../12-debug-dwt/) and the
+[capability record](../../docs/TARGET_CAPABILITIES.md). This lesson does not
+demonstrate cycle/performance measurements, MVE, PACBTI, or cache acceleration.
 
 ## VERIFY
 
-Debug build ve dört çiftin QEMU testi geçti: örnek/çözüm tüm kontroller PASS,
-starter yalnız CHECK_SERVICE=FAIL; SG atlama beklenen INVEP ile yakalandı.
-Disassembly'de SG / BLXNS / BXNS görüldü. Bu sonuçlar gerçek kart testi veya
-tam güvenlik audit'i değildir. Ayrıntılı GDB, üç-preset karşılaştırması ve
-geniş negatif testler toplu kalite kapısında yapılacak.
+The Debug build and QEMU tests of four pairs passed: example/solution all checks
+PASS, starter only CHECK_SERVICE=FAIL; skipping SG was caught with the expected
+INVEP. SG / BLXNS / BXNS were seen in disassembly. These results are not a real-board
+test or a complete security audit. Detailed GDB checks, a three-preset comparison,
+and broad negative tests are to be performed at the combined quality gate.
 
 ## Quick Check
 
-1. SAU tek başına neden yeterli değildir?
-2. NSC tüm Secure kodu Non-secure yapar mı?
-3. AUVIOL görünce SFAR neden otomatik geçerli sayılamaz?
-4. Scalar API bu örnekte hangi pointer problemini ortadan kaldırır?
-5. Bu testin PASS olması secure boot kanıtı mı?
+1. Why is the SAU alone insufficient?
+2. Does NSC make all Secure code Non-secure?
+3. Why can SFAR not automatically be considered valid when AUVIOL appears?
+4. Which pointer problem does the scalar API eliminate in this example?
+5. Is this test passing evidence of secure boot?
 
-[Cevaplar](answers/quick-check.md)
+[Answers](answers/quick-check.md)
 
 ## References
 
 - [Cortex-M33 DUG](https://documentation-service.arm.com/static/5f16e93d20b7cf4bc524af1d), 4.5: SAU, SFSR/SFAR.
-- [IoT Kit FVP User Guide](https://documentation-service.arm.com/static/5ed13622ca06a95ce53f911b), Tables 15/21/49: SRAM MPC ve NSCCFG.
-- [QEMU AN505 implementation](https://github.com/qemu/qemu/blob/v8.2.2/hw/arm/mps2-tz.c): SSRAM MPC ve alias yerleşimi.
+- [IoT Kit FVP User Guide](https://documentation-service.arm.com/static/5ed13622ca06a95ce53f911b), Tables 15/21/49: SRAM MPC and NSCCFG.
+- [QEMU AN505 implementation](https://github.com/qemu/qemu/blob/v8.2.2/hw/arm/mps2-tz.c): SSRAM MPC and alias layout.
 - [GCC CMSE](https://gcc.gnu.org/onlinedocs/gcc/ARM-ARMv8-M-Security-Extensions.html): nonsecure_entry / nonsecure_call.
-- [QEMU fault handling](https://github.com/qemu/qemu/blob/v8.2.2/target/arm/tcg/m_helper.c): NS data attribution fault'unda AUVIOL yolu; model gözleminin bağlamı.
+- [QEMU fault handling](https://github.com/qemu/qemu/blob/v8.2.2/target/arm/tcg/m_helper.c): AUVIOL path for an NS data attribution fault; context for the model observation.
 
-**Previous:** [15](../15-mini-kernel/) · **Next:** toplu kalite kapısı, sonra [projeler](../../projects/).
+**Previous:** [15](../15-mini-kernel/) · **Next:** combined quality gate, then [projects](../../projects/).
 
-## Son toplu kapı
+## Final combined gate
 
-Üç preset clean build ve dört çift QEMU senaryosu PASS. Final sistemde yeniden
-kullanılan aynı boot/SAU/NSC kaynaklarının Secure geçişi ve fault sınırı ayrıca
-GDB ile doğrulandı. Standalone Lesson 16'nın ayrı kapsamlı GDB/audit sertifikası
-iddia edilmez. [Progress](../../docs/PROGRESS.md) tüm yerel kapıları ve uzak CI durumunu ayırır.
+Three-preset clean builds and four paired QEMU scenarios PASS. The Secure transition
+and fault boundary of the same boot/SAU/NSC sources reused in the final system were
+also verified with GDB. No separate comprehensive GDB/audit certification is claimed
+for standalone Lesson 16. [Progress](../../docs/PROGRESS.md) distinguishes all local
+gates from remote CI status.

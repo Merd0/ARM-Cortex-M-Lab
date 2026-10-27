@@ -1,11 +1,13 @@
-# Alıştırma — Scalar Secure API politikası
+**Language:** English | [Türkçe](README.tr.md)
 
-Yalnız `policy.c` TODO'sunu tamamla: [0,15] kapalı aralığını kabul et.
-Diğer bütün uint32_t girdiler reddedilmeli. SAU, MPC, SG, startup veya test
-beklentisini değiştirme. Starter fail-closed'dur: yalnız CHECK_SERVICE=FAIL;
-geçersiz girdiler ve Secure bellek ihlali kontrolleri PASS kalır.
+# Exercise — Scalar Secure API policy
 
-`16-exercise-policy-nonsecure` hedefi kendi Secure bağımlılığını da derler.
-İki exercise ELF'ini beraber yükle veya `python tests/development-smoke.py 16`
-çalıştır. Çözüldüğünde tüm CHECK alanları PASS olmalı. 0,7,15 kabul edilir;
-16 ve 0xFFFFFFFF reddedilir. Referans çözüm ayrı dizindedir.
+Complete only the `policy.c` TODO: accept the closed interval [0,15].
+All other uint32_t inputs must be rejected. Do not change SAU, MPC, SG, startup, or
+test expectations. The starter is fail-closed: only CHECK_SERVICE=FAIL;
+checks for invalid inputs and Secure memory violations remain PASS.
+
+The `16-exercise-policy-nonsecure` target also builds its own Secure dependency.
+Load the two exercise ELFs together or run `python tests/development-smoke.py 16`.
+Once solved, all CHECK fields should PASS. 0,7,15 are accepted;
+16 and 0xFFFFFFFF are rejected. The reference solution is in a separate directory.

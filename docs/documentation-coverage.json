@@ -583,7 +583,7 @@
       "english": "lessons/14-systick-pendsv/README.md",
       "turkish": "lessons/14-systick-pendsv/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "72f3d69ab6a5c3e484b7042edab377949a3ab6e8a9a1b829b33617c84137b92c"
     },
     {
@@ -591,7 +591,7 @@
       "english": "lessons/14-systick-pendsv/answers/quick-check.md",
       "turkish": "lessons/14-systick-pendsv/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "400733e3ce7bbfccb13409625d7086821946087fbae038fe31e6d1f99a70d2a0"
     },
     {
@@ -599,7 +599,7 @@
       "english": "lessons/14-systick-pendsv/exercises/01-defer-work/README.md",
       "turkish": "lessons/14-systick-pendsv/exercises/01-defer-work/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "23898a6c69bddf8282b985b6d70d921aacf64db99041043da5cdb01810a80881"
     },
     {
@@ -607,7 +607,7 @@
       "english": "lessons/14-systick-pendsv/solutions/01-defer-work/README.md",
       "turkish": "lessons/14-systick-pendsv/solutions/01-defer-work/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "83585de8594279938299ba784998ff7308f10b78d22371a2c398ea109957c00b"
     },
     {
@@ -615,7 +615,7 @@
       "english": "lessons/15-mini-kernel/README.md",
       "turkish": "lessons/15-mini-kernel/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "4d6054934817badc6210d8d3b9593a1b889eb47ec4201d045689e0661113744c"
     },
     {
@@ -623,7 +623,7 @@
       "english": "lessons/15-mini-kernel/answers/quick-check.md",
       "turkish": "lessons/15-mini-kernel/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "6a22b7c1926e8b79ae9875ddcb8f6556ef5e8f21105a9617d9dff82e2e23e175"
     },
     {
@@ -631,7 +631,7 @@
       "english": "lessons/15-mini-kernel/exercises/01-initial-frame/README.md",
       "turkish": "lessons/15-mini-kernel/exercises/01-initial-frame/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "fd93d621c2e146c4491f4a882d2e585f90887d08f5362bca39133986652abe6a"
     },
     {
@@ -639,7 +639,7 @@
       "english": "lessons/15-mini-kernel/solutions/01-initial-frame/README.md",
       "turkish": "lessons/15-mini-kernel/solutions/01-initial-frame/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "1a9e57dcee8475f5b82ae3caed27c8d615a041631f54ba986a80ac19fc7b51ff"
     },
     {
@@ -647,7 +647,7 @@
       "english": "lessons/16-trustzone-advanced/README.md",
       "turkish": "lessons/16-trustzone-advanced/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "c6d09a81f109e67a76bd651e3754e24064dd3602ccf149a21c3fd0c50c8c7754"
     },
     {
@@ -655,7 +655,7 @@
       "english": "lessons/16-trustzone-advanced/answers/quick-check.md",
       "turkish": "lessons/16-trustzone-advanced/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "a68937654324818f021f1e06561e000b242f0809b782167e967ec3d83554b8d0"
     },
     {
@@ -663,7 +663,7 @@
       "english": "lessons/16-trustzone-advanced/exercises/01-secure-service/README.md",
       "turkish": "lessons/16-trustzone-advanced/exercises/01-secure-service/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "dd8d63b5636d7a32ef4e610eda58bfb414e66e9f5bde4e85a45d785b20bea46a"
     },
     {
@@ -671,7 +671,7 @@
       "english": "lessons/16-trustzone-advanced/solutions/01-secure-service/README.md",
       "turkish": "lessons/16-trustzone-advanced/solutions/01-secure-service/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "5907abe68fd0862343a6d4254ac5fa82f37cf06a74050cb57d93f4efe93bcd56"
     },
     {
