@@ -71,7 +71,7 @@
       "english": "docs/LIMITATIONS.md",
       "turkish": "docs/LIMITATIONS.tr.md",
       "category": "reference",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "e929a679cb0e23dcc4e1f4cbaceef708213d20d3224c31633edabd00b6e4ee99"
     },
     {
@@ -103,8 +103,14 @@
       "english": "docs/REAL_HARDWARE_MIGRATION.md",
       "turkish": "docs/REAL_HARDWARE_MIGRATION.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "55aa19337fe0e0980ed2db6b38a25848798e55bbce3acdb2e87fbdd84c296bca"
+      "state": "translated",
+      "source_sha256": "55aa19337fe0e0980ed2db6b38a25848798e55bbce3acdb2e87fbdd84c296bca",
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "b2785117703d90fb49df763422bfe244fbc1af3d7e0640b4684cd44a5d38dd78",
+          "reason": "Directory diagram annotations only; all file paths and indentation unchanged."
+        }
+      }
     },
     {
       "original": "docs/REFERENCES.md",
@@ -151,7 +157,7 @@
       "english": "external/README.md",
       "turkish": "external/README.tr.md",
       "category": "reference",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "f8c6e7b3e1d7f8e08f696b9d331d16ead5f37adca8109842b6e1a6ebc6804fb1"
     },
     {
