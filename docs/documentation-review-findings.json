@@ -34,6 +34,29 @@
         "lessons/14-systick-pendsv/README.md",
         "docs/ENGINEERING_AUDIT.md"
       ]
+    },
+    {
+      "id": "I18N-004",
+      "path": "lessons/04-stack-msp-psp/README.md",
+      "status": "source-internal-contradiction",
+      "english": "Core Idea says memory below SP is allocated; the Visual section calls it available free space. The translation preserves both statements. Resolve the full-descending stack wording in a separate substantive correction.",
+      "turkish": "Core Idea bölümü SP altındaki alanı tahsis edilmiş diye anlatırken Visual bölümü kullanılabilir boş alan diyor. Çeviri iki ifadeyi de koruyor. Full-descending stack anlatımı ayrı bir içerik düzeltmesinde uzlaştırılmalıdır.",
+      "evidence": [
+        "lessons/04-stack-msp-psp/README.tr.md:51",
+        "lessons/04-stack-msp-psp/README.tr.md:127"
+      ]
+    },
+    {
+      "id": "I18N-005",
+      "path": "docs/DEBUGGING.md",
+      "status": "confirmed-stale",
+      "english": "The frame-address validation table still says multiples of 4. The audited C capture and GDB helper require eight-byte alignment. The source wording is preserved; correction is separately reviewable.",
+      "turkish": "Frame adres doğrulama tablosu hâlâ 4 katı hizalamayı söylüyor. Denetlenmiş C capture kodu ve GDB yardımcısı sekiz bayt hizalama istiyor. Kaynak ifade korunuyor; düzeltme ayrı değerlendirilmeli.",
+      "evidence": [
+        "docs/DEBUGGING.tr.md:174",
+        "projects/fault-analyzer/diagnostic.c:22",
+        "scripts/gdb/cortex-m.gdb:298"
+      ]
     }
   ]
 }

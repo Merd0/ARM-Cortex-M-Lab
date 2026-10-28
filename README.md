@@ -1,9 +1,9 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # ARM Cortex-M Lab
 
 [![Build and regression tests](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/workflows/ci.yml)
 [![Stable release](https://img.shields.io/github/v/release/Merd0/ARM-Cortex-M-Lab)](https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0)
-
-**English** · [Türkçe](README.tr.md)
 
 A practical **Arm Cortex-M33 / Armv8-M Mainline** engineering lab built with
 bare-metal C and Thumb assembly. Sixteen lessons lead into five integration
@@ -22,9 +22,10 @@ experiments and automated regression tests across three build presets.
 
 The learning method is **TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY**.
 Lessons include working examples, controlled failures, incomplete exercises,
-and separate reference solutions. Code and identifiers are English; most lesson
-explanations are Turkish. The [Turkish overview](README.tr.md) retains the
-original learning guide.
+and separate reference solutions. Code and identifiers are English. Full bilingual documentation is in progress;
+the [coverage manifest](docs/documentation-coverage.json) distinguishes completed
+pairs from drafts and pending translations. Turkish source documents are preserved.
+Use the language switch at the beginning of each completed document.
 
 ## Engineering Highlights
 
@@ -223,3 +224,339 @@ changes do not alter that release.
 
 [MIT](LICENSE). Vendored CMSIS-Core files retain their
 [Apache-2.0 license](external/CMSIS/LICENSE).
+
+<details>
+<summary>Complete original learning guide — English translation</summary>
+
+The complete guide below preserves the Turkish source's teaching sequence,
+checklists, commands, and historical checkpoint wording. The release status above
+is current; the dated progress and original language policy below describe the
+preserved source. Source inconsistencies are recorded separately in
+[the bilingual review findings](docs/documentation-review-findings.json).
+
+<!-- i18n-original-guide:start -->
+# ARM Cortex-M — Practical Learning Lab
+
+A laboratory for learning Cortex-M33 architecture **by running, debugging, and
+deliberately breaking it**. Every topic corresponds to firmware that runs in
+QEMU and behavior that can be observed in GDB.
+
+No physical development board is required. Target: **Cortex-M33 / QEMU `mps2-an505`**.
+
+---
+
+## What is this repository?
+
+The repository serves three purposes:
+
+1. **Personal Cortex-M laboratory** — a measured, observed experiment for each concept.
+2. **Hands-on educational resource** — written so a developer new to Cortex-M
+   can follow along.
+3. **Portfolio project** — a record of implementation, fault diagnosis, and verification.
+
+Every lesson follows this cycle:
+
+```text
+TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
+```
+
+A topic is not merely explained: it is run, observed in the debugger, broken in
+a controlled way, and diagnosed.
+
+---
+
+## What does it teach?
+
+| Area | Topics |
+|---|---|
+| **Architecture** | Programmer model, registers, MSP/PSP, Thread/Handler Mode, privilege, CONTROL |
+| **Protection** | MPU, SVC, privileged/unprivileged separation, TrustZone |
+| **Exceptions** | Vector table, NVIC, hardware stacking, EXC_RETURN, faults and escalation |
+| **Build** | Compiler, optimization, AAPCS, linker script, ELF, map file, startup |
+| **Debug** | GDB diagnostic workflow, disassembly, watchpoints, fault analysis |
+| **Real-time** | SysTick, PendSV, context switching, educational mini-kernel |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph LEARN["Learning layer"]
+        LS["lessons/<br/>16 lessons"]
+        PR["projects/<br/>integration projects"]
+        FP["final-project/"]
+    end
+
+    subgraph SW["Software layer"]
+        CM["common/<br/>console · tiny libc"]
+        PL["platform/mps2-an505/<br/>startup · UART · linker script"]
+        CMSIS["external/CMSIS/<br/>official CMSIS-Core (baseline)"]
+        CO["core/<br/>cm33_teaching.h — teaching<br/>minimal register definitions"]
+    end
+
+    subgraph TOOL["Tool layer"]
+        CMK["CMake + Ninja<br/>arm-none-eabi"]
+        QEMU["QEMU<br/>mps2-an505"]
+        GDB["GDB<br/>cortex-m.gdb"]
+    end
+
+    LEARN --> CM --> PL --> CMSIS
+    LS -.->|when the register itself is the topic| CO
+    LEARN -.-> CMK
+    CMK --> QEMU
+    QEMU <--> GDB
+```
+
+Why the layers are separated this way: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+---
+
+## Getting started
+
+### 1. Check the environment
+
+```powershell
+.\scripts\check-environment.ps1     # Windows
+```
+
+```bash
+./scripts/check-environment.sh      # Linux / macOS / WSL
+```
+
+If something is missing: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
+
+Required: Arm GNU Toolchain (`arm-none-eabi`), CMake, Ninja, QEMU, GDB.
+
+### 2. Build
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+```
+
+### 3. Run
+
+```bash
+./scripts/run-qemu.sh build/debug/lessons/02-programmer-model/02-programmer-model.elf
+```
+
+Exit: `Ctrl-A`, then `X`.
+
+### 4. Debug
+
+```bash
+# Terminal 1
+./scripts/debug-qemu.sh build/debug/lessons/02-programmer-model/02-programmer-model.elf
+
+# Terminal 2
+arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
+    build/debug/lessons/02-programmer-model/02-programmer-model.elf
+(gdb) cm-connect
+(gdb) cm-regs
+```
+
+### 5. Where should I start?
+
+**[`BOOTCAMP.md`](BOOTCAMP.md)** — the daily study plan.
+First lesson: [`lessons/01-cortex-m-family/`](lessons/01-cortex-m-family/) — it starts
+by reading how the target identifies itself, without writing code.
+Then [`lessons/02-programmer-model/`](lessons/02-programmer-model/).
+
+Daily plan: [BOOTCAMP.md](BOOTCAMP.md) — the entry point, beginning with `lessons/01`.
+
+---
+
+## Target
+
+| | |
+|---|---|
+| Processor | Cortex-M33 (Armv8-M Mainline, TrustZone + DSP + FPU) |
+| Platform | QEMU `mps2-an505` (Arm Application Note AN505 / IoT Kit) |
+| Code region | `0x10000000` (Secure alias), 512 KB |
+| RAM | `0x30000000` (Secure alias), 32 KB |
+| Console | CMSDK APB UART0 @ `0x50200000` |
+| Verified MPU | 8 regions (measured) |
+| Verified SAU | 8 regions (measured) |
+
+**Simulator and real-hardware behavior can differ.** Features and limitations
+measured on this target are recorded in:
+
+- [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) — measured capability matrix
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — simulator/hardware differences
+
+The most important limitation: **the DWT cycle counter does not count on this
+target** (measured). The profiling lesson therefore uses alternative measurement methods.
+
+---
+
+## Progress
+
+This section shows current progress. Only completed, verified work is checked;
+other items remain open.
+
+2026-10-24 technical delivery: 16 lessons, five integration projects, and a working
+Secure Sensor Node were implemented. Debug/Release/MinSize clean builds, broad
+regressions, and critical GDB gates PASS locally. Lesson 13 was merged through
+[PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) after three-preset CI.
+Lessons 14–16 were also merged through
+[PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10) after three-preset CI.
+The five projects and final integration are on main through
+[PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11).
+[Post-merge three-preset CI](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630)
+PASS for `11fde900835d4443a55d0e7da64438ea4da4c690`.
+Final internal-audit fixes are tracked through
+[PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12). Technical record:
+[Engineering Audit](docs/ENGINEERING_AUDIT.md).
+Local and CI validation are not presented as independent third-party audit or
+real-board validation. Staged delivery order: [Roadmap](docs/ROADMAP.md).
+
+### Infrastructure
+
+- [x] Build system (CMake + Ninja + arm-none-eabi)
+- [x] MPS2-AN505 platform port (startup, linker script, UART)
+- [x] Firmware running in QEMU
+- [x] GDB connection + Cortex-M helper commands
+- [x] Target capability probe (measured)
+- [x] Documentation foundation
+
+### Fundamentals
+
+- [x] Cortex-M family & processor selection
+- [x] Programmer model & registers
+- [x] C ↔ Assembly
+- [x] Stack / MSP / PSP
+
+### Architecture
+
+- [x] Privilege & SVC
+- [x] MPU
+- [x] Exceptions & NVIC
+- [x] Faults (the integration Fault Analyzer project is tracked separately below)
+
+### Software Development
+
+- [x] Compiler & AAPCS
+- [x] Linker / ELF / memory layout
+- [x] Startup from scratch
+- [x] Debugging & DWT
+
+### Advanced Topics
+
+- [x] Synchronization / FPU / DSP (Lesson 13: PR #9 merged, three-preset CI PASS)
+- [x] SysTick & PendSV (three-preset QEMU/GDB and main CI PASS)
+- [x] Mini kernel & context switching (three-preset QEMU/GDB and main CI PASS)
+- [x] TrustZone & advanced features (two images / gateway / violation experiment; main CI PASS)
+
+### Projects
+
+- [x] Protected Application (main three-preset CI PASS)
+- [x] Fault Analyzer (main three-preset CI PASS)
+- [x] From Reset to Main (main three-preset CI PASS)
+- [x] Performance Profiler (main three-preset CI PASS)
+- [x] Educational Mini Kernel (main three-preset CI PASS)
+- [x] Final Project (main three-preset CI PASS)
+
+The projects/final three-preset CI result belongs to the main commit above.
+The audit delivery's local tests are recorded separately from PR #12 CI and merge records.
+
+Detailed tracking: [`docs/PROGRESS.md`](docs/PROGRESS.md)
+
+---
+
+## Major Projects
+
+Projects combining topics from multiple lessons, each with its own README:
+
+| Project | Combined topics | Status |
+|---|---|---|
+| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Main three-preset CI PASS |
+| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decoding + CFSR/HFSR analysis | Main three-preset CI PASS |
+| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Main three-preset CI PASS |
+| [Performance Profiler](projects/performance-profiler/) | Measurement methodology + compiler optimization | Main three-preset CI PASS |
+| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Main three-preset CI PASS |
+| [Final Project](final-project/) | Integration of all of them | Main three-preset CI PASS |
+
+---
+
+## Repository structure
+
+```text
+lessons/        16 lessons — each understandable on its own
+projects/       projects combining multiple lessons
+final-project/  end-of-specialization integration
+external/       vendored CMSIS-Core (Arm, Apache-2.0) — baseline core API
+core/           cm33_teaching.h — minimal teaching register definitions
+platform/       board-specific code: startup, UART, linker script
+common/         console and minimal libc components
+tools/          capability probe
+cmake/          toolchain file and build helpers
+scripts/        environment check, QEMU, GDB
+docs/           permanent reference documents
+tests/          smoke test
+.github/        CI workflow
+.vscode/        build/run/debug task and launch definitions
+```
+
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [BOOTCAMP.md](BOOTCAMP.md) | 7-day study plan and checklist |
+| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Windows setup from scratch |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Repository architecture and design rationale |
+| [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md) | Verified memory map |
+| [docs/TARGET_CAPABILITIES.md](docs/TARGET_CAPABILITIES.md) | Measured capability matrix |
+| [docs/DEBUGGING.md](docs/DEBUGGING.md) | Cortex-M diagnostic workflows |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Simulator limitations |
+| [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) | Measurement methodology |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | English terms + brief Turkish equivalents |
+| [docs/COURSE_MAP.md](docs/COURSE_MAP.md) | Course topics ↔ lesson mapping |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Long-term plan |
+| [docs/REAL_HARDWARE_MIGRATION.md](docs/REAL_HARDWARE_MIGRATION.md) | What changes when a board is obtained |
+| [docs/REFERENCES.md](docs/REFERENCES.md) | Official sources |
+| [docs/TOOL_VERSIONS.md](docs/TOOL_VERSIONS.md) | Verified tool versions |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | Progress table |
+| [external/README.md](external/README.md) | Vendored CMSIS-Core: version and updates |
+| [projects/README.md](projects/README.md) | Integration projects |
+| [tests/README.md](tests/README.md) | Smoke test |
+
+---
+
+## Language policy
+
+Code, identifiers, and filenames are **English**. Explanations are predominantly
+**Turkish**; technical terms remain English, with a short Turkish equivalent at
+first use:
+
+> `exception entry (istisnaya giriş)`, `callee-saved register (çağrılan
+> fonksiyonun koruması gereken register)`
+
+The aim is to learn both the subject and the English terminology needed to read
+official documentation.
+
+---
+
+## Originality
+
+Explanations, diagrams, code, and experiments were prepared for this repository.
+Technical explanations are checked against official Arm / CMSIS / QEMU
+documentation; measurable behavior is checked through experiments
+([`docs/REFERENCES.md`](docs/REFERENCES.md)).
+
+Output from code that has not been run is not presented as "actual output."
+Unverified information is marked `OLCULMEDI`.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+Files under `external/CMSIS/` belong to Arm and are licensed under Apache-2.0;
+their own license text is preserved ([external/CMSIS/LICENSE](external/CMSIS/LICENSE)).
+<!-- i18n-original-guide:end -->
+
+</details>

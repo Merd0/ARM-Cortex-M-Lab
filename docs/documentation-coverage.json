@@ -15,16 +15,29 @@
       "english": "README.md",
       "turkish": "README.tr.md",
       "category": "landing",
-      "state": "pending",
-      "source_sha256": "8eef63d6b00b0ac97c173b20f57096adca9f7c985ac422b9d60a629db3074bbb"
+      "state": "translated",
+      "source_sha256": "8eef63d6b00b0ac97c173b20f57096adca9f7c985ac422b9d60a629db3074bbb",
+      "translated_diagrams": {
+        "1": {
+          "english_sha256": "e7608116cf94f77c5713b6cd7e949e189a57c526d7a7b614dcc35962b5f92c2c",
+          "reason": "Human-readable architecture/directory labels translated; paths and relationships retained."
+        },
+        "7": {
+          "english_sha256": "66120f4a43f96151273865953b6065d0f328e409527af451967d977a202d34a4",
+          "reason": "Human-readable architecture/directory labels translated; paths and relationships retained."
+        }
+      },
+      "comparison_scope": "original-guide",
+      "scope_reason": "Retains the previous portfolio landing unchanged in technical content, while providing a full, separately delimited translation of the protected Turkish learning guide."
     },
     {
       "original": "docs/ARCHITECTURE.md",
       "english": "docs/ARCHITECTURE.md",
       "turkish": "docs/ARCHITECTURE.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "8d2b9305e7624feb2f88369d66022fa63e4b1b724d9b761e280a42148200932d"
+      "state": "draft",
+      "source_sha256": "8d2b9305e7624feb2f88369d66022fa63e4b1b724d9b761e280a42148200932d",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/COURSE_MAP.md",
@@ -39,32 +52,36 @@
       "english": "docs/DEBUGGING.md",
       "turkish": "docs/DEBUGGING.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "5400e7eb426b513e7044bd8ef263bb7e120a84dbef4e68cc8ee42f3ec7344ce7"
+      "state": "draft",
+      "source_sha256": "5400e7eb426b513e7044bd8ef263bb7e120a84dbef4e68cc8ee42f3ec7344ce7",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/ENGINEERING_AUDIT.md",
       "english": "docs/ENGINEERING_AUDIT.md",
       "turkish": "docs/ENGINEERING_AUDIT.tr.md",
       "category": "historical",
-      "state": "pending",
-      "source_sha256": "55442289a98af2592faedb9a059498197a3b443298fd15e909cfbb4169b7e459"
+      "state": "draft",
+      "source_sha256": "55442289a98af2592faedb9a059498197a3b443298fd15e909cfbb4169b7e459",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/ENVIRONMENT.md",
       "english": "docs/ENVIRONMENT.md",
       "turkish": "docs/ENVIRONMENT.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "b2dd36354cebd51be1bbdd3b94e392738c0edede7893d1de6505437aaea1dfb2"
+      "state": "draft",
+      "source_sha256": "b2dd36354cebd51be1bbdd3b94e392738c0edede7893d1de6505437aaea1dfb2",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/GLOSSARY.md",
       "english": "docs/GLOSSARY.md",
       "turkish": "docs/GLOSSARY.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "d4c359429dd2ae41ef66c3face6a414daa580e107573f02e613ba950fc161ec8"
+      "state": "draft",
+      "source_sha256": "d4c359429dd2ae41ef66c3face6a414daa580e107573f02e613ba950fc161ec8",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/LIMITATIONS.md",
@@ -79,16 +96,18 @@
       "english": "docs/MEMORY_MAP.md",
       "turkish": "docs/MEMORY_MAP.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "165968cebd6470e6dc418cb452ee3a8748dba854771ddd3e817db66563c1c922"
+      "state": "draft",
+      "source_sha256": "165968cebd6470e6dc418cb452ee3a8748dba854771ddd3e817db66563c1c922",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/PERFORMANCE_MEASUREMENT.md",
       "english": "docs/PERFORMANCE_MEASUREMENT.md",
       "turkish": "docs/PERFORMANCE_MEASUREMENT.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "fc76b1d9323611963e410a7c3fc934a5aed7beaf34418e3a9a3af3e81601043a"
+      "state": "draft",
+      "source_sha256": "fc76b1d9323611963e410a7c3fc934a5aed7beaf34418e3a9a3af3e81601043a",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/PROGRESS.md",
@@ -117,8 +136,9 @@
       "english": "docs/REFERENCES.md",
       "turkish": "docs/REFERENCES.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "11d1719f39c94ae93b5263b37c1143cf65ec3ad1dafe10636049e45c0861cf84"
+      "state": "draft",
+      "source_sha256": "11d1719f39c94ae93b5263b37c1143cf65ec3ad1dafe10636049e45c0861cf84",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/RELEASE_NOTES_DRAFT.md",
@@ -133,8 +153,9 @@
       "english": "docs/ROADMAP.md",
       "turkish": "docs/ROADMAP.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "b34de0aea26d9a074307d5153f496ece2920793f3b58a8d69b5bcbe2a94a770a"
+      "state": "draft",
+      "source_sha256": "b34de0aea26d9a074307d5153f496ece2920793f3b58a8d69b5bcbe2a94a770a",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "docs/TARGET_CAPABILITIES.md",
@@ -181,15 +202,29 @@
       "english": "lessons/01-cortex-m-family/README.md",
       "turkish": "lessons/01-cortex-m-family/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "e25adcbd4a29ad34c7b8af967efe7b6c0679cf7eaaa527890ee0722a92634355"
+      "state": "translated",
+      "source_sha256": "e25adcbd4a29ad34c7b8af967efe7b6c0679cf7eaaa527890ee0722a92634355",
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "fe0d81d7bdd6bfb02db9021d794dde1af04444e1b3916ef45de45575612f4912",
+          "reason": "Human-readable diagram or learner response template; processor names, relationships, numeric values and answer blanks preserved."
+        },
+        "1": {
+          "english_sha256": "b8c08c8971761bd044fdae6f01bc3ba53f442c8a0a0a3335b30772bb4f1d85df",
+          "reason": "Human-readable diagram or learner response template; processor names, relationships, numeric values and answer blanks preserved."
+        },
+        "8": {
+          "english_sha256": "f3bce336e7c988881b884c02f6946d5dea0d174b12b9eefadef748daa1e16a86",
+          "reason": "Human-readable diagram or learner response template; processor names, relationships, numeric values and answer blanks preserved."
+        }
+      }
     },
     {
       "original": "lessons/01-cortex-m-family/answers/reference-answers.md",
       "english": "lessons/01-cortex-m-family/answers/reference-answers.md",
       "turkish": "lessons/01-cortex-m-family/answers/reference-answers.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "5df02c8a863e630cf8dcf0db38e89385259b61c03aeaf66227e49b5e328de288"
     },
     {
@@ -197,23 +232,25 @@
       "english": "lessons/02-programmer-model/README.md",
       "turkish": "lessons/02-programmer-model/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "273e5794ec6e564b4d5e4808a7b79811244d7da31e37bdd1facb09a3e54bd163"
+      "state": "draft",
+      "source_sha256": "273e5794ec6e564b4d5e4808a7b79811244d7da31e37bdd1facb09a3e54bd163",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/02-programmer-model/answers/quick-check.md",
       "english": "lessons/02-programmer-model/answers/quick-check.md",
       "turkish": "lessons/02-programmer-model/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "a92ead16e85b7d463a3f42ee1e92e12050f9337539452537d597952ddfbbbf9a"
+      "state": "draft",
+      "source_sha256": "a92ead16e85b7d463a3f42ee1e92e12050f9337539452537d597952ddfbbbf9a",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/02-programmer-model/exercises/01-decode-apsr-flags/README.md",
       "english": "lessons/02-programmer-model/exercises/01-decode-apsr-flags/README.md",
       "turkish": "lessons/02-programmer-model/exercises/01-decode-apsr-flags/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "2efea2165887ffa5dcad5eb61fc8b08458d33fee239641dea2043d71c8913307"
     },
     {
@@ -221,7 +258,7 @@
       "english": "lessons/02-programmer-model/solutions/01-decode-apsr-flags/README.md",
       "turkish": "lessons/02-programmer-model/solutions/01-decode-apsr-flags/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "b9dcd66695081d99560c4051c29fb4705fdd8fd440aec96242bfa64b88b6aa58"
     },
     {
@@ -229,23 +266,25 @@
       "english": "lessons/03-c-and-assembly/README.md",
       "turkish": "lessons/03-c-and-assembly/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "817c34bb5c7f48fbec4616d0b5085a5c1046452fe9f952d2e823b2995cc1b957"
+      "state": "draft",
+      "source_sha256": "817c34bb5c7f48fbec4616d0b5085a5c1046452fe9f952d2e823b2995cc1b957",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/03-c-and-assembly/answers/quick-check.md",
       "english": "lessons/03-c-and-assembly/answers/quick-check.md",
       "turkish": "lessons/03-c-and-assembly/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "ea05e501152efd13cf1cb3d2ee9784d63cfb2cbc5d7390447e050dd634f24568"
+      "state": "draft",
+      "source_sha256": "ea05e501152efd13cf1cb3d2ee9784d63cfb2cbc5d7390447e050dd634f24568",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/03-c-and-assembly/exercises/01-sub-numbers/README.md",
       "english": "lessons/03-c-and-assembly/exercises/01-sub-numbers/README.md",
       "turkish": "lessons/03-c-and-assembly/exercises/01-sub-numbers/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "c0b1d7d8a7127c20be76f134c597898906dd9fc508d3c027129042f3747e2f6c"
     },
     {
@@ -253,7 +292,7 @@
       "english": "lessons/03-c-and-assembly/solutions/01-sub-numbers/README.md",
       "turkish": "lessons/03-c-and-assembly/solutions/01-sub-numbers/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "37209eda63a14efdde3be65c0ba79345ac932135aef50aa4a2c909a1f53ed9d6"
     },
     {
@@ -261,7 +300,7 @@
       "english": "lessons/03-c-and-assembly/solutions/02-multiply-add/README.md",
       "turkish": "lessons/03-c-and-assembly/solutions/02-multiply-add/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "d9a49873996adaab458af2fabb7b29fe7ab14b6e0742e7be1cf62e45748ee633"
     },
     {
@@ -269,8 +308,9 @@
       "english": "lessons/04-stack-msp-psp/README.md",
       "turkish": "lessons/04-stack-msp-psp/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "7bc70d50b2fbbf8fde08041c75b8cffa1a40562fea7d3e8b5e6a976faadddbec"
+      "state": "draft",
+      "source_sha256": "7bc70d50b2fbbf8fde08041c75b8cffa1a40562fea7d3e8b5e6a976faadddbec",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/04-stack-msp-psp/answers/quick-check.md",
@@ -365,40 +405,45 @@
       "english": "lessons/07-exceptions/README.md",
       "turkish": "lessons/07-exceptions/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "f745ba8da545b110426be23a817cc161fa554e3da28c2978a985bc01576a35cd"
+      "state": "draft",
+      "source_sha256": "f745ba8da545b110426be23a817cc161fa554e3da28c2978a985bc01576a35cd",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/07-exceptions/answers/quick-check.md",
       "english": "lessons/07-exceptions/answers/quick-check.md",
       "turkish": "lessons/07-exceptions/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "abd1d2f1d4a0c8a24a7d16ab048dcbb3f74eeca3d98fd91a45c2aa33c38c31c5"
+      "state": "draft",
+      "source_sha256": "abd1d2f1d4a0c8a24a7d16ab048dcbb3f74eeca3d98fd91a45c2aa33c38c31c5",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.md",
       "english": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.md",
       "turkish": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "c4e80da763a49e7e7d34f4ac199f861a1521315f568cb15859b4db53667f8e24"
+      "state": "draft",
+      "source_sha256": "c4e80da763a49e7e7d34f4ac199f861a1521315f568cb15859b4db53667f8e24",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.md",
       "english": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.md",
       "turkish": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "c1816c145c82ca7a2c9edcc78d7d92c388c98c13c9f3b095bbe001fc2a8bd4f5"
+      "state": "draft",
+      "source_sha256": "c1816c145c82ca7a2c9edcc78d7d92c388c98c13c9f3b095bbe001fc2a8bd4f5",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/08-faults/README.md",
       "english": "lessons/08-faults/README.md",
       "turkish": "lessons/08-faults/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "3e9a3ae20eaafc510741db7e4eefe63925ad5b75a72e15650d60de24279da73a"
+      "state": "draft",
+      "source_sha256": "3e9a3ae20eaafc510741db7e4eefe63925ad5b75a72e15650d60de24279da73a",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     },
     {
       "original": "lessons/08-faults/answers/quick-check.md",
@@ -745,8 +790,9 @@
       "english": "tests/README.md",
       "turkish": "tests/README.tr.md",
       "category": "reference",
-      "state": "pending",
-      "source_sha256": "5733533fe86a5da71a88e89d171c44b28e55da6cbb9c9a17fc0a78e322786cf9"
+      "state": "draft",
+      "source_sha256": "5733533fe86a5da71a88e89d171c44b28e55da6cbb9c9a17fc0a78e322786cf9",
+      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
     }
   ],
   "exclusions": [
