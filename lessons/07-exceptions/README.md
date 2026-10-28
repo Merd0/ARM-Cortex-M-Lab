@@ -1,30 +1,31 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 07 — Exceptions: Entry, Stacking, Vectors & Return
 
-`[STANDARD]` · Day 4 · Tahmini süre: 75–90 dk
+`[STANDARD]` · Day 4 · Estimated time: 75–90 min
 
 ---
 
 ## Why This Matters
 
-Exception mekanizmasını beş derstir **kullanıyoruz**: ders 02'de HardFault,
-ders 04'te UsageFault/STKOF, ders 05'te SVCall, ders 06'da MemManage. Her
-seferinde `EXC_RETURN`'ü okuduk, frame'i çözdük, `IPSR`'ye baktık — ama CPU'nun
-exception'a **girerken tam olarak ne yaptığını** sistematik olarak hiç
-anlatmadık.
+We have been **using** exceptions for five lessons: HardFault in Lesson 02,
+UsageFault/STKOF in Lesson 04, SVCall in Lesson 05, and MemManage in Lesson 06.
+Each time we read `EXC_RETURN`, decoded the frame, and inspected `IPSR` — but
+never systematically explained **exactly what the CPU does when entering** an exception.
 
-Bu ders o boşluğu dolduruyor. Sonunda şunu söyleyebilmelisin:
+This lesson fills that gap. By the end, you should be able to say:
 
-> **Exception, çağrılan normal bir C fonksiyonu değildir. CPU, yürütme
-> bağlamını donanım yardımıyla değiştirir.**
+> **An exception is not an ordinary C function call. The CPU changes the execution
+> context with hardware assistance.**
 
-Bu, ders 08'deki fault teşhisinin, ders 14'teki SysTick/PendSV zamanlamasının
-ve ders 15'teki context switch'in ortak temelidir.
+This is the common foundation of fault diagnosis in Lesson 08, SysTick/PendSV
+scheduling in Lesson 14, and context switching in Lesson 15.
 
 ---
 
 ## Core Idea
 
-### Zincir
+### The sequence
 
 ```text
 olay / komut
@@ -48,29 +49,29 @@ donanim yigilmis baglami GERI YUKLER
 kesilen baglam devam eder
 ```
 
-Bu zincirin **hiçbir adımı** yazılım tarafından yapılmaz — `handler çalışır`
-hariç. Yığma, mod değişimi, stack seçimi ve geri yükleme donanımın işidir.
+**None of these steps** is performed by software — except `handler çalışır`.
+Stacking, mode changes, stack selection, and restoration are hardware responsibilities.
 
-Bu zincir **olağan** exception yoludur: SVCall, MemManage, HardFault, PendSV,
-SysTick, external IRQ'lar. **Reset bu yolu izlemez** — aşağıda ayrı anlatılıyor.
+This is the **ordinary** exception path: SVCall, MemManage, HardFault, PendSV,
+SysTick, and external IRQs. **Reset does not follow this path** — it is covered separately below.
 
-### Özel durum: Reset
+### Special case: Reset
 
-Reset mimari olarak bir exception'dır (numarası 1), ama **olağan giriş/çıkış
-modeline uymaz**:
+Reset is architecturally an exception (number 1), but **does not follow the ordinary
+entry/exit model**:
 
-| | Olağan exception (SVC, MemManage, IRQ...) | Reset |
+| | Ordinary exception (SVC, MemManage, IRQ...) | Reset |
 |---|---|---|
-| Kesilen bir bağlam var mı? | Evet | **Hayır** — önceki bağlam yok |
-| Donanım frame yığar mı? | Evet, 8 word | **Hayır** — incelenecek frame yok |
-| Nerede başlar? | Handler Mode | **Ayrıcalıklı Thread Mode** |
-| `IPSR` | Exception numarası | **0** |
-| `LR` | `EXC_RETURN` | `EXC_RETURN` değil |
-| `SP` nereden gelir? | Mevcut stack'ten | `vector[0]` → `MSP` |
-| `PC` nereden gelir? | `vector[n]` | `vector[1]` → `Reset_Handler` |
-| Dönüş var mı? | `EXC_RETURN` ile | **Yok** — dönülecek bir bağlam yok |
+| Is there an interrupted context? | Yes | **No** — no previous context |
+| Does hardware stack a frame? | Yes, 8 words | **No** — no frame to inspect |
+| Where does it start? | Handler Mode | **Privileged Thread Mode** |
+| `IPSR` | Exception number | **0** |
+| `LR` | `EXC_RETURN` | Not `EXC_RETURN` |
+| Where does `SP` come from? | Existing stack | `vector[0]` → `MSP` |
+| Where does `PC` come from? | `vector[n]` | `vector[1]` → `Reset_Handler` |
+| Is there a return? | Through `EXC_RETURN` | **No** — no context to return to |
 
-Bu build'de `Reset_Handler`'ın ilk komutunda ölçüldü (**OBSERVATION**):
+Measured at the first instruction of `Reset_Handler` in this build (**OBSERVATION**):
 
 ```text
 IPSR     = 0
@@ -80,14 +81,13 @@ PSP      = 0x00000000
 CONTROL  = 0x0               <- ayricalikli Thread Mode, MSP
 ```
 
-Yani `Reset_Handler` bir "handler" gibi adlandırılsa da, kesilmiş bir işin
-arasına giren bir handler değildir. Sistemin **ilk Thread Mode kodudur**. Bu
-yüzden bu dersteki yığma, `EXC_RETURN` ve geri yükleme anlatımının hiçbiri
-Reset için geçerli değildir.
+Although named a "handler," `Reset_Handler` does not interrupt an ongoing task.
+It is the system's **first Thread Mode code**. Consequently, none of the stacking,
+`EXC_RETURN`, and restoration discussion in this lesson applies to Reset.
 
 ### Exception ≠ external interrupt
 
-Günlük konuşmada "interrupt" geniş kullanılır. Mimari anlatımda ayrım net:
+Everyday speech uses "interrupt" broadly. The architectural distinction is precise:
 
 ```text
 Exception
@@ -108,18 +108,17 @@ Exception
     └── IRQ0, IRQ1, ...      exception numarasi = 16 + IRQ numarasi
 ```
 
-Ortak nokta: **Reset dışındakilerin hepsi** aynı giriş/çıkış mekanizmasını
-kullanır. Fark, kimin tanımladığı ve nasıl tetiklendiği.
+The common point: **all except Reset** use the same entry/exit mechanism.
+They differ in who defines them and how they are triggered.
 
-> **ARCHITECTURE:** Exception numarası vector table indeksidir. Olağan bir
-> exception'ın handler'ı çalışırken numarası `IPSR`'de görünür. **Reset
-> istisnadır:** `Reset_Handler` Thread Mode'da çalışır ve `IPSR = 0` okur. External IRQ *n*, exception numarası `16 + n`'dir ve vector
-> table'daki `[16 + n]` girdisini kullanır.
+> **ARCHITECTURE:** The exception number is the vector-table index. While an
+> ordinary exception handler runs, its number appears in `IPSR`. **Reset is the
+> exception:** `Reset_Handler` runs in Thread Mode and reads `IPSR = 0`.
+> External IRQ *n* has exception number `16 + n` and uses vector-table entry `[16 + n]`.
 >
-> **Bu repoda:** AN505'in cihaza özel IRQ numaraları henüz tanımlı değil
-> (`platform/mps2_an505.h` içindeki `TODO`). FAST TRACK için system
-> exception'lar yeterli; cihaz IRQ'ları doğrulanmadan eklenmiyor
-> (bkz. "Known Boundaries").
+> **In this repository:** AN505 device-specific IRQ numbers are not yet defined
+> (the `TODO` in `platform/mps2_an505.h`). System exceptions suffice for the FAST
+> TRACK; device IRQs are not added without verification (see "Known Boundaries").
 
 ### Vector table
 
@@ -129,19 +128,18 @@ vector[1]  = Reset_Handler adresi
 vector[n]  = exception n'in handler adresi (veya ayrilmis)
 ```
 
-Handler adresleri Thumb bit'i (bit 0 = 1) ile yazılır. Ama:
+Handler addresses are stored with the Thumb bit (bit 0 = 1). But:
 
-> **Eski ve yanlış kural: "vector table'daki bütün değerler tektir."**
-> `vector[0]` bir **handler adresi değildir**; başlangıç `MSP` değerini
-> taşır — bu build'de `0x30008000`. Çift olması stack hizalamasıyla
-> ilgilidir (bir `SP` değeri Thumb biti taşımaz, word/8-byte hizalı olur),
-> "bu bir adres değil" diye değil: sonuçta bir bellek adresidir, yalnızca
-> dallanma hedefi değildir. Ayrılmış girdiler de `0` olabilir.
+> **Old, incorrect rule: "all values in the vector table are odd."**
+> `vector[0]` is **not a handler address**; it holds the initial `MSP` value —
+> `0x30008000` in this build. Its even value concerns stack alignment (an `SP`
+> value has no Thumb bit and is word/8-byte aligned), not "this is not an address":
+> it is a memory address, just not a branch target. Reserved entries can also be `0`.
 
-### Otomatik (basic) stack frame
+### Automatic (basic) stack frame
 
-Exception kabul edildiğinde donanım şu sekiz word'ü **o an aktif olan**
-stack'e yazar:
+When an exception is accepted, hardware writes these eight words to the
+**currently active** stack:
 
 ```text
 ofset  icerik
@@ -155,37 +153,36 @@ ofset  icerik
 +0x1C  xPSR
 ```
 
-Neden tam bu sekizi? İki ayrı grup var:
+Why exactly these eight? There are two distinct groups:
 
-- **`R0-R3` ve `R12`** — normal fonksiyon çağrılarında çağrılan tarafın
-  serbestçe bozabildiği (volatile / caller-clobbered) çalışma register'ları
-  (ders 03). Donanım onları kaydettiği için handler sıradan bir C fonksiyonu
-  gibi yazılabilir; `r4-r11`'i derleyici zaten kendi prologunda korur.
-- **`LR`, `PC`, `xPSR`** — bunlar bir ABI kategorisi yüzünden değil, işlemcinin
-  **kesilen kontrol akışını ve mimari durumu** geri yükleyebilmesi için
-  yığılır: nereye dönülecek, hangi bayraklar, hangi yürütme durumu.
+- **`R0-R3` and `R12`** — working registers that the called function may freely
+  overwrite during ordinary calls (volatile / caller-clobbered; Lesson 03).
+  Hardware saving them allows a handler to be written as an ordinary C function;
+  the compiler already preserves `r4-r11` in its own prologue.
+- **`LR`, `PC`, `xPSR`** — stacked not because of an ABI category, but so the
+  processor can restore **interrupted control flow and architectural state**:
+  where to return, which flags, and which execution state.
 
-Yani frame, "AAPCS'in caller-saved kümesi" değildir. Doğru özet: **sıradan
-kodu sürdürmek için en acil gereken volatile çalışma register'ları, artı
-kesilen yürütmeyi devam ettirmek için gereken kontrol akışı/durum bilgisi.**
+The frame is therefore not "the AAPCS caller-saved set." A correct summary is:
+**the volatile working registers immediately needed to resume ordinary code,
+plus the control-flow/state information required to continue interrupted execution.**
 
-> **Bu her zaman 8 word değildir.** FP bağlamı aktifse genişletilmiş frame
-> kullanılır (FP register'ları + `FPSCR`), hizalama için bir dolgu word'ü
-> eklenebilir, ve güvenlik durumu geçişlerinde ek varyantlar vardır. Bu repo
-> soft-float derlendiği için basic frame ana modeldir — ama "8 word" evrensel
-> bir kural değildir.
+> **This is not always 8 words.** Active FP context uses an extended frame
+> (FP registers + `FPSCR`); an alignment padding word may be added, and security
+> state transitions introduce further variants. Because this repository is built
+> with soft-float, the basic frame is the main model — but "8 words" is not universal.
 
 ### `EXC_RETURN`
 
-Handler'a girerken `LR`'ye **normal bir dönüş adresi değil**, özel bir değer
-yazılır. Bu derste ölçülen ikisi:
+On handler entry, `LR` receives **a special value, not a normal return address**.
+The two measured in this lesson:
 
-| Değer | Anlamı |
+| Value | Meaning |
 |---|---|
-| `0xFFFFFFFD` | Thread Mode'a dönüş, frame **PSP**'de |
-| `0xFFFFFFF9` | Thread Mode'a dönüş, frame **MSP**'de |
+| `0xFFFFFFFD` | Return to Thread Mode, frame on **PSP** |
+| `0xFFFFFFF9` | Return to Thread Mode, frame on **MSP** |
 
-İlgili alanlar (tamamı için `docs/DEBUGGING.md`):
+Relevant fields (see `docs/DEBUGGING.md` for the complete set):
 
 ```text
 bit3 Mode   1 = Thread'e donus, 0 = Handler'a donus
@@ -193,14 +190,14 @@ bit2 SPSEL  1 = frame PSP'de,   0 = frame MSP'de
 bit4 FType  1 = standart frame, 0 = genisletilmis (FP)
 ```
 
-**Kritik:** bit 2 frame'in **nerede olduğunu** söyler; handler'ın **hangi
-stack'i kullandığını** değil. Handler her zaman MSP kullanır.
+**Critical:** bit 2 identifies **where the frame is**, not **which stack the handler
+uses**. A handler always uses MSP.
 
-### `BX LR` neden sıradan bir dönüş değil?
+### Why is `BX LR` not an ordinary return?
 
-`LR` bir `EXC_RETURN` değeri taşıyorken `PC`'ye yazılırsa, işlemci bunu bir
-adres olarak yorumlamaz — **exception return** olarak tanır ve yığılmış
-bağlamı geri yükler. Bu derste tek bir `si` adımıyla ölçeceğiz.
+When `LR` holds an `EXC_RETURN` value and is written to `PC`, the processor does
+not interpret it as an address — it recognizes **exception return** and restores
+the stacked context. We will measure this with a single `si` step.
 
 ---
 
@@ -242,9 +239,9 @@ donanim yigilmis 8 word'u GERI YUKLER
 Thread PSP uzerinde kaldigi yerden devam eder
 ```
 
-Yön kontrolü (ders 04'ten): stack **full-descending**. `PSP` yığmadan önce
-`0x300002F0` idi, sonra `0x300002D0` — **32 byte aşağı**. Frame'in en düşük
-adresinde `R0`, en yükseğinde `xPSR` var.
+Direction check (from Lesson 04): the stack is **full-descending**. `PSP` was
+`0x300002F0` before stacking and `0x300002D0` afterwards — **32 bytes lower**.
+`R0` is at the frame's lowest address and `xPSR` at its highest.
 
 ---
 
@@ -268,28 +265,27 @@ flowchart TD
 
 ## Tiny Example
 
-Kaynaklar: [`example/main.c`](example/main.c),
+Sources: [`example/main.c`](example/main.c),
 [`example/svc_handler.S`](example/svc_handler.S),
-[`example/psp_start.S`](example/psp_start.S) (ders 04'ten değişmeden).
+[`example/psp_start.S`](example/psp_start.S) (unchanged from Lesson 04).
 
-### Neden SVC?
+### Why SVC?
 
-Exception kaynağı olarak `SVC` seçildi: **senkron** (tam olarak ne zaman
-olacağını biliyoruz), komutu bilinen, yığmanın başarılı olması beklenen, ve
-ders 05'ten tanıdık. Fault'lar bunların hiçbirini garanti etmez — onlar
-ders 08'in konusu.
+`SVC` was chosen as the exception source: it is **synchronous** (we know exactly
+when it occurs), its instruction is known, stacking is expected to succeed,
+and it is familiar from Lesson 05. Faults guarantee none of these — they belong
+to Lesson 08.
 
-### Bu derste Thread ayrıcalıklı kalıyor
+### Thread remains privileged in this lesson
 
-Ders 05/06 ayrıcalık ve izolasyonu işledi. Burada odak exception mekanizması,
-bu yüzden Thread Mode ayrıcalıklı bırakıldı ve doğrudan konsola yazabiliyor.
-(Ders 05'te ölçülen PPC engeli **ayrıcalıksız** koda aitti; burada geçerli
-değil.)
+Lessons 05/06 covered privilege and isolation. Here the focus is the exception
+mechanism, so Thread Mode remains privileged and can write directly to the console.
+(The PPC restriction measured in Lesson 05 concerned **unprivileged** code;
+it does not apply here.)
 
-### Tanınabilir işaretler
+### Recognizable markers
 
-Frame'in bu sekiz register'ı taşıdığını kontrol etmek için `SVC`'den
-önce bilinen değerler yükleniyor:
+Known values are loaded before `SVC` to check that the frame carries these eight registers:
 
 ```c
 register uint32_t r0  __asm__("r0")  = 0x11111111u;
@@ -301,7 +297,7 @@ register uint32_t r12 __asm__("r12") = 0xCCCCCCCCu;
 __asm__ volatile ("svc %[imm]" : "+r"(r0) : [imm]"I"(7), "r"(r1), ...);
 ```
 
-### Handler sarmalayıcısı — neden giriş durumunu kaydediyor?
+### Handler wrapper — why save entry state?
 
 ```asm
 SVC_Handler:
@@ -311,13 +307,12 @@ SVC_Handler:
     ...
 ```
 
-Çünkü bu iki değer handler içinde C kodu çalıştıktan sonra **artık güvenilir
-değildir**:
+Because these two values are **no longer reliable** after C code has run inside the handler:
 
-- `lr` → herhangi bir `bl` onu ezer.
-- `msp` → handler'ın kendi prologu onu aşağı iter.
+- `lr` → any `bl` overwrites it.
+- `msp` → the handler's own prologue moves it downward.
 
-Bu, ders 04'te `cm-frame`'in onarılmasına yol açan hatanın ta kendisiydi.
+This was precisely the bug that led to the `cm-frame` repair in Lesson 04.
 
 ---
 
@@ -333,7 +328,7 @@ cmake --build --preset debug --target 07-exceptions
 
 ## Expected Output
 
-Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
+Actual output (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 
 ```text
 ===== LESSON 07: EXCEPTIONS =====
@@ -390,30 +385,29 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 ===== END =====
 ```
 
-> **OBSERVATION.** Adresler build'e özeldir. Önemli olan ilişkiler.
+> **OBSERVATION.** Addresses are build-specific. The relationships matter.
 
-Altı gözlem, sırayla:
+Six observations, in order:
 
-1. **`vector[0] = 0x30008000`, çift sayı.** Bir handler adresi değil, `MSP`
-   başlangıç değeri. `vector[11] = 0x10000041`, tek — Thumb biti.
-2. **Frame `0x300002D0`'da, yığmadan önceki PSP `0x300002F0` idi.** Fark tam
-   32 byte = 8 word. Donanım aşağı doğru yazdı.
-3. **Beş işaret değeri frame'de birebir duruyor.** `0x11111111` en düşük
-   adreste (`+0x00`), `0xCCCCCCCC` `+0x10`'da. Layout tahmin değil, ölçüm.
-4. **Yığılmış `xPSR = 0x61000000`.** `IPSR` alanı `0` — kesilen bağlam Thread
-   Mode'daydı. T biti (bit 24) `1`. Hizalama biti (bit 9) `0` — bu çalıştırmada
-   donanım dolgu eklemedi.
-5. **`DISPATCHER_SP (0x30007FE0) ≠ FRAME_ADDR (0x300002D0)`.** Handler MSP'de
-   çalışıyor, frame PSP'de duruyor. Bu ikisini karıştırmak ders 04'teki
-   debugger hatasıydı.
-6. **`SVC_RESULT = 286331154 = 0x11111112`.** Handler frame'in `R0` yuvasını
-   değiştirdi; exception return onu Thread'in `R0`'ına geri yükledi.
+1. **`vector[0] = 0x30008000`, even.** Not a handler address, but the initial
+   `MSP` value. `vector[11] = 0x10000041`, odd — the Thumb bit.
+2. **The frame is at `0x300002D0`; PSP before stacking was `0x300002F0`.**
+   Exactly 32 bytes = 8 words. Hardware wrote downward.
+3. **All five marker values remain exactly in the frame.** `0x11111111` is at
+   the lowest address (`+0x00`), `0xCCCCCCCC` at `+0x10`. The layout is measured, not guessed.
+4. **Stacked `xPSR = 0x61000000`.** Its `IPSR` field is `0` — the interrupted
+   context was Thread Mode. T (bit 24) is `1`. Alignment bit 9 is `0` — hardware
+   added no padding in this run.
+5. **`DISPATCHER_SP (0x30007FE0) ≠ FRAME_ADDR (0x300002D0)`.** The handler runs
+   on MSP while the frame remains on PSP. Confusing the two was the Lesson 04 debugger bug.
+6. **`SVC_RESULT = 286331154 = 0x11111112`.** The handler changed the frame's `R0`
+   slot; exception return restored it into Thread's `R0`.
 
 ---
 
 ## Observe in GDB
 
-Her durakta ilgili mimari geçişi GDB ile inceleyeceğiz.
+At each stop we will inspect the corresponding architectural transition in GDB.
 
 ```bash
 cmake --build --preset debug --target debug-07-exceptions
@@ -426,13 +420,13 @@ target remote :3333
 source scripts/gdb/cortex-m.gdb
 ```
 
-### A — `svc` komutundan hemen önce
+### A — Immediately before `svc`
 
 ```gdb
 (gdb) disassemble do_marked_svc
 ```
 
-`svc 7` komutunun adresini bul (bu build'de `0x100000b8`), oraya breakpoint koy:
+Find the address of `svc 7` (`0x100000b8` in this build) and set a breakpoint there:
 
 ```gdb
 (gdb) break *0x100000b8
@@ -450,10 +444,10 @@ r1  = 0x22222222
 r12 = 0xcccccccc
 ```
 
-**Gözlem:** Başlangıç durumu — Thread Mode, `IPSR = 0`, PSP aktif,
-ve işaret değerleri register'larda duruyor. Henüz hiçbir şey yığılmadı.
+**Observation:** Initial state — Thread Mode, `IPSR = 0`, PSP active, marker values
+in the registers. Nothing has been stacked yet.
 
-### B — `SVC_Handler`'ın ilk komutu
+### B — First instruction of `SVC_Handler`
 
 ```gdb
 (gdb) break SVC_Handler
@@ -477,18 +471,18 @@ $msp = 0x30007ff0
 $psp = 0x300002d0
 ```
 
-**Komut sonrasında gözlemlenen değişiklikler:**
+**Changes observed after the instruction:**
 
-| Gözlem | Mimari geçiş |
+| Observation | Architectural transition |
 |---|---|
-| `IPSR` 0 → 11 | Handler Mode'a girildi, exception numarası SVCall |
-| `$sp == $msp` | Donanım `SPSEL`'i temizledi, aktif stack MSP oldu |
-| `$psp` 0x300002f0 → 0x300002d0 | 32 byte yığıldı |
-| `$lr = 0xfffffffd` | `LR` bir dönüş adresi değil, `EXC_RETURN` |
+| `IPSR` 0 → 11 | Entered Handler Mode, exception number SVCall |
+| `$sp == $msp` | Hardware cleared `SPSEL`; MSP became the active stack |
+| `$psp` 0x300002f0 → 0x300002d0 | 32 bytes stacked |
+| `$lr = 0xfffffffd` | `LR` holds `EXC_RETURN`, not a return address |
 
-Hiçbir yazılım satırı çalışmadan bunların hepsi oldu.
+All of this happened without a line of software executing.
 
-### C — Dispatcher kendi stack'ini kullandıktan sonra
+### C — After the dispatcher uses its own stack
 
 ```gdb
 (gdb) break svc_dispatch
@@ -503,14 +497,14 @@ $sp           = 0x30007fe0
 g_frame_addr  = 0x300002d0
 ```
 
-**Gözlem:** Aktif `$sp` artık ne giriş MSP'si (`0x30007ff0`) ne de
-frame adresi. Handler'ın kendi prologu MSP'yi aşağı itti.
+**Observation:** Active `$sp` is now neither the entry MSP (`0x30007ff0`) nor
+the frame address. The handler's own prologue pushed MSP downward.
 
-Bu yüzden `cm-frame` aktif `$sp`'den **tahmin etmez** ve frame adresini
-argüman olarak ister. Eski sürüm tahmin ediyordu ve uydurma değerler
-basıyordu — bağımsız denetimin bulduğu hata buydu.
+This is why `cm-frame` does **not guess** from active `$sp` and requires the
+frame address as an argument. The old version guessed and printed fabricated
+values — the independent audit found this bug.
 
-### D — Kaydedilen frame'i çöz
+### D — Decode the saved frame
 
 ```gdb
 (gdb) cm-exc-return g_entry_lr
@@ -534,11 +528,10 @@ stacked PC = 0x100000ba
 xPSR       = 0x61000000
 ```
 
-**Gözlem:** Ön koşullar sağlanıyor (standart frame, tek güvenlik
-durumu, yığma hatası yok), bu yüzden komut çözüyor. Değerler firmware'in
-bastığıyla birebir aynı.
+**Observation:** Preconditions hold (standard frame, one security state, no
+stacking error), so the command decodes it. Values exactly match the firmware output.
 
-### E — Yığılmış PC neyi gösteriyor?
+### E — What does the stacked PC point to?
 
 ```gdb
 (gdb) x/2i *(unsigned int*)(g_frame_addr+24)-2
@@ -549,20 +542,20 @@ bastığıyla birebir aynı.
    0x100000ba <do_marked_svc+22>:  bx   lr
 ```
 
-**Gözlem:** Yığılmış PC (`0x100000ba`), `svc` komutundan **sonraki**
-komutu gösteriyor. Yani kesilen bağlamın **devam edeceği** adres. `SVC` senkron
-bir exception olduğu için kesin biliniyor.
+**Observation:** The stacked PC (`0x100000ba`) points to the instruction **after**
+`svc`: the address where the interrupted context will **resume**. This is known
+precisely because `SVC` is synchronous.
 
-> Bunu genelleme: fault'larda yığılmış PC'nin anlamı exception türüne bağlıdır
-> (precise / imprecise). Ders 08.
+> Do not generalize this: for faults, the meaning of stacked PC depends on the
+> exception type (precise / imprecise). Lesson 08.
 
-### F — Exception return komutu
+### F — Exception-return instruction
 
 ```gdb
 (gdb) disassemble svc_dispatch
 ```
 
-Son komutu bul (bu build'de `0x100004e2`):
+Find the final instruction (`0x100004e2` in this build):
 
 ```gdb
 (gdb) break *0x100004e2
@@ -576,10 +569,10 @@ $lr = 0xfffffffd
 => 0x100004e2 <svc_dispatch+98>:  bx  lr
 ```
 
-**Gözlem:** Bu, derleyicinin ürettiği **sıradan bir fonksiyon
-dönüşü**. Ama `LR` bir `EXC_RETURN` değeri taşıyor.
+**Observation:** This is an **ordinary function return** emitted by the compiler.
+But `LR` carries an `EXC_RETURN` value.
 
-### G — Tek adımda bağlam geri yükleniyor
+### G — Context restored in one step
 
 ```gdb
 (gdb) si
@@ -597,34 +590,32 @@ r1  = 0x22222222
 r12 = 0xcccccccc
 ```
 
-**Gözlem:** `bx lr` **tek bir adımda**
-şunların hepsini yaptı:
+**Observation:** In **one step**, `bx lr` did all of the following:
 
 - Handler Mode → Thread Mode (`IPSR` 11 → 0)
-- Aktif stack MSP → PSP
-- Sekiz word geri yüklendi: `R1`/`R12` **değişmeden** döndü
-  (`0x22222222`, `0xcccccccc`)
-- `PC` yığılmış değere (`0x100000ba`) atladı
-- `R0` handler'ın yazdığı yeni değeri taşıyor (`0x11111112`)
+- Active stack MSP → PSP
+- Eight words restored: `R1`/`R12` returned **unchanged** (`0x22222222`, `0xcccccccc`)
+- `PC` jumped to the stacked value (`0x100000ba`)
+- `R0` carries the handler's new value (`0x11111112`)
 
-İşlemci `LR`'deki `EXC_RETURN` kodlamasını tanıdı ve bunu bir adres olarak
-yorumlamak yerine **exception return** yaptı.
+The processor recognized the `EXC_RETURN` encoding in `LR` and performed
+**exception return**, rather than interpreting it as an address.
 
 ---
 
 ## Experiment
 
-**Deney 1 — MSP kaynaklı exception.**
+**Experiment 1 — MSP-origin exception.**
 
-Aynı ölçüm, Thread Mode MSP üzerindeyken. Ayrı hedef; stack değiştirmiyoruz —
-`psp_start()` hiç çağrılmıyor, `main` zaten MSP üzerinde çalışıyor.
+The same measurement with Thread Mode on MSP. A separate target; we do not switch
+stacks — `psp_start()` is never called, and `main` already runs on MSP.
 
 ```bash
 cmake --build --preset debug --target 07-exceptions-msp
 ./scripts/run-qemu.sh build/debug/lessons/07-exceptions/07-exceptions-msp.elf
 ```
 
-Gerçek çıktı (ilgili satırlar):
+Actual output (relevant lines):
 
 ```text
 [  CONTROL] 0x00000000
@@ -640,33 +631,32 @@ Gerçek çıktı (ilgili satırlar):
 [  CHECK_EXC_RETURN_MSP] PASS
 ```
 
-Karşılaştırma tablosu:
+Comparison:
 
-| | PSP kaynaklı | MSP kaynaklı |
+| | PSP-origin | MSP-origin |
 |---|---|---|
 | `CONTROL` | `0x2` (SPSEL=1) | `0x0` |
-| Frame nerede | PSP: `0x300002D0` | MSP: `0x30007FC0` |
+| Frame location | PSP: `0x300002D0` | MSP: `0x30007FC0` |
 | `EXC_RETURN` | `0xFFFFFFFD` | `0xFFFFFFF9` |
-| Handler'ın stack'i | **MSP** | **MSP** |
+| Handler stack | **MSP** | **MSP** |
 | `IPSR` | 11 | 11 |
 
-**Tek fark bit 2.** Handler her iki durumda da MSP kullanıyor; değişen yalnızca
-frame'in nereye yığıldığı.
+**Only bit 2 differs.** The handler uses MSP in both cases; only the location
+where the frame was stacked changes.
 
-MSP kaynaklı durumda frame ve handler **aynı** stack'tedir. Stack
-full-descending olduğu için (ders 04): donanımın yığdığı frame MSP üzerinde
-bir adres aralığını zaten kaplar; handler'ın prologu ve yerel verisi MSP'yi
-**daha da aşağı** iter. Yani handler'ın stack kullanımı, kaydedilmiş frame'in
-**altında, daha düşük adreslerde** büyür — doğru çalışan durumda frame'in
-kendisi ezilmez. Ölçüm: frame `0x30007FC0`'da, dispatcher'ın yerel verisi
-`0x30007FB0`'da.
+In the MSP-origin case, the frame and handler share the **same** stack. Because
+it is full-descending (Lesson 04), the hardware frame already occupies an address
+range on MSP; the handler's prologue and local data move MSP **further downward**.
+The handler's stack use therefore grows **below the saved frame, at lower
+addresses** — correct operation does not overwrite the frame itself. Measurement:
+frame at `0x30007FC0`, dispatcher local data at `0x30007FB0`.
 
-Bu yüzden giriş MSP'sini kaydetmek daha da kritik: `$sp` ile frame arasında
-handler'ın ne kadar yığdığına bağlı değişken bir mesafe var.
+Saving entry MSP is therefore even more critical: the distance between `$sp`
+and the frame varies with how much the handler has stacked.
 
-**Deney 2 — Pending ve Active durumları.**
+**Experiment 2 — Pending and Active states.**
 
-Bir exception dört durumdan geçer:
+An exception passes through four states:
 
 ```text
 Inactive
@@ -681,12 +671,12 @@ Active           <- handler calisiyor
 Inactive
 ```
 
-`Pending` her zaman "hemen çalışacak" demek değildir. Beklemesinin sebepleri
-maskeleme, eşit/daha yüksek öncelikli bir exception'ın aktif olması veya
-mimari uygunluk koşulları olabilir.
+`Pending` does not always mean "will run immediately." Masking, an active
+exception of equal/higher priority, or architectural eligibility conditions
+can make it wait.
 
-**Active** durumu da bu derste ölçüldü. `SHCSR` register'ı system
-handler'ların active bitlerini taşır — fault hedeflerinde ölçülen değerler:
+**Active** state was also measured here. `SHCSR` contains active bits for system
+handlers — values measured in the fault targets:
 
 ```text
 MemManage etkinken fault aninda:  SHCSR = 0x00010001
@@ -696,41 +686,39 @@ MemManage devre disiyken:         SHCSR = 0x00000004
     bit16 MEMFAULTENA = 0   bit2 HARDFAULTACT = 1 (HardFault AKTIF)
 ```
 
-İki farklı handler aktif — aynı ihlalden. Devamı Break It bölümünde.
+Two different handlers active — from the same violation. Continued in Break It.
 
-> Pending bitlerini yazarak (`ICSR.PENDSVSET` gibi) bir exception'ı elle
-> tetiklemek mümkündür ve bu, ders 14'teki PendSV tabanlı zamanlamanın
-> temelidir. Burada bilerek açmıyoruz — bu ders giriş/çıkış mekanizması
-> üzerine.
+> An exception can be triggered manually by writing pending bits such as
+> `ICSR.PENDSVSET`; this underpins PendSV-based scheduling in Lesson 14. We
+> deliberately defer it here — this lesson concerns entry/exit mechanisms.
 
-**Deney 3 — Öncelik.**
+**Experiment 3 — Priority.**
 
-> **ARCHITECTURE:** Daha **düşük** sayısal öncelik değeri = daha **yüksek**
-> aciliyet. `Reset (-3)`, `NMI (-2)`, `HardFault (-1)` sabit ve
-> programlanamaz; geri kalanı yapılandırılabilir.
+> **ARCHITECTURE:** A **lower** numeric priority means **higher** urgency.
+> `Reset (-3)`, `NMI (-2)`, `HardFault (-1)` are fixed and not programmable;
+> the rest are configurable.
 >
-> **TARGET CONFIG:** Bu QEMU hedefinde **8 öncelik biti** ölçüldü
-> (`capability-probe`: `NVIC_PRIO_BITS_MEASURED = 8`). Bu **evrensel bir
-> Cortex-M33 gerçeği değildir** — uygulanan bit sayısı bir uygulama
-> seçeneğidir ve cihazdan cihaza değişir.
+> **TARGET CONFIG:** **8 priority bits** were measured on this QEMU target
+> (`capability-probe`: `NVIC_PRIO_BITS_MEASURED = 8`). This is **not a universal
+> Cortex-M33 fact** — the implemented bit count is an implementation option
+> and differs between devices.
 
-Kendin ölç:
+Measure it yourself:
 
 ```bash
 cmake --build --preset debug --target capability-probe
 ./scripts/run-qemu.sh build/debug/tools/capability-probe/capability-probe.elf
 ```
 
-Öncelik gruplaması (`PRIGROUP`, subpriority) bu derste bilerek ertelendi.
+Priority grouping (`PRIGROUP`, subpriority) is deliberately deferred in this lesson.
 
 ---
 
 ## Break It
 
-Aynı ihlal, iki farklı sonuç. Değişen tek şey bir bit.
+The same violation, two different outcomes. Only one bit changes.
 
-Her iki hedef de ayrıcalıklı **salt-okunur** bir MPU bölgesi kurup oraya
-yazmayı deniyor:
+Both targets configure a privileged **read-only** MPU region and attempt a write:
 
 ```c
 /* Region 0: RO = 1, NP = 0 (yalnizca ayricalikli), XN = 1 */
@@ -739,10 +727,10 @@ ARM_MPU_SetRegion(0u,
     ARM_MPU_RLAR((uint32_t)&g_ro_block[0] + sizeof(g_ro_block) - 1u, 0u));
 ```
 
-Ayrıcalıklı kod bile bu bölgeye **yazamaz** — koruma ayrıcalık ekseninden
-bağımsız.
+Even privileged code **cannot write** this region — protection is independent
+of the privilege axis.
 
-### Ölçülmüş bir tuzak: sıra önemli
+### A measured pitfall: order matters
 
 ```c
 ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk);
@@ -753,39 +741,38 @@ ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk);
 SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;
 ```
 
-İlk denemede `MEMFAULTENA`, `ARM_MPU_Enable()` öncesinde temizlendiğinde
-escalation hedefi `IPSR = 4` verdi. Vendored `armv8m_mpu.h` içindeki
-`ARM_MPU_Enable` bu biti yeniden set ediyor.
+In the first attempt, clearing `MEMFAULTENA` before `ARM_MPU_Enable()` made the
+escalation target report `IPSR = 4`. `ARM_MPU_Enable` in vendored `armv8m_mpu.h`
+sets the bit again.
 
 ```bash
 cmake --build --preset debug --target 07-exceptions-memmanage
 cmake --build --preset debug --target 07-exceptions-escalation
 ```
 
-### Ölçülen sonuç
+### Measured result
 
-| | MemManage **ETKİN** | MemManage **DEVRE DIŞI** |
+| | MemManage **ENABLED** | MemManage **DISABLED** |
 |---|---|---|
 | `IPSR` | **4** (MemManage) | **3** (HardFault) |
-| `CFSR` | `0x00000082` | `0x00000082` — **aynı** |
-| `MMFSR` | `0x82` (DACCVIOL + MMARVALID) | `0x82` — **aynı** |
+| `CFSR` | `0x00000082` | `0x00000082` — **same** |
+| `MMFSR` | `0x82` (DACCVIOL + MMARVALID) | `0x82` — **same** |
 | `HFSR` | `0x00000000` | `0x40000000` |
 | `HFSR.FORCED` | 0 | **1** |
-| `MMFAR` | `0x30000000` | `0x30000000` — **aynı** |
+| `MMFAR` | `0x30000000` | `0x30000000` — **same** |
 | `SHCSR` | `0x00010001` | `0x00000004` |
 | `EXC_RETURN` | `0xFFFFFFFD` | `0xFFFFFFFD` |
-| Yığılmış PC | `0x10000110` | `0x10000110` — **aynı** |
+| Stacked PC | `0x10000110` | `0x10000110` — **same** |
 
-**İhlalin kendisi tamamen aynı.** `MMFSR` ve `MMFAR` her iki durumda da doğru
-yazıldı. Değişen tek şey **hangi handler'ın çağrıldığı**.
+**The violation itself is identical.** `MMFSR` and `MMFAR` were written correctly
+in both cases. Only **which handler was invoked** changed.
 
-`HFSR.FORCED = 1` bunu açıkça söylüyor: "bu HardFault kendi başına oluşmadı,
-başka bir fault yükseltildi (escalated)". Ders 02'de aynı biti başka bir
-sebeple görmüştük.
+`HFSR.FORCED = 1` states this explicitly: "this HardFault did not arise on its
+own; another fault was escalated." We saw the same bit for another reason in Lesson 02.
 
-> **OBSERVATION**, universal kural değil: bu değerler bu build ve bu QEMU
-> çalıştırması için ölçüldü. Escalation kuralları mimaridir ama tam
-> `CFSR`/`HFSR` içerikleri senaryoya bağlıdır.
+> **OBSERVATION**, not a universal rule: these values were measured for this build
+> and QEMU run. Escalation rules are architectural, but exact `CFSR`/`HFSR`
+> contents depend on the scenario.
 
 ---
 
@@ -806,23 +793,21 @@ cm-fault
 cm-exc-return g_entry_lr
 ```
 
-Yığma başarılı (`MSTKERR = 0`) olduğu için frame çözülebilir:
+Stacking succeeded (`MSTKERR = 0`), so the frame can be decoded:
 
 ```gdb
 cm-frame g_frame_addr g_entry_lr
 ```
 
-Cevaplaman gereken sorular:
+Questions to answer:
 
-1. `IPSR = 3` iken `MMFSR` neden hâlâ dolu? Hangi donanım bu biti yazdı?
-2. `HFSR.FORCED = 1` tam olarak ne anlatıyor? "HardFault oluştu"dan farkı ne?
-3. `MMFAR` geçerli mi? Hangi bit bunu söylüyor ve neden her zaman kontrol
-   etmen gerekir?
-4. Yığılmış PC (`0x10000110`) hangi komutu gösteriyor? `x/1i` ile bak.
-   Bu, `svc` durumundaki yığılmış PC'den **anlamca** nasıl farklı?
-5. Escalation olmasaydı bu fault'tan "kurtulmak" mümkün olur muydu? Handler
-   ne yapmak zorunda kalırdı?
-6. `SHCSR = 0x00000004` — hangi bit set ve ne anlama geliyor?
+1. Why is `MMFSR` still populated when `IPSR = 3`? Which hardware wrote the bit?
+2. What exactly does `HFSR.FORCED = 1` mean? How is it different from "a HardFault occurred"?
+3. Is `MMFAR` valid? Which bit says so, and why must you always check it?
+4. Which instruction does stacked PC (`0x10000110`) point to? Inspect with `x/1i`.
+   How does its **meaning** differ from stacked PC in the `svc` case?
+5. Without escalation, could this fault be "recovered from"? What would the handler have to do?
+6. `SHCSR = 0x00000004` — which bit is set, and what does it mean?
 
 ---
 
@@ -830,17 +815,17 @@ Cevaplaman gereken sorular:
 
 ### Exercise 01 — Decode an Exception Entry
 
-Başlangıç firmware'i temiz bir `SVC` üretiyor ve frame'i yakalıyor. Senin
-yazacağın: `decode_exception_entry()`.
+The starter firmware generates a clean `SVC` and captures its frame.
+You will write `decode_exception_entry()`.
 
 ```text
 exercises/01-decode-exception-entry/main.c
 ```
 
-Fonksiyon üç şey alıyor — frame pointer, `EXC_RETURN`, `IPSR` — ve altı alanı
-dolduruyor:
+The function takes three inputs — frame pointer, `EXC_RETURN`, `IPSR` — and
+fills six fields:
 
-| Alan | Kaynak |
+| Field | Source |
 |---|---|
 | `interrupted_mode` | `"Thread"` / `"Handler"` |
 | `frame_stack` | `"PSP"` / `"MSP"` |
@@ -849,16 +834,15 @@ dolduruyor:
 | `stacked_pc` | |
 | `stacked_xpsr` | |
 
-**Kapsam:** yalnızca bu repo'nun desteklediği alt küme — standart 8 word
-frame, tek güvenlik durumu. Her `EXC_RETURN` kuralını yeniden uygulaman
-istenmiyor.
+**Scope:** only the subset supported by this repository — standard 8-word frame,
+one security state. You are not asked to reimplement every `EXC_RETURN` rule.
 
 ```bash
 cmake --build --preset debug --target 07-exercise-decode
 ./scripts/run-qemu.sh build/debug/lessons/07-exceptions/07-exercise-decode.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Actual starter output:
 
 ```text
 [4] Exception girisi cozumu
@@ -873,43 +857,41 @@ Başlangıç çıktısı (gerçek):
 [  CHECK_DECODE_XPSR] FAIL
 ```
 
-Firmware sorunsuz çalışıyor; yalnızca çözümleme boş. Bu **beklenen başlangıç
-durumudur**.
+The firmware runs correctly; only decoding is empty. This is the **expected
+starting state**.
 
-**Doğrulama ölçütü:** altı `CHECK_DECODE_*` da `PASS` olmalı ve diğer bütün
-`CHECK_*` satırları `PASS` kalmalı.
+**Verification criterion:** all six `CHECK_DECODE_*` checks must become `PASS`,
+while all other `CHECK_*` lines remain `PASS`.
 
-**Dikkat edilecek tuzak:** `frame_stack` ile "handler hangi stack'i kullanıyor"
-**aynı soru değil**. Biri `EXC_RETURN` bit 2'den gelir, diğerinin cevabı her
-zaman MSP'dir.
+**Pitfall:** `frame_stack` and "which stack does the handler use?" are **not the
+same question**. One comes from `EXC_RETURN` bit 2; the other is always MSP.
 
-### Exercise 02 (opsiyonel, DEEP) — `EXC_RETURN` sınıflandırma
+### Exercise 02 (optional, DEEP) — `EXC_RETURN` classification
 
-Aşağıdaki değerleri sınıflandır: Thread mi Handler mı, MSP mi PSP mi, basic mi
-extended mi, ve bu laboratuvarın `cm-frame` yardımcısı tarafından
-desteklenip desteklenmediği.
+Classify these values: Thread or Handler, MSP or PSP, basic or extended, and
+whether this lab's `cm-frame` helper supports them.
 
 ```text
 0xFFFFFFF9    0xFFFFFFFD    0xFFFFFFED    0xFFFFFFF1    0xFFFFFFF5
 ```
 
-Cevapları `answers/quick-check.md` sonundaki tabloda.
-(İpucu: `cm-exc-return <değer>` ile kontrol edebilirsin.)
+Answers are in the table at the end of `answers/quick-check.md`.
+(Hint: check with `cm-exc-return <değer>`.)
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-decode-exception-entry/`](solutions/01-decode-exception-entry/) | `07-solution-decode` |
+| Exercise 01 solution | [`solutions/01-decode-exception-entry/`](solutions/01-decode-exception-entry/) | `07-solution-decode` |
 
 ```bash
 cmake --build --preset debug --target 07-solution-decode
 ./scripts/run-qemu.sh build/debug/lessons/07-exceptions/07-solution-decode.elf
 ```
 
-Gerçek çıktı:
+Actual output:
 
 ```text
 [4] Exception girisi cozumu
@@ -931,25 +913,25 @@ Gerçek çıktı:
 
 ## What I Learned
 
-> Bu bölüm senin.
+> This section is yours.
 
-**Exception'ın normal fonksiyon çağrısından farkı:**
-
-<!-- -->
-
-**`bx lr`'nin tek adımda yaptıkları:**
+**How an exception differs from an ordinary function call:**
 
 <!-- -->
 
-**`EXC_RETURN` bit 2 ile "handler hangi stack'i kullanır" arasındaki fark:**
+**What `bx lr` did in one step:**
 
 <!-- -->
 
-**Beni şaşırtan şey:**
+**The difference between `EXC_RETURN` bit 2 and "which stack the handler uses":**
 
-<!-- örn: aynı ihlalin MMFSR'ı aynı bırakıp farklı handler'a gitmesi -->
+<!-- -->
 
-**Ders 08'e taşıdığım soru:**
+**What surprised me:**
+
+<!-- e.g. the same violation leaves MMFSR unchanged but reaches a different handler -->
+
+**My question for Lesson 08:**
 
 <!-- -->
 
@@ -957,101 +939,94 @@ Gerçek çıktı:
 
 ## Quick Check
 
-1. Exception ile external interrupt aynı şey midir? Ortak yanları ne?
-2. Vector table'ın 0. girdisi neden bir handler adresi değildir? Bu build'de
-   değeri kaç ve neden çift sayı?
-3. Exception girişinde hangi register'lar basic frame'e otomatik yazılır?
-   Neden tam olarak onlar?
-4. Thread PSP kullanırken `SVC` oluşursa frame hangi stack'e gider?
-5. Handler hangi stack'i kullanır? Bunu yazılım mı seçer, donanım mı?
-6. Handler girişinde `LR` neden normal bir dönüş adresi değildir?
-7. `BX LR` bir exception handler'ında nasıl exception return başlatabilir?
-8. `Pending` ile `Active` arasındaki fark nedir? Pending her zaman "hemen
-   çalışacak" demek midir?
-9. Daha düşük bir öncelik sayısı ne anlama gelir?
-10. Bu hedefte 8 öncelik biti ölçüldü. Bu neden evrensel bir Cortex-M33
-    gerçeği değildir?
-11. **(Reasoning)** `cm-frame $sp ...` bir handler içinde neden otomatik
-    olarak doğru değildir?
-12. **(Reasoning)** MemManage devre dışıyken bir MPU ihlali neden başka bir
-    exception'a dönüşür? `MMFSR`'a ne olur?
-13. **(Reasoning)** Handler'ın `r4-r11`'i kaydetmesi gerekir mi? Donanım neden
-    onları yığmıyor?
+1. Are exceptions and external interrupts the same? What do they share?
+2. Why is vector-table entry 0 not a handler address? What is its value in this
+   build, and why is it even?
+3. Which registers are automatically written to the basic frame on exception
+   entry? Why exactly those?
+4. If `SVC` occurs while Thread uses PSP, which stack receives the frame?
+5. Which stack does a handler use? Does software or hardware choose it?
+6. Why is `LR` not a normal return address on handler entry?
+7. How can `BX LR` initiate exception return in an exception handler?
+8. What is the difference between `Pending` and `Active`? Does pending always
+   mean "will run immediately"?
+9. What does a lower priority number mean?
+10. This target measured 8 priority bits. Why is that not a universal Cortex-M33 fact?
+11. **(Reasoning)** Why is `cm-frame $sp ...` not automatically correct inside a handler?
+12. **(Reasoning)** Why does an MPU violation become another exception when
+    MemManage is disabled? What happens to `MMFSR`?
+13. **(Reasoning)** Must the handler save `r4-r11`? Why does hardware not stack them?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
 
 ---
 
 ## Takeaway
 
-- **Exception bir fonksiyon çağrısı değildir.** Yığma, mod değişimi, stack
-  seçimi ve geri yükleme **donanım** tarafından yapılır.
-- Basic frame **8 word**: `R0 R1 R2 R3 R12 LR PC xPSR`, en düşük adreste `R0`.
-  Volatile çalışma register'ları (`R0-R3`, `R12`) + kontrol akışı/durum
-  (`LR`, `PC`, `xPSR`). Tamamı "caller-saved küme" değildir. (FP ve güvenlik
-  varyantları vardır.)
-- Frame **o an aktif olan** stack'e yazılır; handler **her zaman MSP**
-  kullanır. `EXC_RETURN` bit 2 birincisini söyler, ikincisini değil.
-- `EXC_RETURN` `LR`'de taşınır; `PC`'ye yazıldığında işlemci onu bir adres
-  değil, **exception return komutu** olarak yorumlar.
-- `vector[0]` bir handler adresi değildir; başlangıç `MSP` değerini taşır.
-  "Bütün vector girdileri tektir" **yanlıştır**.
-- **Reset özel durumdur:** yığma yok, `EXC_RETURN` yok, dönüş yok;
-  `Reset_Handler` ayrıcalıklı Thread Mode'da `IPSR = 0` ile başlar.
-- Bir handler devre dışıysa fault kaybolmaz; **yükseltilir** (escalation) ve
-  `HFSR.FORCED` bunu söyler. Durum register'ları yine doğru yazılır.
+- **An exception is not a function call.** Stacking, mode changes, stack selection,
+  and restoration are performed by **hardware**.
+- Basic frame: **8 words**, `R0 R1 R2 R3 R12 LR PC xPSR`, with `R0` at the lowest
+  address. Volatile working registers (`R0-R3`, `R12`) + control flow/state
+  (`LR`, `PC`, `xPSR`). Not all are a "caller-saved set." (FP and security variants exist.)
+- The frame is written to the **currently active** stack; the handler **always
+  uses MSP**. `EXC_RETURN` bit 2 describes the former, not the latter.
+- `EXC_RETURN` is carried in `LR`; when written to `PC`, the processor interprets
+  it as **exception return**, not an address.
+- `vector[0]` is not a handler address; it holds the initial `MSP` value.
+  "All vector entries are odd" is **incorrect**.
+- **Reset is special:** no stacking, no `EXC_RETURN`, no return;
+  `Reset_Handler` starts in privileged Thread Mode with `IPSR = 0`.
+- Disabling a handler does not remove a fault; it **escalates**, and `HFSR.FORCED`
+  indicates this. Status registers are still written correctly.
 
 ---
 
 ## Official References
 
-- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — exception
-  numaralandırma, `IPSR`, vector table, exception entry/return, stack frame
-  yerleşimi, `EXC_RETURN`, `SPSEL`'in exception girişinde temizlenmesi,
-  öncelik modeli ve escalation.
+- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — exception numbering,
+  `IPSR`, vector table, exception entry/return, stack-frame layout, `EXC_RETURN`,
+  clearing `SPSEL` on exception entry, priority model, and escalation.
   <https://developer.arm.com/documentation/ddi0553/latest/>
-- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numaraları
-  (SVCall = 11, MemManage = 4, HardFault = 3), `EXC_RETURN` bit alanları.
+- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numbers
+  (SVCall = 11, MemManage = 4, HardFault = 3), `EXC_RETURN` bit fields.
   <https://developer.arm.com/documentation/107706/latest/>
-- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — `SHCSR`, system
-  handler active/enable bitleri, `VTOR`, öncelik register'ları.
+- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — `SHCSR`, system-handler
+  active/enable bits, `VTOR`, priority registers.
   <https://developer.arm.com/documentation/100235/latest/>
-- **AAPCS32** — volatile / callee-saved register ayrımı; frame'in `R0-R3`/`R12`
-  kısmının neden yığıldığı (`LR`/`PC`/`xPSR` ise kontrol akışı için).
+- **AAPCS32** — volatile / callee-saved registers; why the `R0-R3`/`R12` portion
+  is stacked (`LR`/`PC`/`xPSR` serve control flow).
   <https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst>
-- **CMSIS-Core (M)** — `__get_IPSR`, `__get_CONTROL`, `SCB`/`MPU` tanımları;
-  `ARM_MPU_Enable()`'ın `MEMFAULTENA`'yı set etmesi (bu repoda vendored:
+- **CMSIS-Core (M)** — `__get_IPSR`, `__get_CONTROL`, `SCB`/`MPU` definitions;
+  `ARM_MPU_Enable()` setting `MEMFAULTENA` (vendored here in
   `external/CMSIS/Core/Include/m-profile/armv8m_mpu.h`).
   <https://arm-software.github.io/CMSIS_6/latest/Core/index.html>
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
   `mps2-an505 / cortex-m33`, `debug` preset.
 
 ---
 
 ## Known Boundaries
 
-- **Basic frame odaklı.** Bu repo `-mfloat-abi=soft` ile derleniyor, FP
-  bağlamı hiç aktif olmuyor, bu yüzden tüm ölçümler 8 word frame üzerinde.
-  Genişletilmiş (FP) frame ve ek durum bağlamı (`DCRS = 0`) varyantları
-  **ölçülmedi**; `cm-frame` onları zaten reddediyor. FPU ders 13'te.
-- **Hizalama dolgusu bu çalıştırmalarda görülmedi** (`xPSR` bit 9 = 0). Donanım
-  gerektiğinde bir dolgu word'ü ekleyebilir; burada yalnızca ölçülen
-  sonuçlar gösteriliyor.
-- **Tek güvenlik durumu.** Secure state içinde çalışıyoruz. TrustZone'da
-  exception giriş/çıkışının güvenlik durumu boyutu vardır (`EXC_RETURN` bit 0
-  ve bit 6, ek frame varyantları) — ders 16.
-- **QEMU hedef konfigürasyonu.** 8 öncelik biti ve PPC davranışı bu
-  emülatörde ölçüldü; fiziksel MPS2+ AN505 doğrulanmadı.
-- **External IRQ örneği ertelendi.** AN505'in cihaza özel IRQ numaraları
-  doğrulanmadan `IRQn_Type`'a eklenmiyor. Bu
-  derste external interrupt numaralandırması **kavramsal** olarak anlatıldı
-  (`exception numarası = 16 + IRQ numarası`); çalışan bir cihaz IRQ örneği
-  ileriye bırakıldı.
-- **Öncelik gruplaması ertelendi.** `PRIGROUP`, subpriority ve iç içe
-  (nested) kesme senaryoları bu derste açılmadı — deterministik ve küçük bir
-  demo kurulamadığı için. Nested preemption fikri kavramsal olarak verildi.
-- **Pending bitlerini elle tetikleme** (örneğin `ICSR.PENDSVSET`) bilerek
-  ders 14'e bırakıldı.
+- **Basic-frame focus.** This repository is built with `-mfloat-abi=soft`; FP
+  context never becomes active, so all measurements use 8-word frames. Extended
+  (FP) frames and additional-state-context (`DCRS = 0`) variants were **not
+  measured**; `cm-frame` already rejects them. FPU is covered in Lesson 13.
+- **Alignment padding was not observed in these runs** (`xPSR` bit 9 = 0).
+  Hardware can add a padding word when needed; only measured results are shown here.
+- **One security state.** We run in Secure state. TrustZone adds a security-state
+  dimension to exception entry/exit (`EXC_RETURN` bits 0 and 6, extra frame
+  variants) — Lesson 16.
+- **QEMU target configuration.** The 8 priority bits and PPC behavior were
+  measured in this emulator; physical MPS2+ AN505 was not verified.
+- **External IRQ example deferred.** AN505 device-specific IRQ numbers are not
+  added to `IRQn_Type` without verification. External interrupt numbering is
+  explained **conceptually** here (`exception numarası = 16 + IRQ numarası`);
+  a working device IRQ example is left for later.
+- **Priority grouping deferred.** `PRIGROUP`, subpriority, and nested interrupt
+  scenarios were not implemented here because a small deterministic demonstration
+  could not be established. Nested preemption was introduced conceptually.
+- **Manually triggering pending bits**, such as `ICSR.PENDSVSET`, is deliberately
+  left to Lesson 14.
 
 ---
 

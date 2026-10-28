@@ -1,11 +1,12 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Decode an Exception Entry
 
-**Hedef:** Exception girişinden geriye dönüp "ne oldu" sorusunu cevaplayabilmek.
+**Goal:** work backwards from exception entry to answer "what happened?"
 
-## Görev
+## Task
 
-`main.c` içindeki `decode_exception_entry()` fonksiyonunu doldur. Üç girdi
-alıyor ve altı alanı dolduruyor:
+Complete `decode_exception_entry()` in `main.c`. It takes three inputs and fills six fields:
 
 ```c
 static void decode_exception_entry(const exception_frame_t *frame,
@@ -14,28 +15,27 @@ static void decode_exception_entry(const exception_frame_t *frame,
                                    entry_info_t *out);
 ```
 
-| Alan | Ne yazmalı | Nereden |
+| Field | What to write | Source |
 |---|---|---|
 | `interrupted_mode` | `"Thread"` / `"Handler"` | `EXC_RETURN` |
 | `frame_stack` | `"PSP"` / `"MSP"` | `EXC_RETURN` |
-| `exception_number` | Çalışan exception'ın numarası | `ipsr` |
-| `stacked_r0` | Frame'in `R0` yuvası | `frame` |
-| `stacked_pc` | Frame'in `PC` yuvası | `frame` |
-| `stacked_xpsr` | Frame'in `xPSR` yuvası | `frame` |
+| `exception_number` | Number of the executing exception | `ipsr` |
+| `stacked_r0` | Frame's `R0` slot | `frame` |
+| `stacked_pc` | Frame's `PC` slot | `frame` |
+| `stacked_xpsr` | Frame's `xPSR` slot | `frame` |
 
-## Kapsam
+## Scope
 
-Yalnızca bu repo'nun desteklediği alt küme: **standart 8 word frame, tek
-güvenlik durumu**. Her `EXC_RETURN` kuralını yeniden uygulaman istenmiyor —
-iki bit yeterli.
+Only the subset supported by this repository: **standard 8-word frame, one
+security state**. You are not asked to reimplement every `EXC_RETURN` rule —
+two bits suffice.
 
-## ⚠️ Tuzak
+## ⚠️ Pitfall
 
-`frame_stack` ile *"handler hangi stack'i kullanıyor"* **aynı soru değildir**.
+`frame_stack` and *"which stack does the handler use?"* are **not the same question**.
 
-- Birincisi `EXC_RETURN` bit 2'den gelir ve frame'in **nerede yığıldığını**
-  söyler.
-- İkincisinin cevabı **her zaman MSP**'dir.
+- The first comes from `EXC_RETURN` bit 2 and says **where the frame was stacked**.
+- The answer to the second is **always MSP**.
 
 ## Build & Run
 
@@ -44,7 +44,7 @@ cmake --build --preset debug --target 07-exercise-decode
 ./scripts/run-qemu.sh build/debug/lessons/07-exceptions/07-exercise-decode.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Actual starter output:
 
 ```text
 [4] Exception girisi cozumu
@@ -60,15 +60,15 @@ Başlangıç çıktısı (gerçek):
 [  CHECK_DECODE_XPSR] FAIL
 ```
 
-Firmware sorunsuz çalışıyor; yalnızca çözümleme boş. Bu **beklenen başlangıç
-durumudur**, bir bug değildir.
+The firmware runs correctly; only decoding is empty. This is the **expected
+starting state**, not a bug.
 
-## Doğrulama
+## Verification
 
-Altı `CHECK_DECODE_*` da `PASS` olmalı **ve** diğer bütün `CHECK_*` satırları
-`PASS` kalmalı.
+All six `CHECK_DECODE_*` checks must become `PASS` **and** every other `CHECK_*`
+line must remain `PASS`.
 
-Beklenen değerler (`svc #7`, PSP kaynaklı):
+Expected values (`svc #7`, PSP-origin):
 
 ```text
 INTERRUPTED_MODE  Thread
@@ -77,7 +77,7 @@ EXCEPTION_NUMBER  11
 STACKED_R0        0x11111111
 ```
 
-## Kendi ölçümünle doğrula
+## Verify with your own measurement
 
 ```gdb
 break svc_dispatch
@@ -87,24 +87,23 @@ cm-exc-return g_entry_lr
 cm-frame g_frame_addr g_entry_lr
 ```
 
-Fonksiyonunun çıkardığı sonuçlar `cm-frame`'in bastıklarıyla aynı mı?
+Do your function's results match what `cm-frame` prints?
 
-## Opsiyonel (DEEP) — Exercise 02
+## Optional (DEEP) — Exercise 02
 
-Şu `EXC_RETURN` değerlerini sınıflandır: Thread mi Handler mı, MSP mi PSP mi,
-basic mi extended mi, ve bu laboratuvarın `cm-frame` yardımcısı tarafından
-desteklenip desteklenmediği.
+Classify these `EXC_RETURN` values: Thread or Handler, MSP or PSP, basic or
+extended, and whether this lab's `cm-frame` helper supports them.
 
 ```text
 0xFFFFFFF9    0xFFFFFFFD    0xFFFFFFED    0xFFFFFFF1    0xFFFFFFF5
 ```
 
-Sonuncusunda dikkatli ol. Cevaplar `answers/quick-check.md` sonunda.
+Be careful with the last one. Answers are at the end of `answers/quick-check.md`.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-decode-exception-entry/`](../../solutions/01-decode-exception-entry/)
+Reference solution: [`../../solutions/01-decode-exception-entry/`](../../solutions/01-decode-exception-entry/)
 
 ---
 
-[← Ders 07](../../README.md)
+[← Lesson 07](../../README.md)
