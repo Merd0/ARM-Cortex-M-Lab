@@ -52,6 +52,27 @@ def prose(text):
     return FENCES.sub("", SWITCH.sub("", text))
 
 
+def comparison_text(path, text, row):
+    """Only the pre-existing portfolio landing has an additional source guide."""
+    if row.get("comparison_scope") is None:
+        return text
+    start = "<!-- i18n-original-guide:start -->"
+    end = "<!-- i18n-original-guide:end -->"
+    if path != "README.md" or row["comparison_scope"] != "original-guide":
+        raise ValueError("unsupported comparison scope")
+    if text.count(start) != 1 or text.count(end) != 1 or text.index(start) >= text.index(end):
+        raise ValueError("missing/duplicate original learning guide markers")
+    return text.split(start)[1].split(end)[0].strip() + "\n"
+
+
+def sections(text):
+    """Heading sequence and bodies, independent of translated heading wording."""
+    text = prose(text)
+    headings = list(re.finditer(r"^(#{1,6}) (.+)$", text, re.M))
+    return [(len(h[1]), text[h.start():headings[i + 1].start() if i + 1 < len(headings) else len(text)])
+            for i, h in enumerate(headings)]
+
+
 def heading_ids(text):
     counts = Counter()
     result = set(re.findall(r'<a\s+(?:id|name)=[\'"]([^\'"]+)', text))
@@ -137,6 +158,13 @@ def main():
                 failures.append(f"invalid language switch: {path}")
             if len(SWITCH.sub("", text).strip()) < 20:
                 failures.append(f"empty/placeholder document: {path}")
+        try:
+            english = comparison_text(en, english, row)
+        except ValueError as exc:
+            failures.append(f"invalid comparison scope: {en}: {exc}")
+            continue
+        if re.search(r"\{\{BLOCK\d+\}\}", english):
+            failures.append(f"unresolved translation block placeholder: {en}")
         source_blocks, english_blocks = block_contents(source), block_contents(english)
         if len(source_blocks) != len(english_blocks):
             failures.append(f"code/output block count mismatch: {en}")
@@ -164,6 +192,20 @@ def main():
                                           if m[2].startswith(("https://", "http://")))
         if references(source) != references(english):
             failures.append(f"official/external reference changed: {en}")
+        source_sections, english_sections = sections(source), sections(english)
+        if [level for level, _ in source_sections] != [level for level, _ in english_sections]:
+            failures.append(f"section hierarchy/order mismatch: {en}")
+        elif source_sections:
+            for index, ((_, before), (_, after)) in enumerate(zip(source_sections, english_sections), 1):
+                for label, pattern in (("inline commands", inline_pattern),
+                                       ("CHECK/hex values", token_pattern),
+                                       ("numbers", number_pattern)):
+                    if Counter(re.findall(pattern, before)) != Counter(re.findall(pattern, after)):
+                        failures.append(f"section {index} {label} mismatch: {en}")
+                before_body = before.partition("\n")[2].strip()
+                after_body = after.partition("\n")[2].strip()
+                if len(before_body) > 80 and len(after_body) < len(before_body) * 0.30:
+                    failures.append(f"section {index} missing/substantially shortened prose: {en}")
         completed += 1
     print(f"{completed}/{len(data['documents'])} translated pairs checked")
     print("Turkish preservation, source hashes, switches, blocks, headings, CHECK/hex values, navigation/anchors")
