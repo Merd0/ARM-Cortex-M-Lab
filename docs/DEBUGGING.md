@@ -1,17 +1,19 @@
-# Cortex-M Debugging Rehberi
+**Language:** English | [Türkçe](DEBUGGING.tr.md)
 
-Bu dosya komut listesi degil, **teshis akisi** ogretir.
-Komutlarin tam listesi icin: `scripts/gdb/cortex-m.gdb`
+# Cortex-M Debugging Guide
 
-## Kurulum: iki terminal
+This file teaches a **diagnostic workflow**, not a command list.
+For the full command list: `scripts/gdb/cortex-m.gdb`
 
-Terminal 1 - QEMU'yu durdurulmus baslat:
+## Setup: two terminals
+
+Terminal 1 - start QEMU halted:
 
 ```bash
 ./scripts/debug-qemu.sh build/debug/lessons/02-programmer-model/02-programmer-model.elf
 ```
 
-Terminal 2 - GDB'yi bagla:
+Terminal 2 - connect GDB:
 
 ```bash
 arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
@@ -19,52 +21,51 @@ arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
 (gdb) cm-connect
 ```
 
-`arm-none-eabi-gdb` yoksa `gdb-multiarch` ayni sekilde calisir.
+If `arm-none-eabi-gdb` is unavailable, `gdb-multiarch` works the same way.
 
-## Temel komutlar
+## Basic commands
 
-| Komut | Ne yapar |
+| Command | What it does |
 |---|---|
-| `break main` / `b main` | Fonksiyonda dur |
-| `continue` / `c` | Devam et |
-| `next` / `n` | Bir C satiri (fonksiyona girmez) |
-| `step` / `s` | Bir C satiri (fonksiyona girer) |
-| `stepi` / `si` | **Bir assembly komutu** |
-| `finish` | Fonksiyondan cik |
-| `info registers` | Tum core register'lar |
-| `p/x $sp` | Tek register, hex |
-| `x/16wx $sp` | Bellekten 16 word, hex |
-| `disassemble /s` | Kaynak ile karisik disassembly |
-| `watch my_var` | Degisken degisince dur |
-| `rwatch` / `awatch` | Okuma / her erisim |
+| `break main` / `b main` | Stop in a function |
+| `continue` / `c` | Continue |
+| `next` / `n` | One C line (without entering functions) |
+| `step` / `s` | One C line (entering functions) |
+| `stepi` / `si` | **One assembly instruction** |
+| `finish` | Return from the function |
+| `info registers` | All core registers |
+| `p/x $sp` | One register, hexadecimal |
+| `x/16wx $sp` | 16 memory words, hexadecimal |
+| `disassemble /s` | Disassembly mixed with source |
+| `watch my_var` | Stop when the variable changes |
+| `rwatch` / `awatch` | Read / any access |
 
-Cortex-M'e ozel repo komutlari (`scripts/gdb/cortex-m.gdb`):
+Repository-specific Cortex-M commands (`scripts/gdb/cortex-m.gdb`):
 
-| Komut | Kullanim |
+| Command | Usage |
 |---|---|
 | `cm-connect` | `target remote :3333` |
 | `cm-regs` | R0-R12, SP/LR/PC/xPSR + MSP/PSP/CONTROL/IPSR |
-| `cm-mode` | Mod, ayricalik, aktif stack |
-| `cm-stack` | Aktif SP'den 16 word HAM dokum (frame cozumu DEGIL) |
-| `cm-exc-return <deger>` | Bir EXC_RETURN degerini cozer |
-| `cm-frame <adres> <EXC_RETURN>` | Standart 8 word frame'i cozer (asagiya bak) |
-| `cm-fault` | CFSR/HFSR/MMFAR/BFAR + gecerlilik bitleri + set olan CFSR bitlerinin isimleri (`SET` satiri) |
-| `cm-vectors` | VTOR ve vector table girdileri |
+| `cm-mode` | Mode, privilege, active stack |
+| `cm-stack` | RAW dump of 16 words from active SP (NOT frame decoding) |
+| `cm-exc-return <deger>` | Decode an EXC_RETURN value |
+| `cm-frame <adres> <EXC_RETURN>` | Decode a standard 8-word frame (see below) |
+| `cm-fault` | CFSR/HFSR/MMFAR/BFAR + validity bits + names of set CFSR bits (`SET` line) |
+| `cm-vectors` | VTOR and vector-table entries |
 | `cm-mpu` | MPU_TYPE / MPU_CTRL |
 
-Onemli on kosul: baglanmadan once
+Important prerequisite, before connecting:
 
 ```text
 set architecture armv8-m.main
 ```
 
-Bu olmadan `$msp`, `$psp`, `$control`, `$psplim` gorunmez.
-(`set arm force-mode thumb` yalnizca disassembly modunu etkiler; mimari
-secimi DEGILDIR.)
+Without this, `$msp`, `$psp`, `$control`, and `$psplim` are not visible.
+(`set arm force-mode thumb` affects only disassembly mode; it is NOT architecture selection.)
 
-## Teshis akislari
+## Diagnostic workflows
 
-### "Program neden buraya geldi?"
+### "Why did the program get here?"
 
 ```text
 bt                 # cagri yigini
@@ -72,9 +73,9 @@ info frame         # mevcut frame
 p/x $lr            # nereye donecek
 ```
 
-`bt` anlamsiz gorunuyorsa stack bozulmus olabilir - asagiya bak.
+If `bt` looks meaningless, the stack may be corrupt - see below.
 
-### "Stack bozuldu mu?"
+### "Is the stack corrupt?"
 
 ```text
 cm-regs                     # SP mantikli bir araliktata mi?
@@ -82,18 +83,18 @@ p/x &__stack_limit
 p/x &__stack_top
 ```
 
-SP `__stack_limit`'in altina indiyse **stack overflow** var.
-SP bu araligin tamamen disindaysa yanlis stack pointer secilmis
-olabilir (CONTROL.SPSEL).
+If SP has fallen below `__stack_limit`, there is a **stack overflow**.
+If SP is entirely outside this range, the wrong stack pointer may have been
+selected (CONTROL.SPSEL).
 
 ```text
 x/32wx $sp                  # stack icerigi mantikli mi
 ```
 
-Donus adresleri `0x1000xxxx` (FLASH) araliginda gorunmeli.
-Rastgele degerler gormek bozulma isaretidir.
+Return addresses should appear in the `0x1000xxxx` (FLASH) range.
+Random-looking values are a sign of corruption.
 
-### "PC hangi komutta?"
+### "Which instruction is PC pointing to?"
 
 ```text
 x/i $pc                     # su anki komut
@@ -101,9 +102,9 @@ x/10i $pc-20                # cevresi
 info line *$pc              # hangi C satiri
 ```
 
-### "Bu fault neden olustu?"
+### "Why did this fault occur?"
 
-Sirali akis:
+Sequential workflow:
 
 ```text
 cm-mode                       # 1) Handler'da miyiz? Hangi exception?
@@ -113,25 +114,24 @@ cm-frame <adres> <EXC_RETURN> # 4) Frame'i coz
 x/i <stacked PC>              # 5) O komuta bak
 ```
 
-### `cm-frame` nasil kullanilir
+### How to use `cm-frame`
 
 ```text
 cm-frame <frame_adresi> <EXC_RETURN>
 ```
 
-Iki argumanin da SENIN tarafindan verilmesi bilincli bir tasarim karari:
+Requiring YOU to supply both arguments is a deliberate design choice:
 
-**Frame adresi.** Handler MSP uzerinde calisir, ama kesilen baglam frame'i
-PSP'ye yigmis olabilir. Ustelik handler'in kendi prolog'u MSP'yi frame'in
-basindan uzaklastirir. Yani **aktif `$sp` genel olarak frame adresi
-degildir** ve komut ondan tahmin etmez.
+**Frame address.** Handler runs on MSP, but the interrupted context may have
+stacked its frame on PSP. The handler's own prologue can also move MSP away from
+the start of the frame. Thus **active `$sp` is generally not the frame address**,
+and the command does not guess from it.
 
-**EXC_RETURN.** Frame TURUNU (standart / FP-genisletilmis, hangi stack,
-hangi guvenlik durumu) yalnizca o soyler. Degeri handler'a **girer girmez**
-`$lr`'den al; handler icinde bir C cagrisi yapildiktan sonra canli `$lr`
-artik EXC_RETURN olmayabilir.
+**EXC_RETURN.** Only this value identifies the frame TYPE (standard / FP-extended,
+which stack, which security state). Capture it from `$lr` **immediately on handler
+entry**; after a C call inside the handler, live `$lr` may no longer be EXC_RETURN.
 
-Tipik akis:
+Typical flow:
 
 ```text
 (gdb) b MyFault_Handler
@@ -142,112 +142,111 @@ Tipik akis:
 (gdb) cm-frame $msp $er          # bit2 = 0 ise (handler henuz stack kullanmadiysa)
 ```
 
-### `cm-frame` sınırları
+### Limits of `cm-frame`
 
-Bu komut desteklenmeyen frame türlerini ve geçersiz değerleri eler.
-Kontrollerin geçmesi, verilen adreste donanımın daha önce bir exception
-frame yazdığını doğrulamaz; yalnızca adres bilgisi bunun için yeterli değildir.
+This command rejects unsupported frame types and invalid values. Passing its
+checks does not establish that hardware previously wrote an exception frame at
+the supplied address; an address alone cannot establish that.
 
-Reddettigi durumlar:
+Rejected cases:
 
-Red mesajlari kategorilidir; hepsi tek bir genel hataya indirgenmez:
+Rejection messages have categories; they are not collapsed into a single generic error:
 
-| Etiket | Anlami |
+| Label | Meaning |
 |---|---|
-| `[BICIMSIZ EXC_RETURN]` | Deger mimari kodlamaya uymuyor |
-| `[DESTEKLENMIYOR]` | Mimari olarak gecerli, ama bu komut o bicimi cozmuyor |
-| `[STACKING HATASI]` | Donanim frame'i yigamamis olabilir |
-| `[GECERSIZ FRAME ADRESI]` | Hizasiz veya RAM penceresi disinda |
-| `[GECERSIZ FRAME ICERIGI]` | Okunan degerler frame olamaz |
+| `[BICIMSIZ EXC_RETURN]` | Value does not match the architectural encoding |
+| `[DESTEKLENMIYOR]` | Architecturally valid, but this command does not decode that format |
+| `[STACKING HATASI]` | Hardware may have failed to stack the frame |
+| `[GECERSIZ FRAME ADRESI]` | Misaligned or outside the RAM window |
+| `[GECERSIZ FRAME ICERIGI]` | The values read cannot form a frame |
 
-| Kontrol | Kategori | Red sebebi |
+| Check | Category | Rejection reason |
 |---|---|---|
-| EXC_RETURN[31:7] | BICIMSIZ | RES1'dir, hepsi 1 olmali. **Yalnizca `0xFFFFFF` onekine bakmak YETMEZ** |
-| EXC_RETURN[1] | BICIMSIZ | Ayrilmistir, sifir olmak zorunda (`0xFFFFFFFF` bu yuzden gecersiz) |
-| `Mode = 0` + `SPSEL = 1` | BICIMSIZ | Handler Mode Main stack kullanir; boyle bir kodlama yok (`0xFFFFFFF5`) |
-| `FType = 0` | DESTEKLENMIYOR | FP-genisletilmis frame (FPU ders 13) |
-| `DCRS = 0` | DESTEKLENMIYOR | Ek durum baglami (callee register'lari yigilmis) |
-| `ES != S` | DESTEKLENMIYOR | Guvenlik durumlari arasi gecis (ders 16) |
-| CFSR stacking biti | STACKING HATASI | STKOF / STKERR / MSTKERR |
-| Adres hizasi | GECERSIZ FRAME ADRESI | 4'un kati degil |
-| Adres araligi | GECERSIZ FRAME ADRESI | Platform RAM penceresi disinda |
-| Yigilmis xPSR | GECERSIZ FRAME ICERIGI | T biti (bit24) sifir - Cortex-M'de imkansiz |
-| Yigilmis PC | GECERSIZ FRAME ICERIGI | 0, tek sayi, veya kod penceresi disinda |
+| EXC_RETURN[31:7] | BICIMSIZ | RES1, all must be 1. **Checking only the `0xFFFFFF` prefix is NOT ENOUGH** |
+| EXC_RETURN[1] | BICIMSIZ | Reserved, must be zero (this makes `0xFFFFFFFF` invalid) |
+| `Mode = 0` + `SPSEL = 1` | BICIMSIZ | Handler Mode uses the Main stack; no such encoding exists (`0xFFFFFFF5`) |
+| `FType = 0` | DESTEKLENMIYOR | FP-extended frame (FPU, Lesson 13) |
+| `DCRS = 0` | DESTEKLENMIYOR | Additional state context (callee registers stacked) |
+| `ES != S` | DESTEKLENMIYOR | Transition between security states (Lesson 16) |
+| CFSR stacking bit | STACKING HATASI | STKOF / STKERR / MSTKERR |
+| Address alignment | GECERSIZ FRAME ADRESI | Not a multiple of 4 |
+| Address range | GECERSIZ FRAME ADRESI | Outside the platform RAM window |
+| Stacked xPSR | GECERSIZ FRAME ICERIGI | T bit (bit24) zero - impossible on Cortex-M |
+| Stacked PC | GECERSIZ FRAME ICERIGI | 0, odd, or outside the code window |
 
-Pratikte desteklenen EXC_RETURN degerleri yalnizca sunlardir:
+In practice, only the following EXC_RETURN values are supported:
 
-`cm-frame`, mimari olarak gecerli EXC_RETURN bicimlerinin **bilincli olarak
-secilmis bir ALT KUMESINI** destekler: standart frame (`FType=1`), varsayilan
-callee yigmasi (`DCRS=1`) ve tek guvenlik durumu (`ES == S`). Geriye alti
-deger kalir:
+`cm-frame` supports a **deliberately selected SUBSET** of architecturally valid
+EXC_RETURN formats: standard frame (`FType=1`), default callee stacking
+(`DCRS=1`), and one security state (`ES == S`). Six values remain:
 
-| Deger | ES | S | Mode | SPSEL | Anlami |
+| Value | ES | S | Mode | SPSEL | Meaning |
 |---|---|---|---|---|---|
-| `0xFFFFFFF1` | 1 | 1 | 0 | 0 | Secure, Handler Mode'a donus, frame MSP'de |
-| `0xFFFFFFF9` | 1 | 1 | 1 | 0 | Secure, Thread Mode'a donus, frame MSP'de |
-| `0xFFFFFFFD` | 1 | 1 | 1 | 1 | Secure, Thread Mode'a donus, frame PSP'de |
-| `0xFFFFFFB0` | 0 | 0 | 0 | 0 | Non-secure, Handler Mode'a donus, frame MSP'de |
-| `0xFFFFFFB8` | 0 | 0 | 1 | 0 | Non-secure, Thread Mode'a donus, frame MSP'de |
-| `0xFFFFFFBC` | 0 | 0 | 1 | 1 | Non-secure, Thread Mode'a donus, frame PSP'de |
+| `0xFFFFFFF1` | 1 | 1 | 0 | 0 | Secure, return to Handler Mode, frame on MSP |
+| `0xFFFFFFF9` | 1 | 1 | 1 | 0 | Secure, return to Thread Mode, frame on MSP |
+| `0xFFFFFFFD` | 1 | 1 | 1 | 1 | Secure, return to Thread Mode, frame on PSP |
+| `0xFFFFFFB0` | 0 | 0 | 0 | 0 | Non-secure, return to Handler Mode, frame on MSP |
+| `0xFFFFFFB8` | 0 | 0 | 1 | 0 | Non-secure, return to Thread Mode, frame on MSP |
+| `0xFFFFFFBC` | 0 | 0 | 1 | 1 | Non-secure, return to Thread Mode, frame on PSP |
 
-Alti degerin hepsinde `[31:7]` RES1 (hepsi bir), `[1] = 0`, `FType = 1`,
-`DCRS = 1`, ve `Mode = 0` olan satirlarda `SPSEL = 0`.
+In all six values, `[31:7]` is RES1 (all ones), `[1] = 0`, `FType = 1`,
+`DCRS = 1`, and rows with `Mode = 0` have `SPSEL = 0`.
 
-**Sik yapilan hata:** `0xFFFFFFB1` / `0xFFFFFFB9` / `0xFFFFFFBD`
-desteklenmez. Bu degerlerde `ES = 1` ama `S = 0`'dir — yani exception
-Secure durumdan alinmis ama frame Non-secure stack'tedir. Bu mimari olarak
-gecerli bir guvenlik durumu gecisidir; `cm-frame` onu
-`[DESTEKLENMIYOR]` olarak reddeder (ders 16).
+**Common mistake:** `0xFFFFFFB1` / `0xFFFFFFB9` / `0xFFFFFFBD` are unsupported.
+In these values, `ES = 1` but `S = 0` — the exception was taken from Secure
+state, but the frame is on the Non-secure stack. This is an architecturally valid
+security-state transition; `cm-frame` rejects it as `[DESTEKLENMIYOR]` (Lesson 16).
 
-Kaynak: Armv8-M Exception Model User Guide (Arm 107706), EXC_RETURN bit
-alanlari tablosu — `[31:7] RES1`, `[6] S`, `[5] DCRS`, `[4] FType`,
-`[3] Mode`, `[2] SPSEL`, `[1]` ayrilmis, `[0] ES`.
+Source: Armv8-M Exception Model User Guide (Arm 107706), EXC_RETURN bit-field
+table — `[31:7] RES1`, `[6] S`, `[5] DCRS`, `[4] FType`, `[3] Mode`,
+`[2] SPSEL`, `[1]` reserved, `[0] ES`.
 
-Platform pencereleri `$cm_ram_start` / `$cm_ram_end` ve `$cm_code_start` /
-`$cm_code_end` degiskenlerinden ayarlanabilir.
+Platform windows can be configured through `$cm_ram_start` / `$cm_ram_end`
+and `$cm_code_start` / `$cm_code_end`.
 
-CFSR okuma rehberi:
+CFSR reading guide:
 
-| Alan | Bit araligi | Anlami |
+| Field | Bit range | Meaning |
 |---|---|---|
-| MMFSR | CFSR[7:0] | MemManage - genelde MPU ihlali |
-| BFSR | CFSR[15:8] | BusFault - gecersiz bellek erisimi |
-| UFSR | CFSR[31:16] | UsageFault - gecersiz komut/durum |
+| MMFSR | CFSR[7:0] | MemManage - usually an MPU violation |
+| BFSR | CFSR[15:8] | BusFault - invalid memory access |
+| UFSR | CFSR[31:16] | UsageFault - invalid instruction/state |
 
-Sik gorulen bitler:
+Common bits:
 
-| Bit | Isim | Anlami |
+| Bit | Name | Meaning |
 |---|---|---|
-| CFSR[1] | MMFSR.DACCVIOL | Veri erisimi MPU'ya takildi |
-| CFSR[7] | MMFSR.MMARVALID | MMFAR gecerli adres iceriyor |
-| CFSR[9] | BFSR.PRECISERR | Hatanin adresi kesin |
-| CFSR[12] | BFSR.STKERR | **Exception stacking sirasinda hata** |
-| CFSR[15] | BFSR.BFARVALID | BFAR gecerli adres iceriyor |
-| CFSR[16] | UFSR.UNDEFINSTR | Tanimsiz komut |
-| CFSR[17] | UFSR.INVSTATE | Gecersiz state (cogunlukla Thumb biti 0) |
-| HFSR[30] | FORCED | Baska bir fault **escalate** oldu |
+| CFSR[1] | MMFSR.DACCVIOL | Data access blocked by the MPU |
+| CFSR[7] | MMFSR.MMARVALID | MMFAR contains a valid address |
+| CFSR[9] | BFSR.PRECISERR | Fault address is precise |
+| CFSR[12] | BFSR.STKERR | **Error during exception stacking** |
+| CFSR[15] | BFSR.BFARVALID | BFAR contains a valid address |
+| CFSR[16] | UFSR.UNDEFINSTR | Undefined instruction |
+| CFSR[17] | UFSR.INVSTATE | Invalid state (often Thumb bit 0) |
+| HFSR[30] | FORCED | Another fault **escalated** |
 
-`HFSR.FORCED = 1` gordugunde: "asil hata HardFault degil". Gercek sebep
-CFSR'dedir; ilgili fault handler kapali oldugu icin HardFault'a yukselmistir.
+When you see `HFSR.FORCED = 1`: "the original fault is not HardFault."
+The actual cause is in CFSR; it escalated to HardFault because the corresponding
+fault handler was disabled.
 
-### Ozel durum: stacking'in kendisi basarisizsa
+### Special case: stacking itself fails
 
-`BFSR.STKERR`, `UFSR.STKOF` veya `MMFSR.MSTKERR` set ise donanim exception
-frame'ini **yigamamis** olabilir; bellekte guvenilir bir frame yoktur.
-`cm-frame` bu bitleri gördüğünde güvenilir olmayan belleği register
-değerleri olarak yorumlamamak için çözümlemeyi **reddeder**.
+If `BFSR.STKERR`, `UFSR.STKOF`, or `MMFSR.MSTKERR` is set, hardware may have
+**failed to stack** the exception frame; there is no trustworthy frame in memory.
+`cm-frame` **refuses** to decode when it sees these bits, rather than interpreting
+untrustworthy memory as register values.
 
-Bu repoda iki ornek var:
+This repository contains two examples:
 
-| Ders | Bit | Senaryo |
+| Lesson | Bit | Scenario |
 |---|---|---|
-| 02 "Break It" | `BFSR.STKERR` | PSP bilerek gecersiz, sonra SPSEL = 1 |
-| 04 "Break It" | `UFSR.STKOF` | `PSPLIM` + derin ozyineleme |
+| 02 "Break It" | `BFSR.STKERR` | Deliberately invalid PSP, then SPSEL = 1 |
+| 04 "Break It" | `UFSR.STKOF` | `PSPLIM` + deep recursion |
 
-Dikkat: bu bitler **yapiskandir (sticky)**. Eski bir hatadan kalmis
-olabilirler; emin degilsen 1 yazarak temizleyip tekrar dene.
+Note: these bits are **sticky**. They may remain from an earlier fault;
+if unsure, clear them by writing 1 and try again.
 
-### "Degisken neden degisiyor?"
+### "Why is the variable changing?"
 
 ```text
 watch counter
@@ -255,19 +254,19 @@ continue
 bt                 # degistiren kod kim
 ```
 
-`-O2` ile derlenmis kodda degisken register'a alinmis olabilir ve
-watchpoint calismayabilir. Once `-O0`/`Debug` preset ile dene.
+In code compiled with `-O2`, the variable may be held in a register and a
+watchpoint may not work. First try `-O0`/the `Debug` preset.
 
-### "Optimizasyon degiskenimi yedi"
+### "Optimization ate my variable"
 
 ```text
 <optimized out>
 ```
 
-Derleyici değişkeni optimizasyon sırasında kaldırdığı için GDB onu gösteremiyor.
-`Debug` preset (`-Og -g3`) kullan veya degiskeni `volatile` yap.
+GDB cannot display it because the compiler eliminated the variable during
+optimization. Use the `Debug` preset (`-Og -g3`) or make the variable `volatile`.
 
-## Reset'ten itibaren adim adim gitmek
+## Stepping from reset
 
 ```text
 cm-connect
@@ -278,9 +277,9 @@ break main
 c
 ```
 
-Startup'i bu sekilde izlemek ders 11'in ana egzersizidir.
+Tracing startup this way is the main exercise of Lesson 11.
 
-## QEMU tarafindaki ipuclari
+## QEMU-side tips
 
 ```bash
 # Gecersiz bellek erisimlerini logla
@@ -296,7 +295,7 @@ qemu-system-arm -M mps2-an505 -kernel fw.elf -nographic \
 
 ## Fault triage
 
-Sistematik fault teshis listesi ders 08'de:
+The systematic fault-diagnosis checklist is in Lesson 08:
 [`lessons/08-faults/README.md`](../lessons/08-faults/README.md) → "Cortex-M Fault Triage".
-Kisa hali: IPSR → HFSR.FORCED → CFSR alt alani → sebep bitleri → VALID bitleri →
-yigma hatasi → EXC_RETURN → frame → disassembly.
+Short form: IPSR → HFSR.FORCED → CFSR subfield → cause bits → VALID bits →
+stacking error → EXC_RETURN → frame → disassembly.

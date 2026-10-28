@@ -1,95 +1,98 @@
-# Glossary - Embedded/Arm Terimleri
+**Language:** English | [Türkçe](GLOSSARY.tr.md)
 
-Terimler, resmi dokümantasyonu takip etmeyi kolaylaştırmak için İngilizce
-biçimleriyle verilmiştir. Yanlarında kısa Türkçe açıklamaları yer alır.
+# Glossary - Embedded/Arm Terms
 
-## Mimari
+Terms use their English forms to make official documentation easier to follow.
+The original Turkish guide accompanies them with short Turkish explanations;
+their English equivalents are provided here.
 
-| Terim | Kisa aciklama |
+## Architecture
+
+| Term | Short explanation |
 |---|---|
-| **programmer model** (programci modeli) | Yazilimin gordugu register/mode/state kumesi |
-| **Thread Mode** (is parcacigi modu) | Normal uygulama kodunun calistigi mod |
-| **Handler Mode** (isleyici modu) | Exception islerken girilen mod, her zaman privileged |
-| **privileged / unprivileged** (ayricalikli / ayricalisiz) | Sistem register'larina erisim hakki olan/olmayan calisma seviyesi |
-| **T32 / Thumb** | Cortex-M'in kullandigi komut seti; 16 ve 32 bit komutlar karisik |
-| **Thumb bit** | Adreslerin bit 0'i; 1 olmak zorunda, 0 ise UsageFault |
-| **banked register** (bolunmus register) | Mode/state'e gore farkli kopyasi olan register (orn. MSP/PSP) |
+| **programmer model** | Set of registers/modes/states visible to software |
+| **Thread Mode** | Mode in which normal application code runs |
+| **Handler Mode** | Mode entered while handling an exception, always privileged |
+| **privileged / unprivileged** | Execution level with/without access to system registers |
+| **T32 / Thumb** | Cortex-M instruction set; mixed 16- and 32-bit instructions |
+| **Thumb bit** | Bit 0 of addresses; must be 1, otherwise UsageFault |
+| **banked register** | Register with different copies according to mode/state (e.g. MSP/PSP) |
 
-## Register'lar
+## Registers
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **R0-R12** | Genel amacli register'lar |
-| **SP (R13)** | Stack pointer; aktif olan MSP veya PSP'dir |
-| **MSP** (ana stack pointer) | Main Stack Pointer - reset ve handler'larda kullanilir |
-| **PSP** (surec stack pointer) | Process Stack Pointer - genelde task/uygulama stack'i |
-| **LR (R14)** (baglanti register'i) | Donus adresi; exception icinde EXC_RETURN tutar |
-| **PC (R15)** (program sayaci) | Calisan komutun adresi |
-| **xPSR** (program durum register'i) | APSR + IPSR + EPSR birlesimi |
-| **APSR** | N/Z/C/V gibi kosul bayraklari |
-| **IPSR** | Calisan exception numarasi (0 = Thread Mode) |
-| **CONTROL** | nPRIV (privilege) ve SPSEL (hangi stack) bitleri |
+| **R0-R12** | General-purpose registers |
+| **SP (R13)** | Stack pointer; the active MSP or PSP |
+| **MSP** | Main Stack Pointer - used at reset and in handlers |
+| **PSP** | Process Stack Pointer - usually the task/application stack |
+| **LR (R14)** | Link register; return address, holds EXC_RETURN in an exception |
+| **PC (R15)** | Program counter; address of the executing instruction |
+| **xPSR** | Program status register; combination of APSR + IPSR + EPSR |
+| **APSR** | Condition flags such as N/Z/C/V |
+| **IPSR** | Currently executing exception number (0 = Thread Mode) |
+| **CONTROL** | nPRIV (privilege) and SPSEL (which stack) bits |
 
-## Stack ve cagri
+## Stack and calls
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **full descending stack** (tam azalan yigin) | SP once azalir sonra yazilir; yukaridan asagi buyur |
-| **AAPCS** | Arm fonksiyon cagri sozlesmesi (argumanlar, donus, korunan register'lar) |
-| **caller-saved** (cagiran korur) | R0-R3, R12; cagrilan fonksiyon bozabilir |
-| **callee-saved** (cagrilan korur) | R4-R11; kullanilacaksa kaydedilip geri yuklenmeli |
-| **stack frame** (yigin cercevesi) | Bir fonksiyonun stack uzerindeki alani |
-| **stack alignment** (yigin hizalama) | AAPCS geregi 8 byte hizalama |
+| **full descending stack** | SP decreases before the write; grows downward |
+| **AAPCS** | Arm function calling convention (arguments, return, preserved registers) |
+| **caller-saved** | R0-R3, R12; the called function may clobber them |
+| **callee-saved** | R4-R11; must be saved and restored if used |
+| **stack frame** | A function's area on the stack |
+| **stack alignment** | 8-byte alignment required by AAPCS |
 
 ## Exception
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **exception** (istisna) | Normal akisi kesen donanim olayi |
-| **exception entry** (istisnaya giris) | Donanimin otomatik yigma + Handler Mode'a gecis sureci |
-| **hardware stacking** (donanim yigmasi) | R0-R3, R12, LR, PC, xPSR'nin otomatik yigilmasi |
-| **EXC_RETURN** | Exception'da LR'ye konan ozel deger; donus sekliyle ilgili bilgi tasir |
-| **NVIC** | Nested Vectored Interrupt Controller - kesme onceliklendirme |
-| **vector table** (vektor tablosu) | Exception handler adresleri tablosu |
-| **escalation** (yukselme) | Islenemeyen bir fault'un HardFault'a donusmesi |
-| **PendSV** | Dusuk oncelikli, context switch icin kullanilan exception |
-| **SVC** (supervisor call) | Yazilimin bilerek uretttigi exception - sistem cagrisi |
+| **exception** | Hardware event interrupting normal flow |
+| **exception entry** | Hardware's automatic stacking + transition to Handler Mode |
+| **hardware stacking** | Automatic stacking of R0-R3, R12, LR, PC, xPSR |
+| **EXC_RETURN** | Special value placed in LR during an exception; describes the return |
+| **NVIC** | Nested Vectored Interrupt Controller - interrupt prioritization |
+| **vector table** | Table of exception handler addresses |
+| **escalation** | An unhandled fault becoming a HardFault |
+| **PendSV** | Low-priority exception used for context switching |
+| **SVC** | Supervisor call; exception deliberately generated by software - system call |
 
 ## Fault
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **HardFault** | En yuksek oncelikli, her seyi yakalayan fault |
-| **MemManage** | MPU ihlali |
-| **BusFault** | Bellek/bus erisim hatasi |
-| **UsageFault** | Gecersiz komut/durum, hizalama, sifira bolme |
-| **CFSR** | Configurable Fault Status Register - hatanin turu |
-| **MMFAR / BFAR** | Hataya sebep olan adres |
+| **HardFault** | Highest-priority catch-all fault |
+| **MemManage** | MPU violation |
+| **BusFault** | Memory/bus access error |
+| **UsageFault** | Invalid instruction/state, alignment, division by 0 |
+| **CFSR** | Configurable Fault Status Register - fault type |
+| **MMFAR / BFAR** | Address causing the fault |
 
-## Bellek ve build
+## Memory and build
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **MPU** (bellek koruma birimi) | Bolge bazli erisim izni donanimi |
-| **linker script** (baglayici betigi) | Section'larin hangi adrese gidecegini tanimlar |
-| **section** (bolum) | `.text`, `.rodata`, `.data`, `.bss` gibi kod/veri gruplari |
-| **VMA / LMA** | Calisma adresi / yuklenme adresi (`.data` icin farklidir) |
-| **map file** (harita dosyasi) | Linker'in nereye ne koydugunu anlatan rapor |
-| **ELF** | Derlenmis ciktinin standart dosya formati |
-| **startup code** (baslatma kodu) | Reset'ten main'e kadar calisan kod |
-| **scatter-loading** | Arm Compiler'in bellek yerlesimi tanimlama yontemi (GNU ld'de linker script) |
+| **MPU** | Memory protection unit; region-based access-permission hardware |
+| **linker script** | Defines the addresses at which sections are placed |
+| **section** | Code/data groups such as `.text`, `.rodata`, `.data`, `.bss` |
+| **VMA / LMA** | Runtime address / load address (different for `.data`) |
+| **map file** | Linker report showing what was placed where |
+| **ELF** | Standard file format for compiled output |
+| **startup code** | Code running from reset to main |
+| **scatter-loading** | Arm Compiler's memory-layout specification method (linker script in GNU ld) |
 
-## Ileri konular
+## Advanced topics
 
-| Terim | Kisa aciklama |
+| Term | Short explanation |
 |---|---|
-| **memory barrier** (bellek bariyeri) | DSB/DMB/ISB - erisim ve komut siralamasini zorlar |
-| **exclusive access** (ozel erisim) | LDREX/STREX ile atomik guncelleme mekanizmasi |
-| **lazy stacking** (tembel yigma) | FPU register'larinin gerekene kadar yigilmamasi |
-| **TrustZone** | Secure / Non-secure ayrimi saglayan guvenlik uzantisi |
-| **SAU** | Security Attribution Unit - hangi adres secure |
-| **NSC** (non-secure callable) | Non-secure kodun cagirabildigi secure giris noktalari |
+| **memory barrier** | DSB/DMB/ISB - enforces access and instruction ordering |
+| **exclusive access** | Atomic-update mechanism using LDREX/STREX |
+| **lazy stacking** | Deferring the stacking of FPU registers until needed |
+| **TrustZone** | Security extension providing Secure / Non-secure separation |
+| **SAU** | Security Attribution Unit - which addresses are secure |
+| **NSC** (non-secure callable) | Secure entry points callable by Non-secure code |
 | **PACBTI** | Pointer Authentication + Branch Target Identification |
-| **MVE / Helium** | M-profile vektor uzantisi (Cortex-M55/M85) |
-| **DWT** | Data Watchpoint and Trace - watchpoint ve sayaclar |
-| **semihosting** | Debugger uzerinden host I/O kullanma yontemi |
+| **MVE / Helium** | M-profile vector extension (Cortex-M55/M85) |
+| **DWT** | Data Watchpoint and Trace - watchpoints and counters |
+| **semihosting** | Method of using host I/O through a debugger |
