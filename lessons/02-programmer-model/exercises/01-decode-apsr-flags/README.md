@@ -1,24 +1,25 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — `decode_apsr_flags()`
 
-**Hedef:** ham `APSR` değerini okunabilir bayrak satırına çevirmek.
+**Goal:** turn a raw `APSR` value into a readable line of flags.
 
-## Görev
+## Task
 
-`main.c` içindeki `decode_apsr_flags()` fonksiyonunu doldur. Üretmesi gereken
-satır:
+Complete `decode_apsr_flags()` in `main.c`. It must produce this line:
 
 ```text
 [FLAGS] N=0 Z=1 C=1 V=0
 ```
 
-Bit konumları (Armv8-M ARM, "APSR"):
+Bit positions (Armv8-M ARM, "APSR"):
 
-| Bit | Bayrak | Anlamı |
+| Bit | Flag | Meaning |
 |---|---|---|
-| 31 | N | Negative — sonuç negatif |
-| 30 | Z | Zero — sonuç sıfır |
-| 29 | C | Carry — çıkarmada "borrow yok" |
-| 28 | V | Overflow — işaretli taşma |
+| 31 | N | Negative — the result is negative |
+| 30 | Z | Zero — the result is zero |
+| 29 | C | Carry — "no borrow" for subtraction |
+| 28 | V | Overflow — signed overflow |
 
 ## Build & Run
 
@@ -27,25 +28,25 @@ cmake --build --preset debug --target 02-exercise-apsr
 ./scripts/run-qemu.sh build/debug/lessons/02-programmer-model/02-exercise-apsr.elf
 ```
 
-## Doğrulama
+## Verification
 
-| İşlem | Beklenen |
+| Operation | Expected |
 |---|---|
 | `5 - 5` | `Z = 1` |
 | `5 - 7` | `N = 1` |
 
-`C` ve `V` için beklentini **çalıştırmadan önce** bir yere yaz. Sonuç beklentinden
-farklıysa ilgili bayrağın nasıl oluştuğunu incele.
+Write down your expectations for `C` and `V` **before running**. If the result
+differs, investigate how the corresponding flag is generated.
 
-## İpucu
+## Hint
 
-`console_puts()` ve `console_putc()` yeterli. `'0' + bit` ifadesi bir biti
-doğrudan karaktere çevirir. Yeni yardımcı fonksiyon gerekmez.
+`console_puts()` and `console_putc()` suffice. `'0' + bit` converts a bit directly
+to a character. No new helper function is needed.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-decode-apsr-flags/`](../../solutions/01-decode-apsr-flags/)
+Reference solution: [`../../solutions/01-decode-apsr-flags/`](../../solutions/01-decode-apsr-flags/)
 
 ---
 
-[← Ders 02](../../README.md)
+[← Lesson 02](../../README.md)
