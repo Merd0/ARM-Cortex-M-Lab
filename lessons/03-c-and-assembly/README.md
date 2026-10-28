@@ -45,8 +45,8 @@ The complete algorithm appears in Lesson 09.
 There is a distinction between two branch instructions:
 
 ```text
-B   <hedef>     sadece dallan.       lr'ye DOKUNMAZ.
-BL  <hedef>     dallan ve BAGLA.     lr = bir sonraki komutun adresi.
+B   <target>     branch only.       does NOT change lr.
+BL  <target>     branch and LINK.     lr = address of the next instruction.
 ```
 
 The **L** in `BL` means "Link." This is what writes the return address to `lr` —
@@ -86,10 +86,10 @@ finds their belongings missing. That is exactly what Break It demonstrates.
 flowchart TD
     A["C caller<br/>int x = add_numbers(7, 5);"]
     B["movs r0, #7<br/>movs r1, #5"]
-    C["BL add_numbers<br/>lr = dönüş adresi"]
+    C["BL add_numbers<br/>lr = return address"]
     D["Assembly callee<br/>adds r0, r0, r1"]
     E["BX lr"]
-    F["C caller devam eder<br/>mov r5, r0"]
+    F["C caller resumes<br/>mov r5, r0"]
 
     A --> B --> C --> D --> E --> F
 ```
@@ -97,14 +97,14 @@ flowchart TD
 Register ownership:
 
 ```text
-        cagiran (caller)                cagrilan (callee)
+        caller                callee
         ----------------                -----------------
-r0-r3   argumanlari yerlestirir  -->    serbestce kullanabilir
-                                        sonucu r0'a koyar
-lr      BL ile otomatik dolar    -->    bozacaksa once stack'e itmeli
-r4-r8   kendi degerlerim          -->   kullanacaksa SAKLA ve GERI VER
+r0-r3   places arguments  -->    may use freely
+                                        places result in r0
+lr      automatically set by BL    -->    must first stack if overwriting
+r4-r8   my own values          -->   SAVE and RESTORE if used
 r10,r11
-sp      dengede kalmali           -->   ittigini geri almali
+sp      must stay balanced           -->   must remove what it pushed
 ```
 
 ---
@@ -157,11 +157,11 @@ The actual risk **depends on which declarations coexist**. Measurements in this
 repository (arm-none-eabi-gcc 13.2.1, binutils 2.42):
 
 ```text
-.thumb + .type f,%function  (.thumb_func YOK):
-    readelf -s -> 6: 00000001  0 FUNC   GLOBAL ... f      <- bit0 = 1, sorun yok
+.thumb + .type f,%function  (NO .thumb_func):
+    readelf -s -> 6: 00000001  0 FUNC   GLOBAL ... f      <- bit0 = 1, no problem
 
-.thumb, tip isareti de YOK:
-    readelf -s -> 6: 00000000  0 NOTYPE GLOBAL ... g      <- bit0 = 0, INVSTATE riski
+.thumb, NO type annotation either:
+    readelf -s -> 6: 00000000  0 NOTYPE GLOBAL ... g      <- bit0 = 0, INVSTATE risk
 ```
 
 The determining factor is not `.thumb_func` alone but **whether the symbol is
@@ -262,11 +262,11 @@ arm-none-eabi-objdump -d build/debug/lessons/03-c-and-assembly/03-c-and-assembly
 Actual output:
 
 ```text
-10000040 <add_numbers>:            ; elle yazılmış
+10000040 <add_numbers>:            ; handwritten
 10000040:  1840        adds  r0, r0, r1
 10000042:  4770        bx    lr
 
-10000054 <add_numbers_c>:          ; derleyici üretti
+10000054 <add_numbers_c>:          ; compiler-generated
 10000054:  4408        add   r0, r1
 10000056:  4770        bx    lr
 ```
@@ -483,7 +483,7 @@ Actual output (only the last line changes):
 [ADD_NUMBERS_C(7,5)] 12
 [SAME_RESULT] YES
 --- callee-saved ---
-[ACCUMULATE(7,5)] 5          <-- 12 olmalıydı
+[ACCUMULATE(7,5)] 5          <-- should have been 12
 ===== END =====
 ```
 
@@ -515,7 +515,7 @@ At entry (actual output):
 ```text
 r0    0x7    7
 r1    0x5    5
-r4    0xc    12        <-- caller'a ait, önceki bir değer
+r4    0xc    12        <-- a previous value belonging to the caller
 ```
 
 Now continue until **after** the `helper` call. Use `disassemble accumulate`

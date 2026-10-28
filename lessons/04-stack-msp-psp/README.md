@@ -63,9 +63,9 @@ registers (banked register):
 **`CONTROL.SPSEL`** (bit 1) selects between them:
 
 ```text
-Thread Mode,  SPSEL = 0  ->  SP, MSP'yi gösterir
-Thread Mode,  SPSEL = 1  ->  SP, PSP'yi gösterir
-Handler Mode              ->  SP, MSP'yi gösterir (SPSEL'in değeri ne olursa olsun)
+Thread Mode,  SPSEL = 0  ->  SP refers to MSP
+Thread Mode,  SPSEL = 1  ->  SP refers to PSP
+Handler Mode              ->  SP refers to MSP (regardless of SPSEL)
 ```
 
 After reset, `CONTROL = 0`, so MSP is active. On exception entry, the processor
@@ -95,7 +95,7 @@ Writing `CONTROL` neither moves the existing frame nor creates a new one.
 The correct boundary is:
 
 ```text
-MSP uzerinde C  ->  kucuk assembly gecisi  ->  PSP uzerinde TAZE bir C girisi
+C on MSP  ->  small assembly transition  ->  FRESH C entry on PSP
 ```
 
 The assembly fragment operates without the compiler's frame assumptions;
@@ -124,22 +124,22 @@ remains standing — this is why RTOSes use PSP.
 Live data extends **upwards** from `SP` to the top; below `SP` is available space.
 
 ```text
-  Yuksek adres
-  0x30000200  <-- TASK_STACK_TOP (kullanilabilir alanin BIR OTESI)
-              +---------------------+       stack'e ait DEGIL; yazilmaz
-  0x300001FC  | en eski itilen word |  ^
+  High address
+  0x30000200  <-- TASK_STACK_TOP (ONE PAST the usable area)
+              +---------------------+       NOT part of the stack; do not write
+  0x300001FC  | oldest pushed word |  ^
               +---------------------+  |
-  0x300001F8  |        ...          |  |   CANLI VERI
-              +---------------------+  |   (itilmis, henuz cikarilmamis)
-  0x300001F4  | en son itilen word  |  v
+  0x300001F8  |        ...          |  |   LIVE DATA
+              +---------------------+  |   (pushed, not yet popped)
+  0x300001F4  | latest pushed word |  v
               +=====================+  <-- SP
-  0x300001F0  |  bos / tanimsiz     |
-              +---------------------+      KULLANILABILIR ALAN
-  0x300001EC  |  bos / tanimsiz     |      (asagi dogru buyur)
+  0x300001F0  |  free / undefined     |
+              +---------------------+      AVAILABLE SPACE
+  0x300001EC  |  free / undefined     |      (grows downward)
               +---------------------+
                        ...
-  0x30000000  +---------------------+  <-- TASK_STACK_BASE (dip)
-  Dusuk adres
+  0x30000000  +---------------------+  <-- TASK_STACK_BASE (bottom)
+  Low address
 ```
 
 On an empty stack, `SP == TASK_STACK_TOP`; at that moment, `SP` points to
@@ -159,21 +159,21 @@ Result of `POP {r4}`: the word at `SP` is read into `r4`, and `SP` increases by 
 flowchart TD
     subgraph T["Thread Mode"]
         S{"CONTROL.SPSEL"}
-        S -- "0 (reset degeri)" --> M1["SP = MSP"]
+        S -- "0 (reset value)" --> M1["SP = MSP"]
         S -- "1" --> P1["SP = PSP"]
     end
     subgraph H["Handler Mode"]
-        M2["SP = MSP<br/>(giriste SPSEL temizlenir)"]
+        M2["SP = MSP<br/>(SPSEL cleared on entry)"]
     end
     T -->|exception| H
     H -->|exception return| T
 ```
 
 ```text
-        PSP register'ina deger yazmak   !=   PSP'yi aktif SP yapmak
+        writing a value to PSP   !=   making PSP the active SP
         ------------------------------        ----------------------
         __set_PSP(0x30000200)                 CONTROL.SPSEL = 1
-        (icerik degisti)                      (hangi register SP oldu?)
+        (contents changed)                      (which register became SP?)
 ```
 
 ---
@@ -678,16 +678,16 @@ Questions to answer:
 ### Exception preview
 
 ```text
-Thread Mode, PSP kullaniyor
+Thread Mode, using PSP
         |
         v  exception (UsageFault)
-donanim, kesilen kodun durumunu O AN AKTIF olan stack'e yazmaya calisir
+hardware tries to write interrupted state to the CURRENTLY ACTIVE stack
         |
         v
-Handler Mode: SPSEL temizlenir -> handler MSP uzerinde calisir
+Handler Mode: SPSEL cleared -> handler runs on MSP
         |
-        v  handler donuyor
-islemci hangi stack'e donecegini nereden biliyor?
+        v  handler returns
+how does the processor know which stack to return to?
 ```
 
 The last answer is in `EXC_RETURN` — we will unpack it in **Lesson 07**.

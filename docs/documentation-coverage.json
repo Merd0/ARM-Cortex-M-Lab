@@ -301,18 +301,30 @@
       "english": "lessons/02-programmer-model/README.md",
       "turkish": "lessons/02-programmer-model/README.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "273e5794ec6e564b4d5e4808a7b79811244d7da31e37bdd1facb09a3e54bd163",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "28": {
+          "english_sha256": "30fdc1978aea60890b29f31399410334789bc4548f940e811c2cb5977eaa8e15",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "eea11fb483d6b40fa32d66b2915d2ed37cd1e825ed29d2bca8f1d3e9d6c7244a",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "32592fabb49d0ef950975e5fe915a86b8a3a03ecc73468e8eb802fc43a2dfffd",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/02-programmer-model/answers/quick-check.md",
       "english": "lessons/02-programmer-model/answers/quick-check.md",
       "turkish": "lessons/02-programmer-model/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "draft",
-      "source_sha256": "a92ead16e85b7d463a3f42ee1e92e12050f9337539452537d597952ddfbbbf9a",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "state": "translated",
+      "source_sha256": "a92ead16e85b7d463a3f42ee1e92e12050f9337539452537d597952ddfbbbf9a"
     },
     {
       "original": "lessons/02-programmer-model/exercises/01-decode-apsr-flags/README.md",
@@ -335,18 +347,52 @@
       "english": "lessons/03-c-and-assembly/README.md",
       "turkish": "lessons/03-c-and-assembly/README.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "817c34bb5c7f48fbec4616d0b5085a5c1046452fe9f952d2e823b2995cc1b957",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "31": {
+          "english_sha256": "73add88c4f8eeb8c878fbe220eccbd9c85b6922aa171353e1519cc1a83cf3d48",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "28": {
+          "english_sha256": "4cb48af0a39304c711409be8b28a2e9453c0d828659140ae5acc003345cc82f7",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "12": {
+          "english_sha256": "5eeada126b0caf5325e34329fe97d22089e68154e1bf3ca145cdbf27cc6e0834",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "5": {
+          "english_sha256": "2f9b5252f7d9fa926454afca88887abe441e86622a1632da3982ce03a8d80211",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "6c6a17c99834bc9dfdf35e28a056f93e409782ada73591f7e5d6009e8241cccd",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "6a77e456772a921f8200c20e443503736a25fa78dd6f3203c21b0fc74ecb7927",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "2f7e535aa576651d9908ffeea98b3bae3addf07925feb61072ac655cb452f236",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/03-c-and-assembly/answers/quick-check.md",
       "english": "lessons/03-c-and-assembly/answers/quick-check.md",
       "turkish": "lessons/03-c-and-assembly/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "ea05e501152efd13cf1cb3d2ee9784d63cfb2cbc5d7390447e050dd634f24568",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "4d586757b1bf6d38c6a5b7664d01b549fd4e6ae68f3d40124f0b7b66fbd83e53",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/03-c-and-assembly/exercises/01-sub-numbers/README.md",
@@ -377,24 +423,55 @@
       "english": "lessons/04-stack-msp-psp/README.md",
       "turkish": "lessons/04-stack-msp-psp/README.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "7bc70d50b2fbbf8fde08041c75b8cffa1a40562fea7d3e8b5e6a976faadddbec",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "35": {
+          "english_sha256": "14ae51d63bf5d4780d506188ebba6b79eb0c245de22723720340db14930a8e51",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "4": {
+          "english_sha256": "de8fe8b65a0e3af9ef81ead40a765c6391ef7ec43a8a42c68a5fc9b54ad49dae",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "3": {
+          "english_sha256": "030e2d9f648ccdf0c6a1e219d3116097c0a102c328e2d6731381c9fe2a637c86",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "41388574dee710721ad52e5f859b71ef7ac75c873fd010036f8aa62728a6111b",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "4c445d89c68fbeae4ee9a41f07208c4ab4dbf7cc7ac369248fc04484b90ee42c",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "8d99fe8eb658c1e13837c39d60cf18686746a844e5c9953479a368205262b582",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/04-stack-msp-psp/answers/quick-check.md",
       "english": "lessons/04-stack-msp-psp/answers/quick-check.md",
       "turkish": "lessons/04-stack-msp-psp/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "b8b715740f873236460876cdcca11f1504fa86ab3f102f5590af759e7a6e69a4"
+      "state": "translated",
+      "source_sha256": "b8b715740f873236460876cdcca11f1504fa86ab3f102f5590af759e7a6e69a4",
+      "translated_diagrams": {
+        "0": {
+          "english_sha256": "3d7f9f40ef9e8b1559a0fca7be3026c84a367099a2164ad8a4869a59e713b71d",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/04-stack-msp-psp/exercises/01-activate-psp/README.md",
       "english": "lessons/04-stack-msp-psp/exercises/01-activate-psp/README.md",
       "turkish": "lessons/04-stack-msp-psp/exercises/01-activate-psp/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "85dd5e1da59fe328d4ff44efc56cfef9ff6e95c59cadd8afecf78bcba93f753b"
     },
     {
@@ -402,31 +479,65 @@
       "english": "lessons/04-stack-msp-psp/solutions/01-activate-psp/README.md",
       "turkish": "lessons/04-stack-msp-psp/solutions/01-activate-psp/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "bdcef88eb8ab96f20ce7cfcb8f0de03d61f37a1e28e28732ae3e3a8e0889caf8"
+      "state": "translated",
+      "source_sha256": "bdcef88eb8ab96f20ce7cfcb8f0de03d61f37a1e28e28732ae3e3a8e0889caf8",
+      "translated_diagrams": {
+        "2": {
+          "english_sha256": "5865f5d7261858fbbbf12883f068c2dddb4ea627af4880bfff3c8a65fe6254ab",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/05-privilege-svc/README.md",
       "english": "lessons/05-privilege-svc/README.md",
       "turkish": "lessons/05-privilege-svc/README.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "86bdb67083e8b6ee0edd65fa22a9614d9047a08827348f395892ca33ac198948"
+      "state": "translated",
+      "source_sha256": "86bdb67083e8b6ee0edd65fa22a9614d9047a08827348f395892ca33ac198948",
+      "translated_diagrams": {
+        "2": {
+          "english_sha256": "1953be3f35ccec8148d2b4aafad1212180e0ec2a04428e8d67cdfef527573f20",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "87edc44149aa2f68728ceea7db00fa68de0ef21a53e76b82a42052332687738b",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "ddf331574dab20acc38df4f7e86fab6a8e4869f5bda2c60eea11612225e5c983",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "3": {
+          "english_sha256": "f6b2cc9cab90f2b2743e5c1c6a7c3dfb89556c65d994d5a14a371527824afac6",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/05-privilege-svc/answers/quick-check.md",
       "english": "lessons/05-privilege-svc/answers/quick-check.md",
       "turkish": "lessons/05-privilege-svc/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "d5e037b4afe5a0ae1ce6ec3e51d2b78592c4c0245ed10cf06718b578af17db07"
+      "state": "translated",
+      "source_sha256": "d5e037b4afe5a0ae1ce6ec3e51d2b78592c4c0245ed10cf06718b578af17db07",
+      "translated_diagrams": {
+        "4": {
+          "english_sha256": "10da636bac958367d0c3045788a0a91f9b0d39d0f822aac47aa7053947baa84c",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "826c92a2f7a5b2232cd5e31410c1b7bf8f5d907026c4083bd793bb61a6589bb7",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/05-privilege-svc/exercises/01-add-svc-service/README.md",
       "english": "lessons/05-privilege-svc/exercises/01-add-svc-service/README.md",
       "turkish": "lessons/05-privilege-svc/exercises/01-add-svc-service/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "08278f3aec38b9a55141856f5329ae9e1d7b6e20667fe94e87a7898a2745a331"
     },
     {
@@ -434,7 +545,7 @@
       "english": "lessons/05-privilege-svc/solutions/01-add-svc-service/README.md",
       "turkish": "lessons/05-privilege-svc/solutions/01-add-svc-service/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "0d5cebdc540f09849654e42ecee8c09a29ff2edd25fec1561d7147ee536c65f6"
     },
     {
@@ -474,60 +585,171 @@
       "english": "lessons/07-exceptions/README.md",
       "turkish": "lessons/07-exceptions/README.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "f745ba8da545b110426be23a817cc161fa554e3da28c2978a985bc01576a35cd",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "33": {
+          "english_sha256": "12f9d51b644b5767457367383f5148c28a5702a493738d8106e26ce197b43e55",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "32": {
+          "english_sha256": "ff0c351183460d175d66cd9b5d0f1c3b5b7d678edf5569d02d7e8ed5c4b30323",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "7": {
+          "english_sha256": "5feea93c28795fef294836e810638c6dac87eaaf8a7b7e6811d7bcca059324ef",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "6": {
+          "english_sha256": "01c6a8afec2460ec78c0567d2040c3132e562c84588cb0bf917cf3f771266373",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "5": {
+          "english_sha256": "c472feca8ee77b66226f7f8db07cd3b3c54735a12e3fff3f0be996fc5abfb0b1",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "4": {
+          "english_sha256": "ec4258293631640f3c9e25ecd477ae67ccef5c5977b316aff018bc7d4a5f2513",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "3": {
+          "english_sha256": "0324957992579f6ac0b5def3242287a1342801d89e3f28037621b51f28ebcb34",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "a2ef767d7ba91af8134146474bf27d8988819b1fed9d5de6fc315684a995ff72",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "39ac6fbd73042fb24d3295a27979601ae18eb168b9c1c6dd275daf9e146a3021",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "cb9bc8d930adac38f561c9845b87ac5d6053246768473d445ad9cbe95d817676",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/07-exceptions/answers/quick-check.md",
       "english": "lessons/07-exceptions/answers/quick-check.md",
       "turkish": "lessons/07-exceptions/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "abd1d2f1d4a0c8a24a7d16ab048dcbb3f74eeca3d98fd91a45c2aa33c38c31c5",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "11": {
+          "english_sha256": "21b9bdb694cf36dbd5d2c4225431744f3030b1c5158f65b175e5c1cb6d1ae936",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "8": {
+          "english_sha256": "66061e4b28f2ac332e61b05dab1532accce758cc83044a517d6cd3c4ffa78955",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "7": {
+          "english_sha256": "dd04852e504abebfa727506ffd009e24b21796ff1208c947608a0869f26f39ee",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "6": {
+          "english_sha256": "5c0d4c48ad5037f1c23fa1f3490568f8ecba79c3f016bf0675513bb83d80622a",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "5": {
+          "english_sha256": "b7922eba91c514cade227e0ffc95b34083a45e02e51cacb52af055125a7b2b4f",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "3": {
+          "english_sha256": "adbbb18268cb3503b4afef79027590332ee0608feed55cee3432cf390a220cd4",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "8d6fb6b33e06d6da940f785bfa28f7c74fa9c8b7afb258f38a5a099d17f8775e",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "09c9b256ed47a3453c0bc0ab686230a473b13df44547244a1140e96a4c6549b5",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.md",
       "english": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.md",
       "turkish": "lessons/07-exceptions/exercises/01-decode-exception-entry/README.tr.md",
       "category": "lessons",
-      "state": "draft",
-      "source_sha256": "c4e80da763a49e7e7d34f4ac199f861a1521315f568cb15859b4db53667f8e24",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "state": "translated",
+      "source_sha256": "c4e80da763a49e7e7d34f4ac199f861a1521315f568cb15859b4db53667f8e24"
     },
     {
       "original": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.md",
       "english": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.md",
       "turkish": "lessons/07-exceptions/solutions/01-decode-exception-entry/README.tr.md",
       "category": "lessons",
-      "state": "draft",
-      "source_sha256": "c1816c145c82ca7a2c9edcc78d7d92c388c98c13c9f3b095bbe001fc2a8bd4f5",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "state": "translated",
+      "source_sha256": "c1816c145c82ca7a2c9edcc78d7d92c388c98c13c9f3b095bbe001fc2a8bd4f5"
     },
     {
       "original": "lessons/08-faults/README.md",
       "english": "lessons/08-faults/README.md",
       "turkish": "lessons/08-faults/README.tr.md",
       "category": "lessons",
-      "state": "draft",
+      "state": "translated",
       "source_sha256": "3e9a3ae20eaafc510741db7e4eefe63925ad5b75a72e15650d60de24279da73a",
-      "review_remaining": "Full source-to-English review and human-readable diagram/template translation. Agent interrupted by service usage limit."
+      "translated_diagrams": {
+        "14": {
+          "english_sha256": "861f9c8534bf572d20cf40bd489a560d119917f48f2256ca441d5f7f8773db90",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "6": {
+          "english_sha256": "ed1ecde759fbcfde91906ddf780089573bce4fe7bdab19996efd6ea60cd8401c",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "5": {
+          "english_sha256": "276d853deaa99ee6b003d4b6ea2df4205b9eac822e54fa9d74611ed2b26bcc8d",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "4": {
+          "english_sha256": "98ba9bf2de03630f6fd02f388af9fa5d12f9627694062b986ae2873f65a41bf9",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "2": {
+          "english_sha256": "136091a38f8302a4795350c1de6ac13902d03520176fcf0ee5ba0277f03a8876",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "37ddcb6f0017bd66a31211fa49051d7bd3a069f3544b218a34d719f204d2b3b4",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "0": {
+          "english_sha256": "7958ee680baac1d1c3102bdad227f49d400aa97ebc985b4088c8a81c95525bca",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/08-faults/answers/quick-check.md",
       "english": "lessons/08-faults/answers/quick-check.md",
       "turkish": "lessons/08-faults/answers/quick-check.tr.md",
       "category": "lessons",
-      "state": "pending",
-      "source_sha256": "fdb85fadd24820bcbb5d0f877f9d491c2747af9a7a8e288c8d5279f8d5508dd8"
+      "state": "translated",
+      "source_sha256": "fdb85fadd24820bcbb5d0f877f9d491c2747af9a7a8e288c8d5279f8d5508dd8",
+      "translated_diagrams": {
+        "2": {
+          "english_sha256": "6d406a2096f8aabdfef8150cb2f92001ce026867ad9685b6fd9d5714dc92335a",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        },
+        "1": {
+          "english_sha256": "906ca7679de6e6aba0ff685994a68d954ab60f4822dbfabee86e7cdfdb81fa10",
+          "reason": "Human-readable diagram, template, or editorial annotation translated; instructions, identifiers, values, and observed output retained."
+        }
+      }
     },
     {
       "original": "lessons/08-faults/exercises/01-fault-report/README.md",
       "english": "lessons/08-faults/exercises/01-fault-report/README.md",
       "turkish": "lessons/08-faults/exercises/01-fault-report/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "8a01e679e8b804e4f5140c3e1077deb094d55f48a736ceda038f5d63fca41077"
     },
     {
@@ -535,7 +757,7 @@
       "english": "lessons/08-faults/solutions/01-fault-report/README.md",
       "turkish": "lessons/08-faults/solutions/01-fault-report/README.tr.md",
       "category": "lessons",
-      "state": "pending",
+      "state": "translated",
       "source_sha256": "a1f3ae5f33ed8ec24653436e0759c36eba9409de4e83a84120066141153546e5"
     },
     {

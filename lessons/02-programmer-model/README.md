@@ -75,31 +75,31 @@ notebook, the kernel's should remain intact. This separation underpins Lessons
 
 ```mermaid
 flowchart TB
-    subgraph GP["Genel amaçlı register'lar"]
+    subgraph GP["General-purpose registers"]
         R0["R0"] --- R1["R1"] --- R2["R2"] --- R3["R3"]
         R4["R4 … R11<br/>(callee-saved)"] --- R12["R12"]
     end
 
-    subgraph SPECIAL["Özel register'lar"]
+    subgraph SPECIAL["Special registers"]
         SP["R13 / SP"]
-        LR["R14 / LR<br/>dönüş adresi"]
-        PC["R15 / PC<br/>çalışan komut"]
+        LR["R14 / LR<br/>return address"]
+        PC["R15 / PC<br/>current instruction"]
     end
 
-    subgraph BANKED["SP aslında iki register"]
+    subgraph BANKED["SP is actually two registers"]
         MSP["MSP<br/>Main Stack Pointer<br/>reset + handler"]
-        PSP["PSP<br/>Process Stack Pointer<br/>uygulama / task"]
-        NOTE["mevcut guvenlik durumunun<br/>MSP/PSP'si (ders 16)"]
+        PSP["PSP<br/>Process Stack Pointer<br/>application / task"]
+        NOTE["MSP/PSP of the current<br/>security state (Lesson 16)"]
     end
 
-    subgraph STATUS["Durum"]
+    subgraph STATUS["Status"]
         XPSR["xPSR<br/>APSR + IPSR + EPSR"]
-        CTRL["CONTROL<br/>nPRIV · SPSEL<br/>(bu derste kapsam icindekiler)"]
+        CTRL["CONTROL<br/>nPRIV · SPSEL<br/>(fields covered in this lesson)"]
     end
 
     SP -->|"CONTROL.SPSEL = 0"| MSP
     SP -->|"CONTROL.SPSEL = 1"| PSP
-    CTRL -.->|"seçer"| SP
+    CTRL -.->|"selects"| SP
 ```
 
 Inside xPSR:
@@ -107,13 +107,13 @@ Inside xPSR:
 ```text
  31  30  29  28  27        24                       8 7            0
 +---+---+---+---+---+ ... +---+---------------------+---------------+
-| N | Z | C | V | Q |     | T |   (bu derste atlandi)|  exception #  |
+| N | Z | C | V | Q |     | T |   (not covered here)|  exception #  |
 +---+---+---+---+---+ ... +---+---------------------+---------------+
  \_______________/         |                         \_____________/
        APSR                |                              IPSR
-   koşul bayrakları        |                         0 = Thread Mode
-                        T biti                       >0 = Handler Mode
-                   her zaman 1 olmalı
+   condition flags        |                         0 = Thread Mode
+                        T bit                       >0 = Handler Mode
+                   must always be 1
 ```
 
 Two cautions:
@@ -534,9 +534,9 @@ REDDEDILDI [STACKING HATASI]: CFSR = 0x00009200
 Complete this chain in "What I Learned":
 
 ```text
-PSP'ye ___ yazildi → SPSEL=1 → aktif SP artik ___ →
-push ___ adresine gitti → ___ fault'u → handler kapali → ___ →
-frame ___ cunku ___
+___ written to PSP → SPSEL=1 → active SP now ___ →
+push reached address ___ → ___ fault → handler disabled → ___ →
+frame ___ because ___
 ```
 
 ---

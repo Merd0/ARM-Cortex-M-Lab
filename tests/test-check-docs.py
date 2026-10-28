@@ -102,6 +102,21 @@ class DocumentationGateTests(unittest.TestCase):
         self.change("README.md", "`run --preset debug`", "`run --preset release`")
         self.rejects("inline command/identifier mismatch")
 
+    def test_multiline_inline_identifier_is_checked(self):
+        before = SOURCE.replace("`run --preset debug`", '`register ...\n__asm__("r0")`')
+        after = before.replace('"r0"', '"r1"')
+        self.write("README.md", "**Language:** English | [Türkçe](README.tr.md)\n\n" + after)
+        self.write("README.tr.md", "**Dil:** [English](README.md) | Türkçe\n\n" + before)
+        self.manifest["documents"][0]["source_sha256"] = hashlib.sha256(before.encode()).hexdigest()
+        self.write("docs/documentation-coverage.json", json.dumps(self.manifest))
+        output = io.StringIO()
+        with patch.object(GATE, "ROOT", self.root), \
+                patch.object(GATE, "source_at", return_value=before.encode()), \
+                patch.object(GATE, "markdown_inventory", return_value=self.inventory), \
+                patch("sys.argv", ["check-docs.py"]), contextlib.redirect_stdout(output):
+            self.assertTrue(GATE.main())
+        self.assertIn("inline command/identifier mismatch", output.getvalue())
+
     def test_hex_value_cannot_change(self):
         self.change("README.md", "PC=0x1000", "PC=0x2000")
         self.rejects("CHECK/hex value mismatch")

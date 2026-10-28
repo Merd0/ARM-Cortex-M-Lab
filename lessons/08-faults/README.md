@@ -66,36 +66,36 @@ first `HFSR.FORCED`, then `CFSR`.
 
 ```text
 CFSR (0xE000ED28)
-├── MMFSR   bits [7:0]     MemManage durumu
-├── BFSR    bits [15:8]    BusFault durumu
-└── UFSR    bits [31:16]   UsageFault durumu
+├── MMFSR   bits [7:0]     MemManage status
+├── BFSR    bits [15:8]    BusFault status
+└── UFSR    bits [31:16]   UsageFault status
 ```
 
 Bits used in this lesson (positions verified against vendored CMSIS `core_cm33.h` — Armv8-M):
 
 ```text
-MMFSR  bit0 IACCVIOL   komut getirme ihlali
-       bit1 DACCVIOL   veri erisim ihlali
-       bit3 MUNSTKERR  exception DONUSUNDE geri yukleme hatasi
-       bit4 MSTKERR    exception GIRISINDE yigma hatasi
-       bit5 MLSPERR    lazy FP koruma hatasi (FP'ye ozel)
-       bit7 MMARVALID  MMFAR gecerli
+MMFSR  bit0 IACCVIOL   instruction fetch violation
+       bit1 DACCVIOL   data access violation
+       bit3 MUNSTKERR  unstacking error on exception RETURN
+       bit4 MSTKERR    stacking error on exception ENTRY
+       bit5 MLSPERR    lazy FP preservation error (FP-specific)
+       bit7 MMARVALID  MMFAR valid
 
-BFSR   bit0 IBUSERR    komut getirme veri yolu hatasi
-       bit1 PRECISERR  precise veri yolu hatasi
-       bit2 (genel Armv8-M/CMSIS: IMPRECISERR)  -> asagidaki nota bak
-       bit3 UNSTKERR   donuste geri yukleme hatasi
-       bit4 STKERR     giriste yigma hatasi
-       bit5 LSPERR     lazy FP koruma hatasi
-       bit7 BFARVALID  BFAR gecerli
+BFSR   bit0 IBUSERR    instruction fetch bus error
+       bit1 PRECISERR  precise bus error
+       bit2 (generic Armv8-M/CMSIS: IMPRECISERR)  -> see note below
+       bit3 UNSTKERR   unstacking error on return
+       bit4 STKERR     stacking error on entry
+       bit5 LSPERR     lazy FP preservation error
+       bit7 BFARVALID  BFAR valid
 
-UFSR   bit0 UNDEFINSTR tanimsiz komut
-       bit1 INVSTATE   gecersiz yurutme durumu (orn. Thumb biti 0)
-       bit2 INVPC      gecersiz EXC_RETURN / PC yuklemesi
-       bit3 NOCP       coprocessor erisimi (FP kapaliyken FP komutu)
-       bit4 STKOF      stack limiti asildi   <- Armv8-M'e OZEL
-       bit8 UNALIGNED  hizasiz erisim (UNALIGN_TRP acikken)
-       bit9 DIVBYZERO  sifira bolme (DIV_0_TRP acikken)
+UFSR   bit0 UNDEFINSTR undefined instruction
+       bit1 INVSTATE   invalid execution state (e.g. Thumb bit 0)
+       bit2 INVPC      invalid EXC_RETURN / PC load
+       bit3 NOCP       coprocessor access (FP instruction while FP disabled)
+       bit4 STKOF      stack limit exceeded <- Armv8-M-SPECIFIC
+       bit8 UNALIGNED  unaligned access (UNALIGN_TRP enabled)
+       bit9 DIVBYZERO  division by zero (DIV_0_TRP enabled)
 ```
 
 `STKOF` is **absent** from Armv7-M tables — a CFSR table copied from Armv7-M
@@ -115,11 +115,11 @@ cannot explain this lesson's Lesson 04 case.
 ### Address register + validity bit = evidence
 
 ```text
-MMFAR icerigi  +  MMARVALID = 1   ->  kullanilabilir kanit
-MMFAR icerigi  +  MMARVALID = 0   ->  ANLAMSIZ, kullanma
+MMFAR contents  +  MMARVALID = 1   ->  usable evidence
+MMFAR contents  +  MMARVALID = 0   ->  MEANINGLESS, do not use
 
-BFAR  icerigi  +  BFARVALID = 1   ->  kullanilabilir kanit
-BFAR  icerigi  +  BFARVALID = 0   ->  ANLAMSIZ, kullanma
+BFAR  contents  +  BFARVALID = 1   ->  usable evidence
+BFAR  contents  +  BFARVALID = 0   ->  MEANINGLESS, do not use
 ```
 
 > **ARCHITECTURE:** `MMFAR`/`BFAR` are diagnostically meaningful only when their
@@ -183,7 +183,7 @@ called again at the end of the report — **after capturing the snapshot**
 (the `POST-CLEAR` section). Measured in the escalation case:
 
 ```text
-[  HFSR] 0x40000000             <- snapshot: FORCED temizlikten ONCE yakalandi
+[  HFSR] 0x40000000             <- snapshot: FORCED captured BEFORE clearing
 --- POST-CLEAR ---
 [  SNAPSHOT_HFSR] 0x40000000
 [  HFSR_AFTER_CLEAR] 0x00000000
@@ -212,23 +212,23 @@ Not every BusFault is imprecise; not every data fault is precise.
 ## Mental Model
 
 ```text
-FAULT OLUSTU
+FAULT OCCURRED
     ↓
-Hangi exception onu isliyor?           IPSR / SHCSR
+Which exception is handling it?           IPSR / SHCSR
     ↓
-Yukseltilmis mi?                       HFSR.FORCED
+Escalated?                       HFSR.FORCED
     ↓
-CFSR ne diyor?                         MMFSR / BFSR / UFSR
+What does CFSR say?                         MMFSR / BFSR / UFSR
     ↓
-Adres register'i gecerli mi?           MMARVALID / BFARVALID
+Is the address register valid?           MMARVALID / BFARVALID
     ↓
-Yigma / geri yukleme basarili mi?      MSTKERR / STKERR / STKOF
+Did stacking / unstacking succeed?      MSTKERR / STKERR / STKOF
     ↓
-Exception frame'ine guvenilir mi?      EXC_RETURN + yigma bitleri
+Can the exception frame be trusted?      EXC_RETURN + stacking bits
     ↓
-Yigilmis durum + disassembly ne diyor? stacked PC, x/i
+What do stacked state + disassembly show? stacked PC, x/i
     ↓
-KOK SEBEP
+ROOT CAUSE
 ```
 
 Raw registers are **facts**; their inferred meaning is **interpretation**.
@@ -240,18 +240,18 @@ That is why this lesson's report separates `RAW` and `DECODE`.
 
 ```mermaid
 flowchart TD
-    A["Fault oluştu"] --> B{"IPSR = 3?<br/>(HardFault)"}
-    B -- evet --> C{"HFSR.FORCED = 1?"}
-    C -- evet --> D["Yükseltilmiş:<br/>kanıt CFSR'de"]
-    C -- hayır --> E["Doğrudan HardFault:<br/>HFSR'nin diğer bitleri"]
-    B -- "hayır (4/5/6)" --> D
-    D --> F{"Yığma hatası?<br/>MSTKERR / STKERR / STKOF"}
-    F -- evet --> G["Frame'e GÜVENME<br/>çözme"]
-    F -- hayır --> H["EXC_RETURN → frame stack'i<br/>cm-frame adres EXC_RETURN"]
+    A["Fault occurred"] --> B{"IPSR = 3?<br/>(HardFault)"}
+    B -- yes --> C{"HFSR.FORCED = 1?"}
+    C -- yes --> D["Escalated:<br/>evidence in CFSR"]
+    C -- no --> E["Direct HardFault:<br/>other HFSR bits"]
+    B -- "no (4/5/6)" --> D
+    D --> F{"Stacking error?<br/>MSTKERR / STKERR / STKOF"}
+    F -- yes --> G["DO NOT TRUST the frame<br/>do not decode"]
+    F -- no --> H["EXC_RETURN → frame stack<br/>cm-frame address EXC_RETURN"]
     D --> I{"MMARVALID / BFARVALID?"}
-    I -- evet --> J["Adres = kanıt"]
-    I -- hayır --> K["Adres = anlamsız"]
-    H --> L["stacked PC + x/i<br/>(yorum fault türüne bağlı)"]
+    I -- yes --> J["Address = evidence"]
+    I -- no --> K["Address = meaningless"]
+    H --> L["stacked PC + x/i<br/>(interpretation depends on fault type)"]
 ```
 
 ---
@@ -414,9 +414,9 @@ No address register — UsageFault concerns an instruction, not a memory address
 ### Stacked PC ↔ disassembly
 
 ```text
-100000f4 <trigger_udf>:     udf  #66        <- Vaka 2 ve 4: STACKED_PC 0x100000F4
-100000f8 <trigger_load>:    ldr  r0, [r0]   <- Vaka 3:      STACKED_PC 0x100000F8
-100000fc <mpu_store_word>:  str  r1, [r0]   <- Vaka 1:      STACKED_PC 0x100000FC
+100000f4 <trigger_udf>:     udf  #66        <- Cases 2 and 4: STACKED_PC 0x100000F4
+100000f8 <trigger_load>:    ldr  r0, [r0]   <- Case 3:      STACKED_PC 0x100000F8
+100000fc <mpu_store_word>:  str  r1, [r0]   <- Case 1:      STACKED_PC 0x100000FC
 ```
 
 In all four cases, stacked PC points to **the faulting instruction itself**.

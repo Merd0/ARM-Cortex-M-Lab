@@ -42,8 +42,8 @@ The order is `vector[0]` → `MSP`, then `vector[1]` → `PC`.
 Measured in this build:
 
 ```text
-[0] initial MSP  0x30008000     <- cift sayi
-[1] Reset        0x10000535     <- tek sayi (Thumb biti)
+[0] initial MSP  0x30008000     <- even number
+[1] Reset        0x10000535     <- odd number (Thumb bit)
 [11] SVCall      0x10000041     <- tek sayi
 ```
 
@@ -112,8 +112,8 @@ the frame was written to MSP. The same rule: **the active stack**.
 On exception entry, the processor clears `CONTROL.SPSEL`. Measurement:
 
 ```text
-Thread'de:   CONTROL = 0x2   (SPSEL = 1, PSP aktif)
-Handler'da:  $sp == $msp == 0x30007ff0
+In Thread:   CONTROL = 0x2   (SPSEL = 1, PSP active)
+In Handler:  $sp == $msp == 0x30007ff0
 ```
 
 No software instruction cleared `SPSEL`.
@@ -139,9 +139,9 @@ This value is not an address; its upper 25 bits are fixed (`0xFFFFFF80` pattern)
 and the low bits describe **how** return will happen:
 
 ```text
-bit3 Mode   1 = Thread'e donus,  0 = Handler'a donus
-bit2 SPSEL  1 = frame PSP'de,    0 = frame MSP'de
-bit4 FType  1 = standart frame,  0 = genisletilmis (FP)
+bit3 Mode   1 = return to Thread,  0 = return to Handler
+bit2 SPSEL  1 = frame on PSP,    0 = frame on MSP
+bit4 FType  1 = standard frame,  0 = extended (FP)
 ```
 
 Measured: PSP-origin `0xFFFFFFFD`, MSP-origin `0xFFFFFFF9`.
@@ -169,9 +169,9 @@ After a single `si`:
 
 ```text
 Mode: Thread Mode, Stack: PSP (0x300002f0)
-r0  = 0x11111112   <- handler'in frame'e yazdigi yeni deger
-r1  = 0x22222222   <- degismeden geri yuklendi
-r12 = 0xcccccccc   <- degismeden geri yuklendi
+r0  = 0x11111112   <- new value written into the frame by the handler
+r1  = 0x22222222   <- restored unchanged
+r12 = 0xcccccccc   <- restored unchanged
 ```
 
 One instruction did all of this: `IPSR` 11 → 0, active stack MSP → PSP,
@@ -186,7 +186,7 @@ used that.
 ### 8. What is the difference between `Pending` and `Active`?
 
 ```text
-Inactive --(olay/istek)--> Pending --(kabul)--> Active --(donus)--> Inactive
+Inactive --(event/request)--> Pending --(acceptance)--> Active --(return)--> Inactive
 ```
 
 - **Pending:** the exception was requested but is not yet running.
@@ -202,8 +202,8 @@ can make it wait.
 We measured active state here through `SHCSR`:
 
 ```text
-MemManage etkinken:  SHCSR = 0x00010001  (bit0 MEMFAULTACT = 1)
-MemManage kapaliyken: SHCSR = 0x00000004  (bit2 HARDFAULTACT = 1)
+MemManage enabled:  SHCSR = 0x00010001  (bit0 MEMFAULTACT = 1)
+MemManage disabled: SHCSR = 0x00000004  (bit2 HARDFAULTACT = 1)
 ```
 
 Two different handlers active, from the same violation.
@@ -217,7 +217,7 @@ Two different handlers active, from the same violation.
 Fixed, nonprogrammable priorities:
 
 ```text
-Reset      -3   (en yuksek)
+Reset      -3   (highest)
 NMI        -2
 HardFault  -1
 ```
@@ -278,8 +278,8 @@ frame ($psp)  = 0x300002d0
 prologue and locals move `SP` away from the frame start. Measurement:
 
 ```text
-SVC_Handler ilk komut:   $sp = 0x30007ff0
-svc_dispatch icinde:     $sp = 0x30007fe0    <- 16 byte asagi
+SVC_Handler first instruction:   $sp = 0x30007ff0
+inside svc_dispatch:     $sp = 0x30007fe0    <- 16 bytes lower
 ```
 
 For an MSP-origin exception, the frame was at `0x30007FC0`. Because the stack is

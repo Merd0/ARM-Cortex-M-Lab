@@ -182,7 +182,7 @@ def main():
         token_pattern = r"\b(?:CHECK_[A-Z_0-9]+|0x[0-9A-Fa-f]+)\b"
         if Counter(re.findall(token_pattern, source)) != Counter(re.findall(token_pattern, english)):
             failures.append(f"CHECK/hex value mismatch: {en}")
-        inline_pattern = r"`([^`\n]+)`"
+        inline_pattern = r"`([^`]+)`"
         if Counter(re.findall(inline_pattern, prose(source))) != Counter(re.findall(inline_pattern, prose(english))):
             failures.append(f"inline command/identifier mismatch: {en}")
         number_pattern = r"(?<![\w])\d+(?:[.,]\d+)*(?![\w])"

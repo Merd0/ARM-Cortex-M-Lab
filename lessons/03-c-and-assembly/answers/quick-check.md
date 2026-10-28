@@ -21,7 +21,7 @@ reject** `b lr`. It reads `lr` as a **label name**, not a register, and produces
 a branch to an undefined symbol:
 
 ```text
-$ arm-none-eabi-gcc -mcpu=cortex-m33 -mthumb -c tb.S -o tb.o     # hata yok
+$ arm-none-eabi-gcc -mcpu=cortex-m33 -mthumb -c tb.S -o tb.o     # no error
 $ arm-none-eabi-objdump -d tb.o
    0:   f7ff bffe       b.w     0 <lr>
 $ arm-none-eabi-nm tb.o

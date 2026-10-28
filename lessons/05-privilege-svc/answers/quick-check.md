@@ -1,21 +1,21 @@
-# Lesson 05 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-> Önce kendi cevabını yaz, sonra aç.
+# Lesson 05 — Quick Check Answers
+
+> Write your own answer before opening this file.
 
 ---
 
-### 1. `CONTROL.nPRIV` neyi kontrol eder? Handler Mode'u kapsar mı?
+### 1. What does `CONTROL.nPRIV` control? Does it cover Handler Mode?
 
-`CONTROL.nPRIV` (bit 0) **Thread Mode'un** ayrıcalık seviyesini tanımlar:
+`CONTROL.nPRIV` (bit 0) defines the privilege level of **Thread Mode**:
 `0` = privileged, `1` = unprivileged.
 
-**Handler Mode'u kapsamaz.** Handler Mode her zaman ayrıcalıklıdır. Bir
-handler içinde `CONTROL`'ü okuduğunda `nPRIV = 1` görebilirsin — bu,
-handler'ın ayrıcalıksız olduğu anlamına **gelmez**; kesilen Thread bağlamının
-ayrıcalıksız olduğunu söyler.
+**It does not cover Handler Mode.** Handler Mode is always privileged. Reading
+`CONTROL` inside a handler may show `nPRIV = 1` — this **does not** mean the
+handler is unprivileged; it describes the interrupted Thread context.
 
-Bu derste ölçüldü: `svc_dispatch` içinde `CONTROL = 0x1` okundu ve `cm-mode`
-şunu bastı:
+Measured here: `CONTROL = 0x1` was read inside `svc_dispatch`, and `cm-mode` printed:
 
 ```text
 Mode      : Handler Mode (exception 11)
@@ -23,15 +23,15 @@ Privilege : Privileged (Handler Mode her zaman ayricaliklidir)
             CONTROL.nPRIV = 1 -> KESILEN Thread baglami ayricaliksizdi
 ```
 
-Doğru sıra: **önce `IPSR`'den modu belirle, sonra `CONTROL`'ü yorumla.**
+Correct order: **determine the mode from `IPSR` first, then interpret `CONTROL`.**
 
 ---
 
-### 2. Ayrıcalıksız Thread `nPRIV`'i temizleyip ayrıcalık kazanabilir mi?
+### 2. Can an unprivileged Thread clear `nPRIV` to gain privilege?
 
-**Hayır.** Ayrıcalıksız Thread Mode'dan `CONTROL`'e yapılan yazma yok sayılır.
+**No.** Writes to `CONTROL` from unprivileged Thread Mode are ignored.
 
-Ölçüm:
+Measurement:
 
 ```text
 CONTROL_UNPRIV          0x00000003    (nPRIV = 1)
@@ -39,102 +39,99 @@ CONTROL_UNPRIV          0x00000003    (nPRIV = 1)
 CONTROL_AFTER_ATTEMPT   0x00000003    (degismedi)
 ```
 
-Fault yok, hata yok, uyarı yok — yazma sessizce etkisiz kalıyor. Ayrıcalık
-kazanmanın tek yolu **ayrıcalıklı bir yürütme yolundan** geçmek: bir exception
-(örneğin SVC) handler'a girer, handler ayrıcalıklıdır ve isterse dönecek
-bağlam için `nPRIV`'i temizler.
+No fault, error, or warning — the write silently has no effect. Gaining
+privilege requires **a privileged execution path**: an exception (such as SVC)
+enters a handler, which is privileged and may choose to clear `nPRIV` for
+the returning context.
 
-Bu derste `SVC #4` servisi tam olarak bunu yapıyor — ama dikkat: o satırı
-**handler** çalıştırıyor. Aynı satır Thread'den çalıştırıldığında yok
-sayılmıştı. Kodu değil, **nereden çalıştığı** belirliyor.
-
----
-
-### 3. `SVC_Handler` neden ayrıcalıklı iş yapabiliyor?
-
-Handler'ın kodunda özel bir şey olduğu için değil. **Handler Mode'da çalıştığı
-için.**
-
-Bir exception alındığında işlemci Handler Mode'a geçer ve Handler Mode
-mimari olarak ayrıcalıklıdır. Yani ayrıcalık, kodun kimliğinden değil,
-**yürütme bağlamından** gelir.
-
-Pratik sonucu önemli: `SVC_Handler` içinde çağırdığın herhangi bir fonksiyon
-da ayrıcalıklı çalışır. Bu yüzden handler'ın ne yaptığı dikkatle
-sınırlandırılmalıdır — bir syscall dispatcher'ının tanımadığı isteği
-reddetmesinin (Break It bölümü) sebebi budur.
-
-Vektör tablosundaki 11. girdinin `SVC_Handler`'ı göstermesi, "bu fonksiyon
-SVCall exception'ında çağrılacak" demektir; ayrıcalığı veren tablo değil,
-exception'ın kendisidir.
+This lesson's `SVC #4` service does exactly that — but notice that the
+**handler** executes the line. The same line was ignored when executed from
+Thread. What matters is **where it executes**, not the code itself.
 
 ---
 
-### 4. "Unprivileged" ile "Non-secure" aynı şey mi?
+### 3. Why can `SVC_Handler` perform privileged work?
 
-**Hayır.** İki ayrı mekanizma, iki dikey eksen.
+Not because its code is special. **Because it runs in Handler Mode.**
 
-| | Ayrıcalık | Güvenlik durumu |
+Taking an exception puts the processor in Handler Mode, which is architecturally
+privileged. Privilege therefore comes from the **execution context**, not the
+identity of the code.
+
+An important practical consequence: any function called inside `SVC_Handler`
+also runs privileged. Handler behavior must therefore be carefully constrained —
+this is why a syscall dispatcher rejects unrecognized requests (Break It).
+
+Vector table entry 11 pointing to `SVC_Handler` means “call this function for
+the SVCall exception.” The exception grants privilege, not the table.
+
+---
+
+### 4. Are “Unprivileged” and “Non-secure” the same thing?
+
+**No.** Two separate mechanisms, two independent axes.
+
+| | Privilege | Security state |
 |---|---|---|
-| Kontrol | `CONTROL.nPRIV` + mod | TrustZone / SAU |
-| Değerler | Privileged / Unprivileged | Secure / Non-secure |
-| Var mı | Her Cortex-M'de | Yalnızca Security Extension varsa |
+| Control | `CONTROL.nPRIV` + mode | TrustZone / SAU |
+| Values | Privileged / Unprivileged | Secure / Non-secure |
+| Availability | Every Cortex-M | Only with the Security Extension |
 
-Dört kombinasyon da mümkündür: Secure-privileged, Secure-unprivileged,
-Non-secure-privileged, Non-secure-unprivileged. Non-secure tarafın da kendi
-ayrıcalıklı kodu (örneğin Non-secure bir RTOS çekirdeği) vardır.
+All four combinations are possible: Secure-privileged, Secure-unprivileged,
+Non-secure-privileged, Non-secure-unprivileged. The Non-secure side also has
+its own privileged code (for example, a Non-secure RTOS kernel).
 
-Bu ders tek güvenlik durumunda (Secure) çalışır ve yalnızca ayrıcalık
-eksenini değiştirir. Ayrıntı ders 16'da.
-
----
-
-### 5. Thread PSP kullanırken SVC olursa frame nereye yazılır?
-
-**PSP'ye** — yani exception anında aktif olan stack'e. Donanım, kesilen
-bağlamın kullandığı stack'i kullanır.
-
-Ölçüm: handler girişinde `$psp = 0x30000308` ve sarmalayıcının hesapladığı
-`frame = 0x30000308`. Aynı adres.
-
-Bunu `EXC_RETURN` bit 2 söylüyor: `0xFFFFFFFD` → bit 2 = 1 → frame PSP'de.
-`svc_handler.S` tam olarak bu biti test ediyor (`tst lr, #4`).
-
-Uyarı: "PSP'ye yazılır" ile "yazma başarılı oldu" aynı şey değildir. PSP
-geçersiz veya `PSPLIM` sınırının altındaysa stacking'in kendisi fault üretir
-(ders 02 ve ders 04'teki Break It bölümleri).
+This lesson runs in one security state (Secure) and changes only the privilege
+axis. Details are in Lesson 16.
 
 ---
 
-### 6. Handler Mode hangi stack'i kullanır? Kim ayarlar?
+### 5. If SVC occurs while Thread uses PSP, where is the frame written?
 
-**MSP.** Ve bunu **donanım** yapar, yazılım değil.
+**To PSP** — the stack active at the exception. Hardware uses the stack of
+the interrupted context.
 
-Exception girişinde işlemci `CONTROL.SPSEL`'i temizler; bu yüzden handler MSP
-üzerinde çalışır. Ölçüm bunu doğruluyor:
+Measurement: at handler entry, `$psp = 0x30000308`, and the wrapper computed
+`frame = 0x30000308`. The same address.
+
+`EXC_RETURN` bit 2 tells us this: `0xFFFFFFFD` → bit 2 = 1 → frame on PSP.
+`svc_handler.S` tests precisely this bit (`tst lr, #4`).
+
+Caution: “written to PSP” and “the write succeeded” are different. If PSP
+is invalid or below `PSPLIM`, stacking itself faults (Break It in Lessons
+02 and 04).
+
+---
+
+### 6. Which stack does Handler Mode use? Who selects it?
+
+**MSP.** **Hardware** selects it, not software.
+
+On exception entry, the processor clears `CONTROL.SPSEL`, so the handler
+runs on MSP. Measurement confirms this:
 
 ```text
-Thread'de:   CONTROL = 0x3   (SPSEL = 1, PSP)
-Handler'da:  CONTROL = 0x1   (SPSEL = 0, MSP)
+In Thread:   CONTROL = 0x3   (SPSEL = 1, PSP)
+In Handler:  CONTROL = 0x1   (SPSEL = 0, MSP)
              $sp == $msp == 0x30007ff0
 ```
 
-`SPSEL` bitini hiçbir yazılım satırı temizlemedi.
+No software line cleared `SPSEL`.
 
-Tasarımın sebebi: handler kodu, hatalı bir görevin stack'ine bağımlı
-olmamalıdır. Görev stack'i taşmış veya bozulmuşsa bile handler temiz bir MSP
-üzerinde çalışmaya devam eder.
+Design reason: handler code should not depend on a faulty task's stack.
+Even if that stack overflows or is corrupted, the handler continues on a
+clean MSP.
 
-(Tek güvenlik durumu varsayımıyla. TrustZone varsa bu, *mevcut güvenlik
-durumunun* MSP'sidir.)
+(Assuming a single security state. With TrustZone, this is the MSP of the
+*current security state*.)
 
 ---
 
-### 7. `SVC` dönen Thread'i otomatik ayrıcalıklı yapar mı?
+### 7. Does `SVC` automatically make the returning Thread privileged?
 
-**Hayır.** Bu hedefte ölçülen davranış aşağıda açıklanıyor.
+**No.** The behavior measured on this target is described below.
 
-`SVC #1`'den döndükten hemen sonra:
+Immediately after returning from `SVC #1`:
 
 ```text
 Mode      : Thread Mode
@@ -142,95 +139,95 @@ Privilege : Unprivileged (CONTROL.nPRIV = 1)
 $control = 0x3
 ```
 
-`SVC` yalnızca **kapıdır**: ayrıcalıklı bir bağlama giriş sağlar. Dönerken ne
-olacağına **handler'ın politikası** karar verir.
+`SVC` is only **the gateway**: it provides entry to a privileged context.
+**Handler policy** determines what happens on return.
 
-Bu derste iki farklı politika aynı anda gösteriliyor:
+This lesson demonstrates two policies together:
 
-- `SVC #1` (increment): iş yapar, ayrıcalığa dokunmaz → Thread ayrıcalıksız
-  döner.
-- `SVC #4` (restore): handler `nPRIV`'i temizler → Thread ayrıcalıklı döner.
+- `SVC #1` (increment): does its work without changing privilege → Thread
+  returns unprivileged.
+- `SVC #4` (restore): the handler clears `nPRIV` → Thread returns privileged.
 
-Gerçek bir RTOS'ta ikincisi genellikle yapılmaz; görevler ayrıcalıksız kalır.
-Burada mekanizma görünsün diye bilerek yapıldı.
+A real RTOS usually does not do the latter; tasks remain unprivileged.
+Here it is deliberate, to expose the mechanism.
 
 ---
 
-### 8. (Reasoning) `SVC` immediate'i neden `PC - 2`'den okunabiliyor?
+### 8. (Reasoning) Why can the `SVC` immediate be read at `PC - 2`?
 
-İki gerçeğin birleşimi:
+Two facts combine:
 
-1. **Yığılmış PC, `SVC` komutundan sonraki komutu gösterir.** Donanım,
-   kesilen bağlamın **devam edeceği** adresi yığar.
-2. **`SVC`'nin Thumb T1 kodlaması 16 bittir:** `0b11011111:imm8`, yani
-   `0xDFxx`. Komut 2 byte uzunluğunda, düşük byte `imm8`.
+1. **The stacked PC points to the instruction after `SVC`.** Hardware stacks
+   the address where the interrupted context **will resume**.
+2. **The Thumb T1 encoding of `SVC` is 16 bits:** `0b11011111:imm8`, or
+   `0xDFxx`. The instruction is 2 bytes long, with `imm8` in the low byte.
 
-Dolayısıyla `pc - 2` komutun başlangıcı ve o adresteki byte `imm8`.
+Thus, `pc - 2` is the start of the instruction, and the byte there is `imm8`.
 
-Bu build'de ölçüldü:
+Measured in this build:
 
 ```text
 10000194:  df01   svc  1        <- pc - 2
-10000196:                       <- yigilmis pc
+10000196:                       <- stacked pc
 ```
 
-**Her exception için geçerli mi? Hayır.** Bu hesap yalnızca 16 bitlik `SVC`
-komutu için doğrudur. Genelleme iki yerde kırılır:
+**Does this apply to every exception? No.** This calculation applies only
+to the 16-bit `SVC` instruction. Generalizing it fails in two ways:
 
-- **32 bitlik komutlar**: hatalı komut 4 byte uzunluğundaysa `pc - 2` komutun
-  ortasına düşer.
-- **Fault'larda yığılmış PC'nin anlamı değişir.** Precise bir fault'ta
-  yığılmış PC hatalı komutu gösterebilir; imprecise bir fault'ta hatanın
-  gerçekleştiği komut çoktan geride kalmış olabilir. Ders 08 bunu açacak.
+- **32-bit instructions:** if the offending instruction occupies 4 bytes,
+  `pc - 2` lands in its middle.
+- **The meaning of stacked PC changes for faults.** For a precise fault,
+  stacked PC may identify the faulting instruction; for an imprecise fault,
+  the instruction responsible may already be far behind. Lesson 08 expands this.
 
-Doğru refleks: varsayma, `objdump` ile üretilen kodlamaya bak.
+The right habit: inspect the generated encoding with `objdump`, rather than assuming.
 
 ---
 
-### 9. (Reasoning) Gerçek bir izole syscall sınırı için ne eksik?
+### 9. (Reasoning) What is missing for a truly isolated syscall boundary?
 
-**Bellek izolasyonu.** Bu ders ayrıcalık *akışını* kurdu, korumayı değil.
+**Memory isolation.** This lesson established privilege *flow*, not protection.
 
-`g_service_counter` sıradan bir RAM değişkenidir. Ayrıcalıksız Thread onu
-`SVC` yolundan geçmeden **doğrudan** artırabilir — ve hiçbir şey olmaz.
+`g_service_counter` is an ordinary RAM variable. Unprivileged Thread can
+increment it **directly**, bypassing `SVC`, without anything happening.
 
-Nasıl kontrol edersin? Ayrıcalıksız bölüme şu satırı ekle ve çalıştır:
+How would you check? Add this line in the unprivileged section and run:
 
 ```c
 g_service_counter = 1000u;      /* SVC'siz, dogrudan */
 ```
 
-Sonra `SVC #1` çağır ve dönen değere bak. `1001` görüyorsan sözleşme
-delinmiştir. (Denedikten sonra satırı geri al.)
+Then call `SVC #1` and inspect its result. If you see `1001`, the contract
+has been bypassed. (Remove the line afterward.)
 
-Eksik olan şey listesi:
+What is missing:
 
-| Şey | Şu anki durum |
+| Item | Current state |
 |---|---|
-| Kernel verisi | Ayrıcalıksız koddan yazılabilir |
-| Thread stack'i ↔ kernel stack'i | Aynı adres uzayı, donanımsal ayrım yok |
-| Kod bölgesi | Ayrıcalıksız koddan okunabilir |
-| Bir görevin diğerine yazması | Engellenmiyor |
+| Kernel data | Writable by unprivileged code |
+| Thread stack ↔ kernel stack | Same address space; no hardware separation |
+| Code region | Readable by unprivileged code |
+| One task writing to another | Not prevented |
 
-Ölçülen tek gerçek kısıt çevre birimi erişimiydi (`UART_BAUDDIV_UNPRIV = 0`)
-— ve o da MPU'dan değil, SoC'nin **Peripheral Protection Controller**'ından
-geliyor. Farklı blok, farklı mekanizma.
+The only actual restriction measured was peripheral access
+(`UART_BAUDDIV_UNPRIV = 0`) — from the SoC's **Peripheral Protection Controller**,
+not the MPU. A different block and mechanism.
 
-**Ders 06 — MPU** bunu tamamlar: `g_service_counter` ayrıcalıksız koda
-kapatılır ve doğrudan yazma denemesi bir **MemManage fault** üretir. O zaman
-"SVC yolundan geçmek zorundasın" bir sözleşme değil, **donanım kuralı** olur.
+**Lesson 06 — MPU** completes this: `g_service_counter` is closed to
+unprivileged code, and a direct write causes a **MemManage fault**. Then
+“you must use SVC” becomes a **hardware rule**, not just a contract.
 
 ---
 
-## Referanslar
+## References
 
 - Armv8-M ARM (Arm DDI 0553) — `CONTROL`, Thread/Handler Mode, exception
-  entry, `SVC` T1 kodlaması
+  entry, `SVC` T1 encoding
 - Armv8-M Exception Model User Guide (Arm 107706) — SVCall = exception 11,
   `EXC_RETURN`
 - Cortex-M33 Devices Generic User Guide (Arm 100235)
-- AAPCS32 — `r0` dönüş değeri
+- AAPCS32 — return value in `r0`
 
 ---
 
-[← Ders 05](../README.md) · [Ders 06 →](../../06-mpu/)
+[← Lesson 05](../README.md) · [Lesson 06 →](../../06-mpu/)

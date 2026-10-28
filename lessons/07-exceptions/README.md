@@ -28,25 +28,25 @@ scheduling in Lesson 14, and context switching in Lesson 15.
 ### The sequence
 
 ```text
-olay / komut
+event / instruction
      ↓
-exception pending olur
+exception becomes pending
      ↓
-oncelik / uygunluk degerlendirilir
+priority / eligibility evaluated
      ↓
 vector lookup
      ↓
-DONANIMSAL YIGMA (8 word)
+HARDWARE STACKING (8 word)
      ↓
-Handler Mode, aktif SP = MSP, LR = EXC_RETURN
+Handler Mode, active SP = MSP, LR = EXC_RETURN
      ↓
-handler calisir
+handler runs
      ↓
-EXC_RETURN pc'ye yazilir
+EXC_RETURN written to pc
      ↓
-donanim yigilmis baglami GERI YUKLER
+hardware RESTORES stacked context
      ↓
-kesilen baglam devam eder
+interrupted context resumes
 ```
 
 **None of these steps** is performed by software — except `handler çalışır`.
@@ -75,10 +75,10 @@ Measured at the first instruction of `Reset_Handler` in this build (**OBSERVATIO
 
 ```text
 IPSR     = 0
-LR       = 0xffffffff        <- EXC_RETURN degil
-MSP      = 0x30008000        <- vector[0] ile ayni
+LR       = 0xffffffff        <- not EXC_RETURN
+MSP      = 0x30008000        <- same as vector[0]
 PSP      = 0x00000000
-CONTROL  = 0x0               <- ayricalikli Thread Mode, MSP
+CONTROL  = 0x0               <- privileged Thread Mode, MSP
 ```
 
 Although named a "handler," `Reset_Handler` does not interrupt an ongoing task.
@@ -91,8 +91,8 @@ Everyday speech uses "interrupt" broadly. The architectural distinction is preci
 
 ```text
 Exception
-├── system exceptions (mimari tarafindan tanimli)
-│   ├── Reset          (1)   <- OZEL DURUM: olagan giris/cikis yolu yok
+├── system exceptions (architecturally defined)
+│   ├── Reset          (1)   <- SPECIAL CASE: no ordinary entry/exit path
 │   ├── NMI            (2)
 │   ├── HardFault      (3)
 │   ├── MemManage      (4)
@@ -104,8 +104,8 @@ Exception
 │   ├── PendSV         (14)
 │   └── SysTick        (15)
 │
-└── external interrupts (cihaza ozel)
-    └── IRQ0, IRQ1, ...      exception numarasi = 16 + IRQ numarasi
+└── external interrupts (device-specific)
+    └── IRQ0, IRQ1, ...      exception number = 16 + IRQ number
 ```
 
 The common point: **all except Reset** use the same entry/exit mechanism.
@@ -123,9 +123,9 @@ They differ in who defines them and how they are triggered.
 ### Vector table
 
 ```text
-vector[0]  = initial MSP degeri       <- HANDLER ADRESI DEGIL
-vector[1]  = Reset_Handler adresi
-vector[n]  = exception n'in handler adresi (veya ayrilmis)
+vector[0]  = initial MSP value       <- NOT A HANDLER ADDRESS
+vector[1]  = Reset_Handler address
+vector[n]  = handler address for exception n (or reserved)
 ```
 
 Handler addresses are stored with the Thumb bit (bit 0 = 1). But:
@@ -142,14 +142,14 @@ When an exception is accepted, hardware writes these eight words to the
 **currently active** stack:
 
 ```text
-ofset  icerik
+offset contents
 +0x00  R0
 +0x04  R1
 +0x08  R2
 +0x0C  R3
 +0x10  R12
 +0x14  LR
-+0x18  PC        <- kesilen baglamin DEVAM adresi
++0x18  PC        <- RESUME address of interrupted context
 +0x1C  xPSR
 ```
 
@@ -185,9 +185,9 @@ The two measured in this lesson:
 Relevant fields (see `docs/DEBUGGING.md` for the complete set):
 
 ```text
-bit3 Mode   1 = Thread'e donus, 0 = Handler'a donus
-bit2 SPSEL  1 = frame PSP'de,   0 = frame MSP'de
-bit4 FType  1 = standart frame, 0 = genisletilmis (FP)
+bit3 Mode   1 = return to Thread, 0 = return to Handler
+bit2 SPSEL  1 = frame on PSP,   0 = frame on MSP
+bit4 FType  1 = standard frame, 0 = extended (FP)
 ```
 
 **Critical:** bit 2 identifies **where the frame is**, not **which stack the handler
@@ -204,13 +204,13 @@ the stacked context. We will measure this with a single `si` step.
 ## Mental Model
 
 ```text
-Thread Mode, PSP aktif
-R0 R1 R2 R3 R12 LR PC xPSR  <- calisan baglam
+Thread Mode, PSP active
+R0 R1 R2 R3 R12 LR PC xPSR  <- running context
         |
-        |  exception kabul edildi
+        |  exception accepted
         v
-PSP (asagi dogru buyur)
-                 yuksek adres
+PSP (grows downward)
+                 high address
               +--------------+
   frame+0x1C  | xPSR         |
   frame+0x18  | PC           |
@@ -219,24 +219,24 @@ PSP (asagi dogru buyur)
   frame+0x0C  | R3           |
   frame+0x08  | R2           |
   frame+0x04  | R1           |
-  frame+0x00  | R0           |  <- yeni PSP buraya isaret eder
+  frame+0x00  | R0           |  <- new PSP points here
               +--------------+
-                 dusuk adres
+                 low address
 
         +
-CPU Handler Mode'a gecer
-aktif SP  -> MSP        (donanim SPSEL'i temizler)
+CPU enters Handler Mode
+active SP  -> MSP        (hardware clears SPSEL)
 LR        -> EXC_RETURN
 PC        -> vector[11] (SVCall)
 IPSR      -> 11
 
-handler calisir
+handler runs
         |
         |  BX LR   (LR = EXC_RETURN)
         v
-donanim yigilmis 8 word'u GERI YUKLER
+hardware RESTORES the 8 stacked words
         ↓
-Thread PSP uzerinde kaldigi yerden devam eder
+Thread resumes where it stopped, using PSP
 ```
 
 Direction check (from Lesson 04): the stack is **full-descending**. `PSP` was
@@ -251,11 +251,11 @@ Direction check (from Lesson 04): the stack is **full-descending**. `PSP` was
 flowchart TD
     A["Thread Mode · PSP<br/>IPSR = 0"]
     B["svc #7"]
-    C["Donanım: 8 word'ü PSP'ye yığar<br/>PSP −= 32"]
+    C["Hardware: stacks 8 words on PSP<br/>PSP −= 32"]
     D["Handler Mode · MSP<br/>IPSR = 11 · LR = 0xFFFFFFFD"]
     E["SVC_Handler → svc_dispatch"]
     F["BX LR<br/>(LR = EXC_RETURN)"]
-    G["Donanım: 8 word'ü PSP'den geri yükler"]
+    G["Hardware: restores 8 words from PSP"]
     H["Thread Mode · PSP<br/>IPSR = 0"]
 
     A --> B --> C --> D --> E --> F --> G --> H
@@ -660,13 +660,13 @@ An exception passes through four states:
 
 ```text
 Inactive
-   | olay / yazilim istegi
+   | event / software request
    v
-Pending          <- kabul edilmeyi bekliyor
-   | kabul edildi
+Pending          <- waiting to be accepted
+   | accepted
    v
-Active           <- handler calisiyor
-   | handler dondu
+Active           <- handler running
+   | handler returned
    v
 Inactive
 ```
@@ -679,11 +679,11 @@ can make it wait.
 handlers — values measured in the fault targets:
 
 ```text
-MemManage etkinken fault aninda:  SHCSR = 0x00010001
-    bit16 MEMFAULTENA = 1   bit0 MEMFAULTACT = 1  (MemManage AKTIF)
+At fault with MemManage enabled:  SHCSR = 0x00010001
+    bit16 MEMFAULTENA = 1   bit0 MEMFAULTACT = 1  (MemManage ACTIVE)
 
-MemManage devre disiyken:         SHCSR = 0x00000004
-    bit16 MEMFAULTENA = 0   bit2 HARDFAULTACT = 1 (HardFault AKTIF)
+With MemManage disabled:         SHCSR = 0x00000004
+    bit16 MEMFAULTENA = 0   bit2 HARDFAULTACT = 1 (HardFault ACTIVE)
 ```
 
 Two different handlers active — from the same violation. Continued in Break It.

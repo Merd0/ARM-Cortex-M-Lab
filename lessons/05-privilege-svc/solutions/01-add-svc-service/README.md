@@ -1,8 +1,10 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — Add an SVC Service
 
 Exercise: [`../../exercises/01-add-svc-service/`](../../exercises/01-add-svc-service/)
 
-## Çözüm
+## Solution
 
 ```c
 case SVC_GET_VERSION:
@@ -10,8 +12,7 @@ case SVC_GET_VERSION:
     break;
 ```
 
-Tek satırlık iş. Değerli olan, o satırın **nereye** ve **neden** oraya
-konduğu.
+One line of work. What matters is **where** that line belongs, and **why**.
 
 ## Build & Run
 
@@ -20,7 +21,7 @@ cmake --build --preset debug --target 05-solution-svc2
 ./scripts/run-qemu.sh build/debug/lessons/05-privilege-svc/05-solution-svc2.elf
 ```
 
-Gerçek çıktı (ilgili satırlar):
+Actual output (relevant lines):
 
 ```text
 [5] SVC uzerinden ayricalikli servis
@@ -34,12 +35,12 @@ Gerçek çıktı (ilgili satırlar):
 [  CHECK_SVC2_VERSION] PASS
 ```
 
-## Zincirin tamamı
+## The complete chain
 
-### 1. `SVC` komutu nasıl üretildi?
+### 1. How was the `SVC` instruction generated?
 
-`SVC`'nin immediate'i **derleme zamanı sabitidir**; bir değişken olamaz. Bu
-yüzden her servis için satır içi assembly gerekiyor:
+The `SVC` immediate is a **compile-time constant**, not a variable.
+Each service therefore needs inline assembly:
 
 ```c
 #define SVC_CALL(num)                                                   \
@@ -53,30 +54,30 @@ yüzden her servis için satır içi assembly gerekiyor:
     })
 ```
 
-`"I"` kısıtı derleyiciye "bu bir immediate sabit olmalı" der. `register ...
-__asm__("r0")` ile sonucu `r0`'dan alıyoruz — çünkü exception return `R0`'ı
-frame'den geri yükler.
+The `"I"` constraint tells the compiler “this must be an immediate constant.”
+We obtain the result from `r0` using `register ...
+__asm__("r0")`, because exception return restores `R0` from the frame.
 
-Üretilen kod (ölçüldü):
+Generated code (measured):
 
 ```text
 10000194:  df01   svc  1
 100001a2:  df04   svc  4
 ```
 
-16 bit, `0xDF` + `imm8`.
+16 bits, `0xDF` + `imm8`.
 
-### 2. Immediate nasıl çözüldü?
+### 2. How was the immediate decoded?
 
 ```c
 const uint8_t *svc_instr = (const uint8_t *)(frame->pc - 2u);
 uint32_t svc_number = (uint32_t)svc_instr[0];
 ```
 
-Yığılmış PC, `SVC`'den **sonraki** komutu gösterir. `SVC` 16 bit olduğu için
-komut `pc - 2`'dedir ve düşük byte `imm8`'dir.
+Stacked PC points to the instruction **after** `SVC`. Since `SVC` is 16 bits,
+the instruction is at `pc - 2`, and its low byte is `imm8`.
 
-GDB'de doğrulandı:
+Verified in GDB:
 
 ```text
 (gdb) x/2i (*(unsigned int*)($psp+24))-2
@@ -84,29 +85,29 @@ GDB'de doğrulandı:
    0x10000196 <thread_entry+106>:  str  r0, [r4, #28]
 ```
 
-Bu hesap **yalnızca 16 bitlik `SVC` için** geçerlidir; genel bir "hatalı
-komut `pc - 2`'dedir" kuralı yoktur (ders 08).
+This calculation applies **only to 16-bit `SVC`**; there is no general rule
+that “the faulting instruction is at `pc - 2`” (Lesson 08).
 
-### 3. Argüman ve sonuç nerede yaşıyor?
+### 3. Where do the argument and result live?
 
-Exception frame'inin ilk word'ü `R0`'dır. Donanım exception girişinde `R0`'ı
-oraya yazar, exception return'de oradan geri yükler.
+The exception frame's first word is `R0`. Hardware writes `R0` there on
+exception entry and restores it from there on exception return.
 
 ```c
 frame->r0 = result;      /* Thread bunu R0'da gorecek */
 ```
 
-Yani servis sonucu, AAPCS'in dönüş değeri register'ına (`r0`) frame üzerinden
-yerleştiriliyor. Çağıran C kodu `SVC_CALL(...)` ifadesini normal bir fonksiyon
-dönüş değeri gibi okuyabiliyor.
+Thus, the service result reaches the AAPCS return-value register (`r0`)
+through the frame. Calling C code can read `SVC_CALL(...)` like an ordinary
+function return value.
 
-Argüman geçirmek isteseydin aynı yol: Thread `R0`/`R1`'e koyar, dispatcher
-`frame->r0` / `frame->r1`'den okur.
+Arguments would follow the same path: Thread places them in `R0`/`R1`;
+the dispatcher reads `frame->r0` / `frame->r1`.
 
-### 4. Kesilen frame hangi stack'te?
+### 4. Which stack contains the interrupted frame?
 
-PSP'de — çünkü Thread PSP kullanıyordu. `svc_handler.S` bunu `EXC_RETURN`
-bit 2'den bulur:
+PSP — because Thread was using PSP. `svc_handler.S` determines this from
+`EXC_RETURN` bit 2:
 
 ```asm
     tst     lr, #4
@@ -115,13 +116,13 @@ bit 2'den bulur:
     mrsne   r0, psp
 ```
 
-Ölçüm: handler girişinde `$lr = 0xfffffffd` (bit 2 = 1) ve
+Measurement: at handler entry, `$lr = 0xfffffffd` (bit 2 = 1), and
 `frame == $psp == 0x30000308`.
 
-### 5. Handler neden ayrıcalıklı?
+### 5. Why is the handler privileged?
 
-Kodunda özel bir şey olduğu için değil — **Handler Mode'da çalıştığı için.**
-Handler Mode mimari olarak her zaman ayrıcalıklıdır. `cm-mode` çıktısı:
+Not because its code is special — **because it runs in Handler Mode.**
+Handler Mode is architecturally always privileged. `cm-mode` output:
 
 ```text
 Mode      : Handler Mode (exception 11)
@@ -129,29 +130,29 @@ Privilege : Privileged (Handler Mode her zaman ayricaliklidir)
             CONTROL.nPRIV = 1 -> KESILEN Thread baglami ayricaliksizdi
 ```
 
-`CONTROL = 0x1` okunması handler'ın ayrıcalıksız olduğu anlamına gelmez;
-kesilen Thread'in durumudur.
+Reading `CONTROL = 0x1` does not make the handler unprivileged;
+it is the interrupted Thread's state.
 
-### 6. Ayrıcalıksız Thread neden kendini yükseltemedi?
+### 6. Why could the unprivileged Thread not elevate itself?
 
-Ayrıcalıksız Thread Mode'dan `CONTROL`'e yapılan yazma yok sayılır. Ölçüm:
+Writes to `CONTROL` from unprivileged Thread Mode are ignored. Measurement:
 
 ```text
 CONTROL_UNPRIV           0x00000003
 CONTROL_AFTER_ATTEMPT    0x00000003    (degismedi)
 ```
 
-Fault bile oluşmaz — sessizce etkisiz kalır.
+Not even a fault occurs — the write silently has no effect.
 
-### 7. Exception return Thread'i nasıl devam ettiriyor?
+### 7. How does exception return resume Thread?
 
-`svc_dispatch` normal bir C fonksiyonu gibi dönüyor. Ama `svc_handler.S` ona
-`bl` ile değil **`b` ile** dallandığı için `lr` hâlâ `EXC_RETURN`'ü
-(`0xFFFFFFFD`) taşıyor. Fonksiyonun epilogu o değeri `pc`'ye yazdığında
-işlemci bunu bir exception return olarak yorumluyor: frame PSP'den geri
-yükleniyor, Thread Mode'a dönülüyor.
+`svc_dispatch` returns like an ordinary C function. However, because
+`svc_handler.S` branched to it with **`b`**, not `bl`, `lr` still holds
+`EXC_RETURN` (`0xFFFFFFFD`). When the function's epilogue writes this value
+to `pc`, the processor interprets it as exception return: the frame is
+restored from PSP, and execution returns to Thread Mode.
 
-Ölçüm — dönüşten hemen sonra:
+Measurement — immediately after return:
 
 ```text
 Mode      : Thread Mode
@@ -159,14 +160,14 @@ Privilege : Unprivileged (CONTROL.nPRIV = 1)
 r0 = 0x1
 ```
 
-`SVC` Thread'i otomatik yükseltmedi ve servis sonucu `R0`'da geldi.
+`SVC` did not automatically elevate Thread, and the service result arrived in `R0`.
 
-## Sınırlar
+## Boundaries
 
-Bu servis sınırı **mimari ayrıcalık akışıdır, bellek izolasyonu değildir.**
-`g_service_counter` hâlâ sıradan RAM; ayrıcalıksız kod ona `SVC`'siz de
-yazabilir. Ders 06 MPU ile bu doğrudan erişimi engelleyecek.
+This service boundary provides **architectural privilege flow, not memory
+isolation**. `g_service_counter` is still ordinary RAM; unprivileged code
+can write it without `SVC`. Lesson 06 will block direct access using the MPU.
 
 ---
 
-[← Ders 05](../../README.md)
+[← Lesson 05](../../README.md)

@@ -1,162 +1,160 @@
-# Lesson 04 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-> Önce kendi cevabını yaz, sonra aç.
+# Lesson 04 — Quick Check Answers
+
+> Write your own answer before opening this.
 
 ---
 
-### 1. Full-descending stack ne demek? İki kelimenin her biri neyi söylüyor?
+### 1. What does full-descending stack mean? What does each word say?
 
-İki ayrı bilgi, tek terimde birleşmiş:
+Two pieces of information combined in one term:
 
-| Kelime | Ne söylüyor |
+| Word | What it says |
 |---|---|
-| **full** | `SP`, son yazılan **dolu** slotu gösterir — bir sonraki boş slotu değil |
-| **descending** | Stack yüksek adresten aşağı büyür; `PUSH` `SP`'yi azaltır |
+| **full** | `SP` points to the last **occupied** slot written, not the next empty one |
+| **descending** | The stack grows downwards from high addresses; `PUSH` decreases `SP` |
 
-Alternatifleri de var (empty-ascending gibi) ve bazı mimariler onları kullanır.
-Cortex-M'de seçim mimari tarafından sabitlenmiştir: full-descending.
+Alternatives exist (such as empty-ascending), and some architectures use them.
+On Cortex-M, the architecture fixes the choice: full-descending.
 
-Boş bir stack'te `SP`, kullanılabilir alanın **bir ötesini** gösterir — yani
-o anda hiçbir geçerli veriyi göstermez. "SP her zaman anlamlı bir veri
-gösterir" **yanlıştır**; bu yalnızca stack boş değilken doğrudur.
+On an empty stack, `SP` points **one past** the usable area — it points to no
+valid data at that moment. "SP always points to meaningful data" is **false**;
+it holds only when the stack is not empty.
 
-`SP`'nin altındaki alan da tahsis edilmiştir ama içeriği tanımsızdır: daha
-önce itilip çıkarılmış verilerin kalıntısıdır.
+The area below `SP` is also allocated, but its contents are undefined: remnants
+of previously pushed and popped data.
 
 ---
 
-### 2. `PUSH {r4, r5}` `SP`'yi ne kadar oynatır? Hangi register daha düşük adreste?
+### 2. How far does `PUSH {r4, r5}` move `SP`? Which register is at the lower address?
 
-`SP` **8 byte azalır** (iki register × 4). Gözlemlenebilir sonuç:
+`SP` **decreases by 8 bytes** (two registers × 4). Observable result:
 
 ```text
-PUSH {r4, r5}:   SP yeni = SP eski - 8
-                 [SP yeni + 0] = r4      <- dusuk numarali register, dusuk adres
-                 [SP yeni + 4] = r5
+PUSH {r4, r5}:   new SP = old SP - 8
+                 [new SP + 0] = r4      <- lower-numbered register, lower address
+                 [new SP + 4] = r5
 
 POP  {r4, r5}:   r4 = [SP + 0]
                  r5 = [SP + 4]
-                 SP yeni = SP eski + 8
+                 new SP = old SP + 8
 ```
 
-Kural: **en düşük numaralı register en düşük adrese.** Yazdığın sıra
-(`{r5, r4}`) hiçbir şeyi değiştirmez; assembler listeyi zaten sıralar.
+Rule: **lowest-numbered register at the lowest address**. Writing the list in
+another order (`{r5, r4}`) changes nothing; the assembler sorts it anyway.
 
-Dikkat: mimari bunu bir *etkin adres* hesabı olarak tanımlar. "Önce SP iner,
-sonra yazılır" bir mikro-işlem garantisi değil, net etkinin kabaca
-anlatımıdır. Emin olabileceğin şey yukarıdaki son durumdur.
+The architecture defines this as an *effective-address* calculation. "SP goes
+down first, then data is written" is a rough description of the net effect,
+not a micro-operation guarantee. The final state above is what you can rely on.
 
-Bu, stack'i kurarken `SP`'ye vereceğin başlangıç adresini belirler. `uint32_t stack[128]` için doğru tepe adresi
-`&stack[128]`'dir — yani **dizinin bir ötesi**. İlk `PUSH` önce 4 azaltıp
-`&stack[127]`'ye yazar; dizi sınırı aşılmaz.
+This determines the initial address to put into `SP` when setting up a stack.
+For `uint32_t stack[128]`, the correct top is `&stack[128]` — **one past the
+array**. The first `PUSH` subtracts 4 and writes to `&stack[127]`; it stays
+inside the array.
 
-`&stack[127]` yazsaydın: ilk `PUSH` `&stack[126]`'ya yazardı — dizinin
-**içine**, üstüne değil. Yani taşma olmazdı; iki şey kaybederdin. Birincisi
-kapasite: son eleman (`stack[127]`) hiç kullanılmaz. İkincisi ve daha
-önemlisi **hizalama**: `&stack[128]` 8 byte hizalıysa `&stack[127]` değildir,
-ve çağrı sınırında `SP % 8 == 4` olur — AAPCS ihlali.
+With `&stack[127]`, the first `PUSH` would write to `&stack[126]` — **inside**
+the array, not above it. There would be no overflow, but two losses. First,
+capacity: the last element (`stack[127]`) would never be used. Second, more
+importantly, **alignment**: if `&stack[128]` is 8-byte aligned, `&stack[127]`
+is not, giving `SP % 8 == 4` at the call boundary — an AAPCS violation.
 
-Asıl tehlikeli hata `&stack[0]` (taban) yazmaktır: ilk `PUSH` dizinin
-**altına** yazar ve komşu değişkenleri ezer.
+The truly dangerous error is writing `&stack[0]` (the bottom): the first
+`PUSH` writes **below** the array and overwrites neighboring variables.
 
 ---
 
-### 3. `PSP`'ye değer yazmak onu neden aktif stack yapmaz?
+### 3. Why does writing `PSP` not make it the active stack?
 
-Çünkü bunlar iki ayrı soruya verilmiş iki ayrı cevap:
+Because these answer two separate questions:
 
-| Soru | Cevabı tutan yer |
+| Question | Where the answer is held |
 |---|---|
-| PSP'nin **içeriği** ne? | `PSP` register'ı |
-| `SP` hangi register'ı **gösteriyor**? | `CONTROL.SPSEL` (bit 1) |
+| What are PSP's **contents**? | The `PSP` register |
+| Which register does `SP` **refer to**? | `CONTROL.SPSEL` (bit 1) |
 
-`__set_PSP(x)` birincisini değiştirir, ikincisine dokunmaz. Aktif seçimi
-yapan `CONTROL.SPSEL`'dir.
+`__set_PSP(x)` changes the first, not the second. `CONTROL.SPSEL` makes the
+active selection.
 
-Derste bunu ölçtük — aşama 2'de `$psp = 0x30000200` ama `$sp` hâlâ
-`$msp` ile aynı (`0x30007fd0`), ve yerel değişkenlerin adresi hiç
-değişmedi.
+We measured this in the lesson: in stage 2, `$psp = 0x30000200`, but `$sp`
+still equals `$msp` (`0x30007fd0`), and local-variable addresses did not change.
 
-Bunun pratikteki karşılığı, sıranın **zorunlu** olmasıdır:
+The practical consequence is a **mandatory** order:
 
-1. Önce `PSP`'ye geçerli bir adres yaz.
-2. Sonra `SPSEL`'i 1 yap.
+1. Write a valid address to `PSP` first.
+2. Then set `SPSEL` to 1.
 
-Ters sırada yaparsan, `SPSEL = 1` olduğu anda `SP` sıfır (veya çöp) değerli
-`PSP`'yi gösterir ve bir sonraki `PUSH` geçersiz adrese yazmaya çalışır. Ders
-02'deki Break It tam olarak buydu.
+Reversing them makes `SP` point to zero-valued (or garbage) `PSP` as soon as
+`SPSEL = 1`, and the next `PUSH` attempts an invalid write. This was exactly
+the Break It scenario in Lesson 02.
 
 ---
 
-### 4. Reset sonrası Thread Mode hangi stack'i kullanır? Kod yazmadan nereden bilirsin?
+### 4. Which stack does Thread Mode use after reset? How do you know without writing code?
 
 **MSP.**
 
-Kod yazmadan bilmenin iki yolu var:
+Two ways to know without code:
 
-1. **`CONTROL`'ün reset değeri.** Mimari, reset sonrası `CONTROL = 0`
-   olduğunu söyler. `SPSEL` bit 1'dir, yani 0 → MSP.
-2. **Vector table'ın ilk girdisi.** Reset'te donanım, vector table'ın 0.
-   girdisini (`0x00000000` offset'indeki word) okuyup **MSP**'ye yükler.
-   PSP için böyle bir mekanizma yoktur — çünkü reset sırasında PSP'nin
-   kullanılması diye bir durum yoktur.
+1. **The reset value of `CONTROL`.** The architecture specifies `CONTROL = 0`
+   after reset. `SPSEL` is bit 1, so 0 → MSP.
+2. **The vector table's first entry.** At reset, hardware reads entry 0 (the
+   word at offset `0x00000000`) and loads it into **MSP**. PSP has no such
+   mechanism, because PSP is not used during reset.
 
-İkincisini ders 02'de ölçmüştük: `vector[0] = 0x30008000` ve reset'te
+We measured the second in Lesson 02: `vector[0] = 0x30008000`, and at reset
 `MSP = 0x30008000`.
 
-Mantıklı olan da bu: PSP'yi kurmak yazılımın işidir, ve reset anında henüz
-hiçbir yazılım çalışmamıştır. Sistem bir stack'le açılmak zorunda, o da MSP.
+This is logical: setting up PSP is software's responsibility, and no software
+has executed yet at reset. The system must start with a stack, and that is MSP.
 
 ---
 
-### 5. Thread Mode PSP kullanırken exception oluşursa: Handler hangi SP'yi kullanır, donanım nereye yazar?
+### 5. An exception occurs while Thread Mode uses PSP: which SP does Handler use, and where does hardware write?
 
-**İki ayrı cevap, ve karıştırılması yaygın bir hatadır.**
+**Two different answers; confusing them is common.**
 
-| Soru | Cevap |
+| Question | Answer |
 |---|---|
-| Donanımın ittiği durum (exception frame) nereye yazılır? | **PSP'ye** — kesilen kodun kullandığı stack'e |
-| Handler hangi SP üzerinde çalışır? | **MSP'ye** — çünkü giriş sırasında `SPSEL` temizlenir |
+| Where is the hardware-pushed state (exception frame) written? | **PSP** — the interrupted code's stack |
+| On which SP does the handler run? | **MSP** — because entry clears `SPSEL` |
 
-Sıra şöyle: işlemci önce kesilen bağlamı **o an aktif olan** stack'e yazar
-(burada PSP), sonra Handler Mode'a geçer ve `SPSEL`'i temizler. Yani frame
-PSP'de kalır, handler MSP'de çalışır.
+The processor first writes the interrupted context to the **currently active**
+stack (PSP here), then enters Handler Mode and clears `SPSEL`. The frame remains
+on PSP while the handler runs on MSP.
 
-Derste bunu ölçtük: fault anında `Stack: MSP (0x30007fd0)` ve
-`$control = 0` — oysa fault'tan hemen önce `SPSEL = 1` idi. `SPSEL`'i
-yazılım temizlemedi; **donanım** temizledi.
+We measured `Stack: MSP (0x30007fd0)` and `$control = 0` at the fault, although
+`SPSEL = 1` just before it. Software did not clear `SPSEL`; **hardware** did.
 
-Tasarımın sebebi: handler kodu, hatalı bir görevin stack'ine bağımlı
-olmamalıdır. Görev stack'i taşmışsa veya bozulmuşsa handler yine de temiz bir
-MSP üzerinde çalışmaya devam eder.
+The reason: handler code must not depend on a faulty task's stack. If the task
+stack overflows or is corrupt, the handler can still run on a clean MSP.
 
-İki uyarı:
+Two cautions:
 
-**1. Yazmaya çalışmak ile yazmış olmak aynı şey değildir.** PSP geçersizse
-veya `PSPLIM` sınırını aşıyorsa stacking'in kendisi fault üretir
-(`BFSR.STKERR`, `UFSR.STKOF`, `MMFSR.MSTKERR`). Bu derste her iki durumu da
-ölçtük. O yüzden `cm-frame <adres> <EXC_RETURN>` bu bitleri görünce çözmeyi
-**reddediyor**: bellekte geçerli bir frame olmayabilir. Komutun bir frame'i
-kabul etmesi de onun gerçek olduğunu doğrulamaz; komut geçersiz durumları
-eleyen sınırlı bir çözücüdür.
+**1. Attempting a write and completing it are different.** If PSP is invalid
+or crosses `PSPLIM`, stacking itself faults (`BFSR.STKERR`, `UFSR.STKOF`,
+`MMFSR.MSTKERR`). We measured both situations in this lesson. This is why
+`cm-frame <adres> <EXC_RETURN>` **rejects** decoding when these bits appear:
+memory may contain no valid frame. Acceptance by the command does not prove
+the frame is real either; it is a limited decoder that filters invalid cases.
 
-**2. Bu açıklama tek güvenlik durumu içindir.** TrustZone devredeyken hangi
-stack'in kullanılacağı güvenlik durumu geçişine de bağlıdır (ders 16).
+**2. This explanation assumes one security state.** With TrustZone, stack
+selection also depends on the security-state transition (Lesson 16).
 
 ---
 
-### 6. (Reasoning) Her C fonksiyonu mutlaka stack kullanır mı?
+### 6. (Reasoning) Must every C function use the stack?
 
-**Hayır.** Bu derste iki karşıt örneği birlikte ölçtük.
+**No.** We measured two contrasting examples together.
 
-Stack kullanan (`frame_using_function`):
+Uses the stack (`frame_using_function`):
 
 ```text
 10000070:  b086    sub   sp, #24
 10000074:  9305    str   r3, [sp, #20]
 ```
 
-Stack'e hiç dokunmayan (`active_stack_name`):
+Never touches the stack (`active_stack_name`):
 
 ```text
 10000054:  f3ef 8314   mrs   r3, CONTROL
@@ -165,129 +163,121 @@ Stack'e hiç dokunmayan (`active_stack_name`):
 10000060:  4770        bx    lr
 ```
 
-İkincisinde ne `push` var ne `sub sp`. Fonksiyon tamamen register'larla
-çalışıyor.
+The second contains neither `push` nor `sub sp`. It operates entirely in registers.
 
-Bir fonksiyonun stack'e dokunmasını gerektiren üç durum var:
+Three situations require a function to touch the stack:
 
-1. **Başka fonksiyon çağırıyorsa** — `BL`, `lr`'yi ezer, saklanması gerekir.
-2. **Callee-saved register kullanıyorsa** — `r4-r8`, `r10`, `r11` teslim
-   alındığı gibi geri verilmeli (ders 03).
-3. **Yerel durumu register'lara sığmıyorsa** — fazlası stack'e taşar (spill).
+1. **Calling another function** — `BL` overwrites `lr`, which must be saved.
+2. **Using callee-saved registers** — `r4-r8`, `r10`, `r11` must be returned
+   as received (Lesson 03).
+3. **Local state does not fit in registers** — the excess spills to the stack.
 
-Üçü de yoksa stack'e hiç dokunulmaz.
+If none applies, the stack is untouched.
 
-Önemli ek: bu, **bu derleyici, bu kaynak ve bu optimizasyon seviyesi** için
-doğrudur. `-Og`'de stack'e taşan bir değişken `-O2`'de tamamen register'da
-kalabilir; başka bir derleyici tamamen farklı kod üretebilir. Yani "bu
-fonksiyon stack kullanıyor mu?" sorusunun cevabı **kaynak koda değil,
-üretilen makine koduna** bakılarak verilir. Doğru refleks: `objdump`.
+Important qualification: this holds for **this compiler, source, and optimization
+level**. A variable spilled under `-Og` may stay entirely in registers under
+`-O2`; another compiler may emit entirely different code. Answer "does this
+function use the stack?" from **generated machine code, not source**.
+The right reflex is `objdump`.
 
-Terim notu: **leaf function**, başka fonksiyon *çağırmayan* fonksiyondur —
-"stack kullanmayan" değil. Bir leaf fonksiyon rahatlıkla `sub sp, #N` ile
-yerel alan açabilir; `frame_using_function` tam olarak bunu yapıyor.
-
----
-
-### 7. (Reasoning) 8 byte hizalama neden önemli olabilir?
-
-AAPCS32, bir genel arayüz sınırında — yani normal bir fonksiyon çağrısı
-anında — `SP`'nin 8 byte hizalı olmasını şart koşar. Sebepleri katmanlı:
-
-**0. Önce bir ayrım.** Bu bir **ABI** (çağrı sözleşmesi) kuralıdır, komut
-hizalama kuralı değildir. Cortex-M33'te `LDRD`/`STRD` **word (4 byte)**
-hizalama ister; 8 byte istemez. İkisini karıştırmak yaygın bir hata — ve bu
-dersin ilk sürümünde de yapılmıştı.
-
-**1. Veri tipleri ve yapılar.** `double` / `int64_t` gibi 8 byte hizalama
-isteyen tipler stack üzerinde yer alır. Çağrı sınırında `SP` 8 hizalı
-olmazsa derleyicinin yerleşim varsayımları bozulur.
-
-**2. ABI birlikte çalışabilirliği.** Derleyici, çağrılan fonksiyonun `SP`'sini
-8 hizalı **varsayarak** kod üretir; ona göre offset hesaplar. Sen elle
-yazılmış assembly'de bu varsayımı bozarsan, derleyicinin ürettiği koda yalan
-söylemiş olursun — ve bu ders 03'teki callee-saved ihlali gibi sessizce yanlış
-çalışır.
-
-**3. Exception stacking.** Cortex-M, exception'a girerken frame'i hizalamak
-için gerekirse araya bir dolgu (padding) word'ü ekler ve bunu `xPSR`'deki bir
-bitle işaretler. Yani hizalama yalnızca senin kodunun değil, donanımın da
-umursadığı bir şey.
-
-`SP % 8 == 4` olan bir çağrı sınırında ne olur? **Doğrudan bir komut hatası
-beklemek yanlış olur.** `LDRD`/`STRD` word hizalaması ister ve `SP % 8 == 4`
-hâlâ word hizalıdır — yani bu tek başına bir `LDRD`/`STRD` fault'u üretmez.
-Bozulan şey **ABI varsayımıdır**: çağrılan kod, kendi yerel yerleşimini
-8 hizalı bir `SP` varsayarak hesaplar. Olası sonuçlar, 8 hizalama isteyen bir
-tipin yanlış hizalanması, derleyicinin ürettiği offset'lerin beklenmedik
-davranması, ya da **hiçbir şey olmaması**. Sonuncusu en tehlikelisidir —
-kod testten geçer ve sorun ancak başka bir derleyici sürümünde veya başka bir
-kod yolunda ortaya çıkar.
-
-Pratik kural: bir `bl` çağrısına girerken `SP % 8 == 0` olsun. Bunun en kolay
-yolu prolog'da itilen toplam baytı 8'in katı tutmaktır — bu yüzden
-derleyicinin ürettiği prologlarda sık sık gereksiz görünen bir register daha
-itildiğini görürsün. Bu derste `accumulate` (ders 03) ve `psp_start` hedefi
-`thread_entry` aynı yöntemi kullanıyor.
-
-Dikkat: bu, **her tek tek `PUSH`'un** çift sayıda register içermesi gerektiği
-anlamına gelmez. Kural fonksiyonun çağrı sınırındaki net `SP` değeri
-üzerinedir; arada tek register itip sonra dengelemek serbesttir.
+Terminology: a **leaf function** *calls no other function* — it does not mean
+"uses no stack." A leaf can allocate locals using `sub sp, #N`;
+`frame_using_function` does exactly that.
 
 ---
 
-### 8. (Reasoning) `CONTROL.SPSEL`'i C'nin ortasında değiştirirsen ne bozulur?
+### 7. (Reasoning) Why can 8-byte alignment matter?
 
-Derleyici, o fonksiyon için **MSP üzerinde** bir frame ayırmıştır ve yerel
-değişkenlere `[sp, #offset]` ile erişen komutlar üretmiştir. `SPSEL`
-değiştiğinde `SP` artık başka bir bölgeyi gösterir — **aynı offset'ler
-tamamen başka adreslere denk gelir.**
+AAPCS32 requires `SP` to be 8-byte aligned at a public interface boundary —
+an ordinary function call. The reasons have several layers:
 
-`CONTROL` yazmak:
+**0. First distinguish two rules.** This is an **ABI** (calling-contract) rule,
+not an instruction-alignment rule. Cortex-M33 `LDRD`/`STRD` require **word
+(4-byte)** alignment, not 8 bytes. Confusing the two is common — the first
+version of this lesson did so too.
 
-- mevcut frame'i yeni stack'e **taşımaz**,
-- yeni stack'te bir frame **oluşturmaz**,
-- derleyiciye bir şey **bildirmez**.
+**1. Data types and structures.** Types requiring 8-byte alignment, such as
+`double` / `int64_t`, reside on the stack. If `SP` is not 8-aligned at the call
+boundary, the compiler's layout assumptions break.
 
-Sonuç: fonksiyonun geri kalanı, yeni stack'in tepesinin **üstüne** veya
-rastgele yerlerine yazar. Bu dersin ilk sürümünde tam olarak bu oldu; `-O2`
-ve `-Os` altında `task_stack`'in bir üstündeki word eziliyordu ve
-`CHECK_REGION` FAIL veriyordu.
+**2. ABI interoperability.** The compiler generates code **assuming** the
+callee's `SP` is 8-aligned, calculating offsets accordingly. Violating that
+assumption in handwritten assembly lies to compiler-generated code, causing
+silent misbehavior like the callee-saved violation in Lesson 03.
 
-**Neden `volatile` düzeltmez?** `volatile` erişimlerin optimize edilip
-silinmesini engeller; erişimin *hangi taban register'a göre* hesaplandığını
-değiştirmez. Offset'ler yine `sp`'ye göredir.
+**3. Exception stacking.** On exception entry, Cortex-M inserts a padding word
+if necessary to align the frame, recording this with a bit in `xPSR`.
+Hardware, not just your code, cares about alignment.
 
-**Neden fazladan `ISB` düzeltmez?** `ISB` bir **senkronizasyon** sorununu
-çözer: bağlam değişikliğinin sonraki komutlarca görülmesini garanti eder.
-Buradaki sorun senkronizasyon değil, **frame geçerliliği**. Zaten
-`__set_CONTROL()` sarmalayıcısı kendi içinde `ISB` çalıştırıyor — yani
-senkronizasyon zaten vardı ve hata yine de oluşuyordu.
+What happens at a call boundary with `SP % 8 == 4`? **Expecting an immediate
+instruction fault is wrong.** `LDRD`/`STRD` require word alignment, and
+`SP % 8 == 4` is still word-aligned, so this alone does not cause an
+`LDRD`/`STRD` fault. The violated property is an **ABI assumption**: the callee
+calculates local layout assuming an 8-aligned `SP`. Possible outcomes include
+misalignment of a type requiring 8 alignment, unexpected behavior of compiler-
+generated offsets, or **nothing at all**. The last is most dangerous: tests
+pass, and the problem appears only with another compiler version or code path.
 
-**Neden `noinline` düzeltmez?** Fonksiyonun ayrı kalması, frame'inin hâlâ
-MSP'de olduğu gerçeğini değiştirmez.
+Practical rule: have `SP % 8 == 0` on entry to a `bl` call. The easiest way is
+to keep total prologue bytes a multiple of 8, explaining the apparently
+unnecessary extra register often pushed in compiler prologues. `accumulate`
+(Lesson 03) and the `psp_start` target `thread_entry` use this method here.
 
-Doğru çözüm tek: geçişi derleyicinin frame varsayımı olmayan bir yerde
-(küçük bir assembly parçası) yapıp **taze bir C fonksiyonuna** dallanmak.
-O fonksiyon kendi prolog'unu yeni `SP` üzerinde kurar.
-
-Bir ek ayrıntı: `CONTROL`'ü oku-değiştir-yaz ile güncellemek bit 0'ı
-(`nPRIV`) korumak içindir. Ama dikkat — bu, ayrıcalıksız kodun `CONTROL`'e
-`2` yazarak kendini yeniden ayrıcalıklı yapabileceği anlamına **gelmez**.
-Ayrıcalıksız Thread Mode kendi `nPRIV` bitini temizleyemez; yetki yükseltme
-yalnızca ayrıcalıklı bir exception yolundan (örneğin SVC handler'ı) geçer.
-Bu ders 05'in konusu.
+This does **not** mean **each individual `PUSH`** must contain an even number
+of registers. The rule concerns net `SP` at the call boundary; pushing one
+register temporarily and balancing it later is allowed.
 
 ---
 
-## Referanslar
+### 8. (Reasoning) What breaks if you change `CONTROL.SPSEL` midway through C?
 
-- Armv8-M Architecture Reference Manual (Arm DDI 0553) — stack pointer
-  banking, `CONTROL.SPSEL`, exception entry davranışı, `PSPLIM`/`MSPLIM`
+The compiler allocated that function's frame **on MSP** and emitted accesses
+to locals using `[sp, #offset]`. When `SPSEL` changes, `SP` refers to another
+region — **the same offsets refer to entirely different addresses**.
+
+Writing `CONTROL`:
+
+- **does not move** the existing frame to the new stack,
+- **does not create** a frame on the new stack,
+- **does not notify** the compiler.
+
+The remaining function therefore writes **above** the new stack's top or to
+arbitrary locations. Exactly this happened in the first version: under `-O2`
+and `-Os`, the word just beyond `task_stack` was overwritten and `CHECK_REGION`
+reported FAIL.
+
+**Why not `volatile`?** `volatile` prevents accesses from being optimized away;
+it does not change *which base register* is used to calculate them. Offsets
+remain relative to `sp`.
+
+**Why not an extra `ISB`?** `ISB` solves a **synchronization** issue: ensuring
+subsequent instructions see the context change. This is a **frame-validity**
+problem, not synchronization. The `__set_CONTROL()` wrapper already executes
+`ISB` internally — synchronization existed while the bug still occurred.
+
+**Why not `noinline`?** Keeping the function separate does not change the fact
+that its frame remains on MSP.
+
+The correct solution is to transition at a point without compiler frame
+assumptions (a small assembly fragment), then branch to a **fresh C function**.
+That function creates its own prologue on the new `SP`.
+
+One more detail: updating `CONTROL` with read–modify–write preserves bit 0
+(`nPRIV`). This does **not** mean unprivileged code can regain privilege by
+writing `2` to `CONTROL`. Unprivileged Thread Mode cannot clear its own `nPRIV`;
+elevation requires a privileged exception path, such as an SVC handler.
+That is Lesson 05's topic.
+
+---
+
+## References
+
+- Armv8-M Architecture Reference Manual (Arm DDI 0553) — stack-pointer
+  banking, `CONTROL.SPSEL`, exception-entry behavior, `PSPLIM`/`MSPLIM`
 - Cortex-M33 Devices Generic User Guide (Arm 100235) — `CONTROL`, MSP/PSP
-- AAPCS32 (ARM-software/abi-aa) — 8 byte stack hizalaması
-- CMSIS-Core (M) — `__set_PSP`, `__set_CONTROL` (kendi icinde `ISB` calistirir), `__ISB`
+- AAPCS32 (ARM-software/abi-aa) — 8-byte stack alignment
+- CMSIS-Core (M) — `__set_PSP`, `__set_CONTROL` (executes `ISB` internally), `__ISB`
 
 ---
 
-[← Ders 04](../README.md) · [Ders 05 →](../../05-privilege-svc/)
+[← Lesson 04](../README.md) · [Lesson 05 →](../../05-privilege-svc/)
