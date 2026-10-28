@@ -95,7 +95,7 @@ Each lesson includes its own DEEP TRACK experiments. Additionally:
 A separate phase, independent of this repository:
 
 ```text
-FreeRTOS veya Zephyr  ->  micro-ROS  ->  ROS 2
+FreeRTOS or Zephyr  ->  micro-ROS  ->  ROS 2
 ```
 
 The mini kernel is educational, not a production RTOS. A real project uses a

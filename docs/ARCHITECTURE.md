@@ -8,22 +8,22 @@ This is an embedded learning repository, not an enterprise application.
 ## Layers
 
 ```text
-lessons/  projects/  final-project/      <- ogrenme ve uygulama
+lessons/  projects/  final-project/      <- learning and practice
         |
         v
-common/        (console, tiny libc)      <- target'tan bagimsiz yardimcilar
+common/        (console, tiny libc)      <- target-independent helpers
         |
         v
-platform/mps2-an505/                     <- board'a ozel: startup, UART, linker
+platform/mps2-an505/                     <- board-specific: startup, UART, linker
         |                                   + mps2_an505.h (CMSIS device header)
         v
-external/CMSIS/Core/Include/             <- resmi CMSIS-Core (BASELINE)
+external/CMSIS/Core/Include/             <- official CMSIS-Core (BASELINE)
         |
-        |   (yan yolda, yalnizca dersler icin)
+        |   (alongside, for lessons only)
         +-- core/include/core/cm33_teaching.h
         |
         v
-cmake/  scripts/                         <- build ve calistirma altyapisi
+cmake/  scripts/                         <- build and execution infrastructure
 ```
 
 ## Why this separation?
@@ -67,8 +67,8 @@ CMSIS so the same calls can be used with either header.
 **Practical rule**
 
 ```text
-lessons/          -> register'in kendisi konuysa teaching header kullanilabilir
-diger her sey     -> CMSIS (platform/mps2_an505.h)
+lessons/          -> teaching header may be used when the register itself is the subject
+everything else     -> CMSIS (platform/mps2_an505.h)
 ```
 
 One Lesson 12 assignment is to compile the same firmware first with the teaching
@@ -100,7 +100,7 @@ when secure/non-secure separation is established in Lesson 16.
 CMakePresets.json
    |  (toolchainFile)
    v
-cmake/arm-none-eabi.cmake        <- -mcpu/-mthumb/-mfloat-abi TEK yerde
+cmake/arm-none-eabi.cmake        <- -mcpu/-mthumb/-mfloat-abi in ONE place
    |
    v
 CMakeLists.txt
@@ -109,7 +109,7 @@ CMakeLists.txt
    |
    +-- cmake/firmware.cmake                 -> add_firmware()
    |
-   +-- lessons/*/CMakeLists.txt             -> her ders kendi firmware'ini tanimlar
+   +-- lessons/*/CMakeLists.txt             -> each lesson defines its own firmware
 ```
 
 **Why is the platform an INTERFACE library?**

@@ -126,8 +126,8 @@ When sharing a measurement, include at least:
 Target      : QEMU 8.2.2 mps2-an505 / cortex-m33
 Toolchain   : arm-none-eabi-gcc 13.2.1
 Optimization: -O0 / -O2
-Olcu        : kod boyutu (byte) + komut sayisi
-Gecersiz    : cycle / wall-clock (bu target'ta anlamsiz)
+Metric      : code size (bytes) + instruction count
+Invalid     : cycles / wall-clock (meaningless on this target)
 ```
 
 ## What changes on real hardware?

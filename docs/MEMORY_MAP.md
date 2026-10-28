@@ -14,7 +14,7 @@ In the IoT Kit, the distinction is **bit 28**:
 
 ```text
 0x0_______   bit28 = 0   ->  Non-secure alias
-0x1_______   bit28 = 1   ->  Secure alias     (ayni fiziksel bellek)
+0x1_______   bit28 = 1   ->  Secure alias     (same physical memory)
 ```
 
 Firmware **boots in Secure state**, so this repository uses Secure aliases
@@ -50,33 +50,33 @@ behave like a real MCU and make "region overflow" errors meaningful.
 0x10000000  +----------------------------+  <-- FLASH ORIGIN
             |  .vectors                  |      [0] = initial MSP
             |    [0] __stack_top         |      [1] = Reset_Handler
-            |    [1] Reset_Handler       |      reset'te Secure VTOR buraya bakar
+            |    [1] Reset_Handler       |      Secure VTOR points here at reset
             |    ...                     |
             +----------------------------+
-            |  .text     (kod)           |
+            |  .text     (code)           |
             +----------------------------+
-            |  .rodata   (sabitler)      |
+            |  .rodata   (constants)      |
             +----------------------------+
-            |  .data'nin FLASH kopyasi   |  <-- __etext (LMA)
+            |  FLASH copy of .data   |  <-- __etext (LMA)
             +----------------------------+
-0x10080000  |  (kullanilmayan)           |      512 KB siniri
+0x10080000  |  (unused)           |      512 KB boundary
             +----------------------------+
 
 
 0x30000000  +----------------------------+  <-- RAM ORIGIN
-            |  .data  (RAM'e kopyalanir) |  <-- __data_start .. __data_end
+            |  .data  (copied to RAM) |  <-- __data_start .. __data_end
             +----------------------------+
-            |  .bss   (sifirlanir)       |  <-- __bss_start .. __bss_end
+            |  .bss   (zeroed)       |  <-- __bss_start .. __bss_end
             +----------------------------+
-            |  .heap  (su an 0 byte)     |
+            |  .heap  (currently 0 bytes)     |
             +----------------------------+
             |                            |
-            |     BOS ALAN               |
+            |     FREE SPACE               |
             |                            |
             +----------------------------+  <-- __stack_limit
             |  STACK                     |
             |     |                      |      full descending:
-            |     v  asagi buyur         |      SP azalarak buyur
+            |     v  grows downward         |      grows as SP decreases
 0x30008000  +----------------------------+  <-- __stack_top = initial MSP
 ```
 
@@ -99,7 +99,7 @@ In GDB:
 ```text
 p/x &__stack_top
 p/x &__bss_start
-x/4wx 0x10000000        # vector table'in ilk 4 girdisi
+x/4wx 0x10000000        # first 4 entries of the vector table
 ```
 
 ## Important detail: where does the initial MSP come from?

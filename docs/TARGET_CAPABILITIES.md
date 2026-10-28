@@ -1,10 +1,12 @@
+**Language:** English | [Türkçe](TARGET_CAPABILITIES.tr.md)
+
 # Target Capabilities
 
-Tablodaki bilgiler `tools/capability-probe` firmware'i ile ölçülmüş
-veya araç çıktısından (`qemu-system-arm -machine help`) doğrulanmıştır.
-Henüz kontrol edilmeyen özellikler `OLCULMEDI` olarak işaretlenmiştir.
+The table contains information measured with `tools/capability-probe` firmware
+or verified from tool output (`qemu-system-arm -machine help`).
+Features not yet checked are marked `OLCULMEDI`.
 
-## Olcum yontemi
+## Measurement method
 
 ```bash
 cmake --preset debug
@@ -12,36 +14,36 @@ cmake --build --preset debug --target capability-probe
 ./scripts/run-qemu.sh build/debug/tools/capability-probe/capability-probe.elf
 ```
 
-Probe firmware'i ID register'larini okur (CPUID, MPU_TYPE, SAU_TYPE, MVFR0-2,
-ID_ISAR, DWT_CTRL) ve DWT cycle counter'ın sayıp saymadığını test eder.
+The probe reads ID registers (CPUID, MPU_TYPE, SAU_TYPE, MVFR0-2, ID_ISAR,
+DWT_CTRL) and tests whether the DWT cycle counter counts.
 
 ## Capability matrix
 
-| Feature | QEMU M33 (mps2-an505) | QEMU M55 (mps3-an547) | QEMU M85 | Arm FVP | Gercek donanim |
+| Feature | QEMU M33 (mps2-an505) | QEMU M55 (mps3-an547) | QEMU M85 | Arm FVP | Real hardware |
 |---|---|---|---|---|---|
-| Makine mevcut mu | EVET (olculdu) | EVET (`-machine help`) | **HAYIR** (bu QEMU'da yok) | OLCULMEDI | - |
-| Programmer model / registers | EVET (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| Thread / Handler Mode | EVET (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| MSP / PSP | EVET (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| Privilege (CONTROL.nPRIV) | EVET (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| MPU | EVET - 8 region (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| TrustZone / SAU | EVET - 8 region (olculdu) | OLCULMEDI | - | OLCULMEDI | Cihaza bagli |
-| Exceptions / NVIC / faults | EVET (olculdu, bkz. asagi) | OLCULMEDI | - | OLCULMEDI | EVET |
-| FPU (single precision) | VAR ama CPACR kapali (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| DSP extension | VAR (ID_ISAR, olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| MVE / Helium | YOK (M33'te mimari olarak yok) | Mimaride var, OLCULMEDI | - | OLCULMEDI | Cihaza bagli |
-| **DWT cycle counter (CYCCNT)** | **SAYMIYOR** (olculdu) | OLCULMEDI | - | OLCULMEDI | EVET |
-| Cache | M33'te yok (mimari) | OLCULMEDI | - | OLCULMEDI | Cihaza bagli |
-| PACBTI | OLCULMEDI | OLCULMEDI | - | OLCULMEDI | Cihaza bagli |
-| Gercekci timing | **HAYIR** | HAYIR | - | Daha iyi | EVET |
-| Trace (ITM/ETM) | OLCULMEDI | OLCULMEDI | - | OLCULMEDI | Cihaza bagli |
+| Machine available? | YES (measured) | YES (`-machine help`) | **NO** (absent in this QEMU) | OLCULMEDI | - |
+| Programmer model / registers | YES (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| Thread / Handler Mode | YES (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| MSP / PSP | YES (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| Privilege (CONTROL.nPRIV) | YES (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| MPU | YES - 8 regions (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| TrustZone / SAU | YES - 8 regions (measured) | OLCULMEDI | - | OLCULMEDI | Device-dependent |
+| Exceptions / NVIC / faults | YES (measured, see below) | OLCULMEDI | - | OLCULMEDI | YES |
+| FPU (single precision) | PRESENT but CPACR disabled (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| DSP extension | PRESENT (ID_ISAR, measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| MVE / Helium | ABSENT (architecturally absent on M33) | Present in architecture, OLCULMEDI | - | OLCULMEDI | Device-dependent |
+| **DWT cycle counter (CYCCNT)** | **DOES NOT COUNT** (measured) | OLCULMEDI | - | OLCULMEDI | YES |
+| Cache | Absent on M33 (architecture) | OLCULMEDI | - | OLCULMEDI | Device-dependent |
+| PACBTI | OLCULMEDI | OLCULMEDI | - | OLCULMEDI | Device-dependent |
+| Realistic timing | **NO** | NO | - | Better | YES |
+| Trace (ITM/ETM) | OLCULMEDI | OLCULMEDI | - | OLCULMEDI | Device-dependent |
 
-`OLCULMEDI` = henuz test edilmedi. Test edildikce bu tablo guncellenir.
-`-` = makine bu QEMU surumunde mevcut olmadigi icin uygulanamaz.
+`OLCULMEDI` = not yet tested. This table is updated as testing proceeds.
+`-` = not applicable because the machine is absent in this QEMU version.
 
-## Olculen ham degerler (QEMU 8.2.2, mps2-an505, cortex-m33)
+## Measured raw values (QEMU 8.2.2, mps2-an505, cortex-m33)
 
-`capability-probe` ciktisi:
+`capability-probe` output:
 
 ```text
 ===== TARGET CAPABILITY PROBE =====
@@ -73,18 +75,18 @@ ID_ISAR, DWT_CTRL) ve DWT cycle counter'ın sayıp saymadığını test eder.
 ===== PROBE COMPLETE =====
 ```
 
-Yorumlar:
+Interpretation:
 
 - `CPUID.PARTNO = 0xD21` -> Cortex-M33, revision r0p3.
-- `MPU_TYPE = 0x800` -> DREGION alani (bit 15:8) = 8 -> **8 MPU region**.
-- `SAU_TYPE = 8` -> 8 SAU region -> TrustZone mevcut.
-- `MVFR1.MVE = 0` -> MVE/Helium yok. Bu QEMU eksigi degil: **Cortex-M33 mimarisi MVE icermez.**
-- `CPACR = 0` -> FPU reset'te kapali. Kullanmak icin CP10/CP11 acilmalidir (ders 13).
+- `MPU_TYPE = 0x800` -> DREGION field (bits 15:8) = 8 -> **8 MPU regions**.
+- `SAU_TYPE = 8` -> 8 SAU regions -> TrustZone present.
+- `MVFR1.MVE = 0` -> no MVE/Helium. This is not a QEMU omission: **the Cortex-M33 architecture does not include MVE.**
+- `CPACR = 0` -> FPU disabled at reset. CP10/CP11 must be enabled to use it (Lesson 13).
 
-## DWT: en onemli uyari
+## DWT: the most important warning
 
-`DWT_CTRL` okundugunda `NOCYCCNT` biti temiz, yani register "cycle counter var"
-diyor. Ancak `CYCCNTENA` acildiktan sonra bile **CYCCNT 0'da kaliyor**.
+Reading `DWT_CTRL` shows `NOCYCCNT` clear: the register says "cycle counter present."
+However, **CYCCNT stays at 0** even after enabling `CYCCNTENA`.
 
 ```text
 [DWT_CYCCNT_T0] 0
@@ -92,73 +94,72 @@ diyor. Ancak `CYCCNTENA` acildiktan sonra bile **CYCCNT 0'da kaliyor**.
 [DWT_CYCCNT_COUNTING] NO
 ```
 
-Yani bu target'ta DWT cycle counter ile profiling **yapilamaz**.
+Profiling with the DWT cycle counter is therefore **not possible** on this target.
 
-### Bu bir gozlem, kesin hukum degil
+### This is an observation, not an absolute verdict
 
-Yukaridaki satirlarin hepsi **bu makinede olculmus davranistir**: QEMU 8.2.2,
-`-M mps2-an505 -cpu cortex-m33`. Sonuçlar bu yapılandırma için geçerlidir.
+Every line above is **behavior measured on this machine**: QEMU 8.2.2,
+`-M mps2-an505 -cpu cortex-m33`. Results apply to this configuration.
 
-Yorumlama sınırları:
+Limits on interpretation:
 
-- Başka QEMU sürümlerinde ve machine/cpu kombinasyonlarında cycle counter
-  davranışı farklı olabilir.
-- Bu gözlem tek başına bir QEMU hatası göstermez. QEMU **fonksiyonel** bir
-  emülatördür: komutları yürütür, pipeline ve saat çevrimini modellemeyi
-  hedeflemez. Cycle sayacı bu modelleme kapsamının dışında kalır.
+- Other QEMU versions and machine/cpu combinations can exhibit different
+  cycle-counter behavior.
+- This observation alone does not establish a QEMU bug. QEMU is a **functional**
+  emulator: it executes instructions, but does not aim to model pipelines and
+  clock cycles. The cycle counter falls outside that modeling scope.
 
-Bagimsiz destek: RTIC (cortex-m-rtfm) projesinin dokumantasyonu, zamanlama
-orneklerinin QEMU'da duzgun calismayacagini, cunku Cortex-M cycle counter
-islevinin `qemu-system-arm` icinde uygulanmadigini belirtir
+Independent support: the RTIC (cortex-m-rtfm) project's documentation states
+that timing examples will not work correctly in QEMU because the Cortex-M cycle
+counter functionality is not implemented in `qemu-system-arm`
 (<https://docs.rs/crate/cortex-m-rtfm/latest/source/book/en/src/by-example/timer-queue.md>).
-Ayni sikayet QEMU tabanli baska projelerde de kayitlidir. Bu, bizim olcumumuzu
-**destekler** — ama yine de birincil kaynak bizim kendi olcumumuzdur.
+Other QEMU-based projects record the same complaint. This **supports** our
+measurement — but our own measurement remains the primary source.
 
-Resmi QEMU dokumantasyonunda mps2 board'lari icin DWT cycle counter destegine
-dair acik bir ifade bulunamadi; "belgelenmedi" ile "desteklenmiyor" ayni sey
-olmadigi icin bu satir da bir iddia olarak degil, arama sonucu olarak
-yaziliyor.
+No explicit statement about DWT cycle-counter support for mps2 boards was found
+in official QEMU documentation. Since "undocumented" and "unsupported" are not
+the same, this is recorded as a search result rather than a claim.
 
-### Sonuc
+### Result
 
 ```text
 DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 ```
 
-Profiling dersi ve `projects/performance-profiler/` bu kisitin **etrafinda**
-kuruldu: statik kod boyutu, statik komut sayisi ve SysTick tabanli **hedef
-yerel** aralik/sayim deneyleri kullanilir. Bu ölçümler cycle sayısı vermez ve
-bunlardan **donanım performans sıralaması çıkarılmaz** - fonksiyonel
-emulator zamani donanim cycle zamani degildir.
+The profiling lesson and `projects/performance-profiler/` were built **around**
+this constraint: static code size, static instruction count, and SysTick-based
+**target-local** interval/counting experiments. These measurements do not provide
+cycle counts and **do not establish hardware performance rankings** - functional-
+emulator time is not hardware cycle time.
 
-Gelecek yol (ikisi de belgelendi, ikisi de denenmedi):
+Future paths (both documented, neither tried):
 
-| Yol | Ne saglar | Durum |
+| Path | What it provides | Status |
 |---|---|---|
-| Arm FVP (Fixed Virtual Platform) | Fonksiyonel modelleme; zamanlama bilgisi **yalnizca** acikca oyle belgelenmis modellerde | Planli — `docs/REAL_HARDWARE_MIGRATION.md` |
-| Gercek donanim (orn. Nucleo, MPS2+) | Gercek CYCCNT + SWO/ETM trace (KART BAZINDA degisir) | Planli — ayni dosya |
+| Arm FVP (Fixed Virtual Platform) | Functional modeling; timing information **only** in models explicitly documented to provide it | Planned — `docs/REAL_HARDWARE_MIGRATION.md` |
+| Real hardware (e.g. Nucleo, MPS2+) | Actual CYCCNT + SWO/ETM trace (varies BY BOARD) | Planned — same file |
 
-Son satirda bir uyari: **her kartta DWT cycle sayaci calisir diye bir kural
-yoktur.** DWT'nin kendisi opsiyoneldir, cycle sayaci DWT icinde ayrica
-opsiyoneldir (`DWT_CTRL.NOCYCCNT`), ve bazi cihazlarda debug altyapisi
-uretici tarafindan kisitlanmis olabilir. Bu repodaki probe zaten dogru soruyu
-soruyor: "register var mi" ile "sayiyor mu" ayri seylerdir. Gercek donanima
-gecerken ayni probe'u calistir.
+A warning about the last row: **there is no rule that the DWT cycle counter works
+on every board.** DWT itself is optional; the cycle counter is separately optional
+inside DWT (`DWT_CTRL.NOCYCCNT`), and a manufacturer may restrict debug
+infrastructure on some devices. This repository's probe already asks the right
+question: "does the register exist?" and "does it count?" are different.
+Run the same probe when moving to real hardware.
 
-Deneyler planlanırken bu simülatör sınırları dikkate alınmalıdır.
+These simulator limitations must be considered when planning experiments.
 
-## Not: SAU nasil okundu
+## Note: how SAU was read
 
-`tools/capability-probe` SAU_TYPE'i CMSIS uzerinden degil, mimari sabit
-adresinden (`SCS_BASE + 0x0DD4`) okur. Sebep: CMSIS-Core, SAU tanimlarini
-yalnizca derleyici `-mcmse` ile cagrildiginda acar ve bu repo su an `-mcmse`
-kullanmiyor. Ders 16'da secure/non-secure ayrimi kurulurken bu degisecek.
-Ayrinti: [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
+`tools/capability-probe` reads SAU_TYPE from its fixed architectural address
+(`SCS_BASE + 0x0DD4`), not through CMSIS. CMSIS-Core exposes SAU definitions only
+when the compiler is invoked with `-mcmse`, and this repository currently does
+not use `-mcmse`. This will change when secure/non-secure separation is established
+in Lesson 16. Details: [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
 
-## Exception/fault davranisi (olculdu)
+## Exception/fault behavior (measured)
 
-Ders 02'deki bilerek bozulmus firmware (`02-programmer-model-broken`)
-QEMU + GDB uzerinde su degerleri uretti:
+The deliberately broken Lesson 02 firmware (`02-programmer-model-broken`)
+produced these values in QEMU + GDB:
 
 ```text
 IPSR  = 3            -> HardFault
@@ -168,57 +169,57 @@ BFAR  = 0xFFFFFFF8
 LR    = 0xFFFFFFFD   -> EXC_RETURN
 ```
 
-Yani fault escalation, fault status register'lari ve EXC_RETURN bu target'ta
-çalışıyor. Ders 07/08 deneyleri bu davranışları kullanıyor.
+Fault escalation, fault status registers, and EXC_RETURN therefore work on this
+target. Lesson 07/08 experiments use these behaviors.
 
-## M55 / M85 / FVP neden bos?
+## Why are M55 / M85 / FVP empty?
 
-- **M55 (mps3-an547):** Makine bu QEMU'da var. Ancak farkli bir bellek haritasi
-  kullaniyor (ITCM/DTCM, farkli UART adresi), yani ayri bir platform portu
-  gerekiyor. Port yazilana kadar tablo `OLCULMEDI` kalir. DEEP TRACK gorevi.
-- **M85:** Bu QEMU surumunde (8.2.2) `-cpu help` ciktisinda cortex-m85 **yok**
-  ve karşılık gelen bir MPS3 makinesi listelenmiyor.
-- **Arm FVP:** Ayri kurulum/lisans gerektirir, bootstrap sirasinda kurulmadi.
-  Ayrica dikkat: "FVP" otomatik olarak zamanlama-dogru veya cycle-approximate
-  bir model anlamına gelmez. Siradan bir FVP fonksiyonel bir modeldir. Bir
-  modelin zamanlama ozelligi ancak kendi dokumantasyonunda acikca yaziyorsa
-  vardir; bu repoda hicbir FVP dogrulanmamistir.
+- **M55 (mps3-an547):** The machine exists in this QEMU. However, it uses a different
+  memory map (ITCM/DTCM, different UART address), requiring a separate platform
+  port. Until the port is written, the table remains `OLCULMEDI`. A DEEP TRACK task.
+- **M85:** This QEMU version (8.2.2) has **no** cortex-m85 in `-cpu help` output,
+  and no corresponding MPS3 machine is listed.
+- **Arm FVP:** Requires separate installation/licensing and was not installed
+  during bootstrap. Also note: "FVP" does not automatically mean a timing-accurate
+  or cycle-approximate model. An ordinary FVP is functional. A model has timing
+  capability only if its own documentation explicitly says so; no FVP has been
+  verified in this repository.
 
-Kontrol komutlari:
+Check commands:
 
 ```bash
 qemu-system-arm -machine help | grep mps
 qemu-system-arm -cpu help | grep cortex-m
 ```
 
-## Lesson 12 tekrar ölçümü — 2026-10-23
+## Lesson 12 remeasurement — 2026-10-23
 
 Windows / QEMU `11.1.0 (v11.1.0-12130-ge470268ff4)`, Cortex-M33 AN505:
-DEMCR.TRCENA ve DWT.CTRL.CYCCNTENA yazma denemesinden sonra her iki
-register readback'i `0x00000000`; CYCCNT başlangıç/bitiş `0/0`.
-GDB write/read watchpoint ise gdbstub üzerinden çalıştı. Bu, fiziksel DWT
-comparator desteğinin kanıtı değildir. Ayrıntılar ve tekrar komutları:
+after attempts to write DEMCR.TRCENA and DWT.CTRL.CYCCNTENA, both register
+readbacks were `0x00000000`; CYCCNT start/end `0/0`.
+GDB write/read watchpoints worked through the gdbstub. This is not proof of
+physical DWT comparator support. Details and reproduction commands:
 [Lesson 12](../lessons/12-debug-dwt/).
 
 
-## Lesson 13 fonksiyonel tekrar — 2026-10-24
+## Lesson 13 functional recheck — 2026-10-24
 
-Yerel Windows / GCC 15.2.1 / QEMU 11.1.0, `mps2-an505 / cortex-m33`:
+Local Windows / GCC 15.2.1 / QEMU 11.1.0, `mps2-an505 / cortex-m33`:
 
-- CPACR=0 iken ilk FP komutu NOCP UsageFault (CFSR=0x00080000,
-  HFSR=0, IPSR=6). CP10/CP11 açıldıktan sonra FP toplama sonucu 3.5.
-- Aktif FP context olmadan basic 32-byte; aktif context ile TS=0,
-  Secure→Secure/MSP deneyinde 104-byte extended frame ölçüldü.
-- Lazy LSPACT 1→0 ve raw stack slot'unun ilk handler FP komutuyla
-  dolması, ardından S0–S2 restore edilmesi GDB'de doğrulandı.
-- Çağıranın FZ=1 FPSCR kontrol durumu worker/exception dönüşünde korundu.
-  Denormal aritmetik davranışı bu deneyde ölçülmedi.
-- SMLAD sonucu bounded C referansıyla eşleşti; QADD iki yönde saturation
-  ve Q flag üretti. Bu fonksiyonel doğrulamadır; cycle/hız ölçümü değildir.
-- Exception ile bozulan exclusive reservation ve retry; PRIMASK'ın önceki
-  değere geri yüklenmesi üç preset'te doğrulandı. DMA/global monitor veya
-  çok çekirdekli atomiklik doğrulaması yapılmadı.
+- With CPACR=0, the first FP instruction caused NOCP UsageFault (CFSR=0x00080000,
+  HFSR=0, IPSR=6). After CP10/CP11 were enabled, FP addition produced 3.5.
+- A basic 32-byte frame without active FP context; with active context and TS=0,
+  a 104-byte extended frame was measured in the Secure→Secure/MSP experiment.
+- Lazy LSPACT 1→0, raw-stack-slot filling at the first handler FP instruction,
+  and subsequent S0–S2 restoration were verified in GDB.
+- The caller's FZ=1 FPSCR control state was preserved across worker/exception return.
+  Denormal arithmetic behavior was not measured in this experiment.
+- SMLAD matched the bounded C reference; QADD produced saturation and the Q flag
+  in both directions. This is functional verification, not cycle/speed measurement.
+- Exception-disrupted exclusive reservation and retry, and PRIMASK restoration
+  to its previous value, were verified across three presets. DMA/global-monitor
+  or multicore atomicity was not verified.
 
-Tam komutlar, kapsam ve kayıtlar: [Lesson 13](../lessons/13-sync-fpu-dsp/).
-Bu sonuçlar önceki ID snapshot'ını değiştirmez; başka QEMU sürümü veya
-fiziksel hedefte yeniden ölçülmelidir. Ders 13 uzak CI sonucu ayrıca izlenir.
+Full commands, scope, and records: [Lesson 13](../lessons/13-sync-fpu-dsp/).
+These results do not change the earlier ID snapshot; measurements must be repeated
+on another QEMU version or physical target. Lesson 13's remote CI result is tracked separately.

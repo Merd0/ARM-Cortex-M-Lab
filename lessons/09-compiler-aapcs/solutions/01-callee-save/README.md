@@ -1,10 +1,12 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — Repair an ABI-Broken Assembly Function
 
 Exercise: [`../../exercises/01-callee-save/`](../../exercises/01-callee-save/)
 
-Kod: [`scale_and_sum.S`](scale_and_sum.S)
+Code: [`scale_and_sum.S`](scale_and_sum.S)
 
-## Gerçek çıktı
+## Actual output
 
 `debug`:
 
@@ -20,9 +22,9 @@ Kod: [`scale_and_sum.S`](scale_and_sum.S)
 ===== END =====
 ```
 
-`release` ve `minsize`'da `SP_AT_BL = 0x30007F98`; kararlar aynı.
+In `release` and `minsize`, `SP_AT_BL = 0x30007F98`; verdicts are identical.
 
-## Başlangıç ile çözüm yan yana
+## Starter and solution side by side
 
 ```asm
 /* BASLANGIC */                         /* COZUM */
@@ -38,67 +40,68 @@ add   r0, r0, r5                        add   r0, r0, r5
 pop   {r4, pc}                          pop   {r3, r4, r5, pc}
 ```
 
-## Onarım 1 — r5 korunmalı
+## Repair 1 — r5 must be preserved
 
-`b` çağrı boyunca **r5**'te tutuluyor. r5 **callee-saved**: sahibi
-`scale_and_sum`'ı çağıran. Kullanıyorsak girişte saklamak ve çıkışta geri
-yüklemek zorundayız.
+`b` is held in **r5** across the call. r5 is **callee-saved**: it belongs to
+the caller of `scale_and_sum`. If we use it, we must save it on entry and
+restore it on exit.
 
-Başlangıç yalnızca `{r4, lr}` saklıyordu; harness r5'in bozulduğunu buldu
+The starter saved only `{r4, lr}`; the harness detected r5 corruption
 (`MASK 0x00000002`, `CORRUPTED r5`).
 
-Neden `b`'yi r1'de bırakmadık? Çünkü r1 **caller-clobbered**: `helper_scale`
-onu serbestçe bozabilir. Çağrı boyunca yaşaması gereken bir değer ya
-callee-saved bir register'da ya da stack'te durmalı.
+Why not leave `b` in r1? Because r1 is **caller-clobbered**: `helper_scale`
+may freely overwrite it. A value that must survive a call must be kept in
+a callee-saved register or on the stack.
 
-## Onarım 2 — `BL` anında SP 8'e hizalı olmalı
+## Repair 2 — SP must be aligned to 8 at `BL`
 
-Girişte SP 8'e hizalı (harness'in `BLX` anında ölçülüyor). Başlangıçta:
+SP is aligned to 8 on entry (measured at the harness's `BLX`). In the starter:
 
 ```text
-push {r4, lr}   8 byte   -> hizali
-sub  sp, #4     4 byte   -> BL aninda SP mod 8 = 4   (SP_AT_BL = 0x30007FAC)
+push {r4, lr}   8 byte   -> aligned
+sub  sp, #4     4 byte   -> at BL SP mod 8 = 4   (SP_AT_BL = 0x30007FAC)
 ```
 
-Çözüm iki şey yapıyor:
+The solution makes two changes:
 
-- Gereksiz `sub sp, #4` / `add sp, #4` çifti kaldırıldı — bu fonksiyonun yerel
-  bir çalışma alanına ihtiyacı yok.
-- Korunacak register'lar r4, r5 ve LR — **üç** register, 12 byte. 8'in katı
-  değil. Bu yüzden listeye bir **dolgu** register'ı eklendi: r3. Toplam dört
-  register, 16 byte.
+- Removes the unnecessary `sub sp, #4` / `add sp, #4` pair — this function
+  needs no local workspace.
+- Registers to preserve are r4, r5, and LR — **three** registers, 12 bytes,
+  not a multiple of 8. A **padding** register, r3, is therefore added to the
+  list: four registers, 16 bytes in total.
 
-r3 neden? Caller-clobbered, yani saklanıp geri yüklenmesi bir şey bozmaz; ve
-`push`/`pop` listesinde yalnızca yer tutuyor. GCC de aynı kalıbı kullanıyor:
-`-Og`'da `tail_call` için `push {r3, lr}` üretti. Harness de öyle:
+Why r3? It is caller-clobbered, so saving and restoring it does no harm;
+it only occupies space in the `push`/`pop` list. GCC uses the same pattern:
+at `-Og`, it generated `push {r3, lr}` for `tail_call`. So does the harness:
 `push {r3-r11, lr}`.
 
-Alternatif: `push {r4, r5, r6, lr}` de 16 byte'tır ve doğrudur; bu durumda r6
-gereksiz yere saklanır ama zararı yoktur.
+Alternative: `push {r4, r5, r6, lr}` also occupies 16 bytes and is correct;
+it saves r6 unnecessarily, but harmlessly.
 
-## LR ve dönüş
+## LR and return
 
-- **LR neden saklanıyor?** `scale_and_sum` yaprak değil: `bl helper_scale`
-  LR'ye `scale_and_sum` içindeki, `BL`'den sonraki komutun adresini (Thumb
-  bit 0 = 1 ile) yazar. Çağıranın dönüş adresi saklanmasaydı, fonksiyon
-  çağırana dönmek yerine kendi içindeki bu noktaya "dönmeye" çalışırdı.
-- **Neden `pop {…, pc}`?** Saklanan LR değeri doğrudan PC'ye yüklenir: geri
-  yükleme ve dönüş tek komutta. `pop {r3, r4, r5, lr}` + `bx lr` de doğrudur;
-  yalnızca bir komut daha uzundur. Her iki durumda da LR'nin bit 0'ı (Thumb)
-  korunur.
+- **Why save LR?** `scale_and_sum` is not a leaf: `bl helper_scale` writes
+  the address of the instruction after `BL` inside `scale_and_sum` to LR
+  (with Thumb bit 0 = 1). Without saving the caller's return address, the
+  function would try to “return” to this point inside itself, rather than
+  to its caller.
+- **Why `pop {…, pc}`?** The saved LR value is loaded directly into PC:
+  restore and return in one instruction. `pop {r3, r4, r5, lr}` + `bx lr`
+  is also correct; it is simply one instruction longer. Both preserve LR's
+  bit 0 (Thumb).
 
-## "Doğru sonuç" neden hiçbir zaman kanıt değildi
+## Why “the right result” was never proof
 
-Başlangıç `RESULT 36` verdi — doğru. Ama:
+The starter produced `RESULT 36` — correct. However:
 
-- r5 bozukluğu, `scale_and_sum`'ı çağıran fonksiyonun r5'te tuttuğu bir değeri
-  **daha sonra** kaybetmesine yol açardı.
-- Hizasız SP, `helper_scale`'in (veya onun çağırdığı bir şeyin) 8 byte hizalı
-  stack varsayımıyla ürettiği kodu yanlış bir temel üzerinde çalıştırırdı.
+- Corrupting r5 would make the caller of `scale_and_sum` lose a value held
+  in r5 **later**.
+- Misaligned SP would give code in `helper_scale` (or something it calls)
+  an invalid foundation if generated assuming an 8-byte-aligned stack.
 
-İkisi de `scale_and_sum`'ın kendi sonucunda görünmez. Sözleşme, sonuçtan ayrı
-denetlenmek zorunda — harness'in varlık sebebi bu.
+Neither appears in `scale_and_sum`'s own result. The contract must be checked
+separately from the result — that is why the harness exists.
 
 ---
 
-[← Ders 09](../../README.md)
+[← Lesson 09](../../README.md)

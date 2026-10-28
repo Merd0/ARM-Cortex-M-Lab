@@ -68,9 +68,9 @@ Without this, `$msp`, `$psp`, `$control`, and `$psplim` are not visible.
 ### "Why did the program get here?"
 
 ```text
-bt                 # cagri yigini
-info frame         # mevcut frame
-p/x $lr            # nereye donecek
+bt                 # call stack
+info frame         # current frame
+p/x $lr            # where it will return
 ```
 
 If `bt` looks meaningless, the stack may be corrupt - see below.
@@ -78,7 +78,7 @@ If `bt` looks meaningless, the stack may be corrupt - see below.
 ### "Is the stack corrupt?"
 
 ```text
-cm-regs                     # SP mantikli bir araliktata mi?
+cm-regs                     # is SP in a sensible range?
 p/x &__stack_limit
 p/x &__stack_top
 ```
@@ -88,7 +88,7 @@ If SP is entirely outside this range, the wrong stack pointer may have been
 selected (CONTROL.SPSEL).
 
 ```text
-x/32wx $sp                  # stack icerigi mantikli mi
+x/32wx $sp                  # are stack contents sensible?
 ```
 
 Return addresses should appear in the `0x1000xxxx` (FLASH) range.
@@ -97,9 +97,9 @@ Random-looking values are a sign of corruption.
 ### "Which instruction is PC pointing to?"
 
 ```text
-x/i $pc                     # su anki komut
-x/10i $pc-20                # cevresi
-info line *$pc              # hangi C satiri
+x/i $pc                     # current instruction
+x/10i $pc-20                # surrounding instructions
+info line *$pc              # which C line
 ```
 
 ### "Why did this fault occur?"
@@ -107,17 +107,17 @@ info line *$pc              # hangi C satiri
 Sequential workflow:
 
 ```text
-cm-mode                       # 1) Handler'da miyiz? Hangi exception?
-cm-fault                      # 2) CFSR/HFSR ne diyor? Stacking hatasi var mi?
-cm-exc-return <kaydedilen LR> # 3) Frame hangi stack'te, hangi turde?
-cm-frame <adres> <EXC_RETURN> # 4) Frame'i coz
-x/i <stacked PC>              # 5) O komuta bak
+cm-mode                       # 1) in Handler Mode? Which exception?
+cm-fault                      # 2) what do CFSR/HFSR say? Stacking error?
+cm-exc-return <saved LR> # 3) which stack and frame type?
+cm-frame <address> <EXC_RETURN> # 4) decode the frame
+x/i <stacked PC>              # 5) inspect that instruction
 ```
 
 ### How to use `cm-frame`
 
 ```text
-cm-frame <frame_adresi> <EXC_RETURN>
+cm-frame <frame_address> <EXC_RETURN>
 ```
 
 Requiring YOU to supply both arguments is a deliberate design choice:
@@ -136,10 +136,10 @@ Typical flow:
 ```text
 (gdb) b MyFault_Handler
 (gdb) continue
-(gdb) set $er = $lr              # handler girisinde: EXC_RETURN
-(gdb) cm-exc-return $er          # bit2 -> hangi stack?
-(gdb) cm-frame $psp $er          # bit2 = 1 ise
-(gdb) cm-frame $msp $er          # bit2 = 0 ise (handler henuz stack kullanmadiysa)
+(gdb) set $er = $lr              # at handler entry: EXC_RETURN
+(gdb) cm-exc-return $er          # bit2 -> which stack?
+(gdb) cm-frame $psp $er          # if bit2 = 1
+(gdb) cm-frame $msp $er          # if bit2 = 0 (if the handler has not yet used the stack)
 ```
 
 ### Limits of `cm-frame`
@@ -251,7 +251,7 @@ if unsure, clear them by writing 1 and try again.
 ```text
 watch counter
 continue
-bt                 # degistiren kod kim
+bt                 # which code changed it?
 ```
 
 In code compiled with `-O2`, the variable may be held in a register and a
@@ -270,9 +270,9 @@ optimization. Use the `Debug` preset (`-Og -g3`) or make the variable `volatile`
 
 ```text
 cm-connect
-cm-vectors                 # vector table'da ne var
-p/x $pc                    # Reset_Handler'da miyiz
-si                         # tek tek komut
+cm-vectors                 # contents of the vector table
+p/x $pc                    # are we in Reset_Handler?
+si                         # single-step instructions
 break main
 c
 ```
