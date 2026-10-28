@@ -15,7 +15,7 @@ their English equivalents are provided here.
 | **Handler Mode** | Mode entered while handling an exception, always privileged |
 | **privileged / unprivileged** | Execution level with/without access to system registers |
 | **T32 / Thumb** | Cortex-M instruction set; mixed 16- and 32-bit instructions |
-| **Thumb bit** | Bit 0 of addresses; must be 1, otherwise UsageFault |
+| **Thumb bit** | Bit 0 of addresses; must be 1; 0 causes UsageFault |
 | **banked register** | Register with different copies according to mode/state (e.g. MSP/PSP) |
 
 ## Registers
@@ -65,7 +65,7 @@ their English equivalents are provided here.
 | **HardFault** | Highest-priority catch-all fault |
 | **MemManage** | MPU violation |
 | **BusFault** | Memory/bus access error |
-| **UsageFault** | Invalid instruction/state, alignment, division by 0 |
+| **UsageFault** | Invalid instruction/state, alignment, division by zero |
 | **CFSR** | Configurable Fault Status Register - fault type |
 | **MMFAR / BFAR** | Address causing the fault |
 
