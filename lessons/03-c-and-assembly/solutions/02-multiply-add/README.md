@@ -1,4 +1,6 @@
-# Solution 02 — `multiply_add` (Deney 1'in referans çözümü)
+**Language:** English | [Türkçe](README.tr.md)
+
+# Solution 02 — `multiply_add` (reference solution for Experiment 1)
 
 ```c
 int multiply_add(int a, int b, int c);    /* a * b + c */
@@ -11,7 +13,7 @@ cmake --build --preset debug --target 03-solution-mla
 ./scripts/run-qemu.sh build/debug/lessons/03-c-and-assembly/03-solution-mla.elf
 ```
 
-## Gerçek çıktı
+## Actual output
 
 ```text
 ===== LESSON 03 SOLUTION 02 =====
@@ -21,7 +23,7 @@ cmake --build --preset debug --target 03-solution-mla
 ===== END =====
 ```
 
-## Üretilen kod (ölçüldü)
+## Generated code (measured)
 
 ```text
 10000040 <multiply_add>:
@@ -29,29 +31,28 @@ cmake --build --preset debug --target 03-solution-mla
 10000044:  4770        bx   lr
 ```
 
-Cevaplanan soru: **üçüncü argüman `r2`'ye gelir.** AAPCS ilk dört argümanı
-sırayla `r0`, `r1`, `r2`, `r3`'e yerleştirir. `mla r0, r0, r1, r2` bunu tek
-komutta kullanıyor: `r0 = r0 * r1 + r2`.
+The answered question: **the third argument arrives in `r2`.** AAPCS places the
+first four arguments in `r0`, `r1`, `r2`, `r3`, in order. `mla r0, r0, r1, r2`
+uses this in one instruction: `r0 = r0 * r1 + r2`.
 
-## İki farklı yol
+## Two different approaches
 
-| Yol | Komutlar | Boyut | Mimari |
+| Approach | Instructions | Size | Architecture |
 |---|---|---|---|
-| `muls` + `adds` | 2 komut | 2 + 2 byte | Armv6-M dahil her yerde |
-| `mla` | 1 komut | 4 byte | Armv7-M ve sonrası |
+| `muls` + `adds` | 2 instructions | 2 + 2 bytes | Everywhere, including Armv6-M |
+| `mla` | 1 instruction | 4 bytes | Armv7-M and later |
 
-Burada bilerek `MLA` seçildi, çünkü ders 01'deki soruyu somutlaştırıyor:
-`MLA` Cortex-M33'te vardır ama Cortex-M0/M0+ (Armv6-M) üzerinde **yoktur**.
-Aynı C kodunu M0+ için derlersen derleyici iki komutlu yolu üretmek zorunda
-kalır.
+`MLA` was chosen deliberately to make the Lesson 01 question concrete:
+`MLA` exists on Cortex-M33 but **not** on Cortex-M0/M0+ (Armv6-M). Compiling the
+same C code for M0+ forces the compiler to produce the two-instruction approach.
 
-Dikkat çekici bir ayrıntı: `mla` **32-bit** bir kodlama (`fb00 2001`), `adds`
-ise 16-bit (`1840`). Yani "tek komut" her zaman "daha az byte" demek değil.
-Burada 1 komut = 4 byte, 2 komut = 4 byte — boyut aynı, fark yürütme
-tarafında.
+A notable detail: `mla` has a **32-bit** encoding (`fb00 2001`), whereas `adds`
+is 16-bit (`1840`). So "one instruction" does not always mean "fewer bytes."
+Here 1 instruction = 4 bytes, 2 instructions = 4 bytes — the same size, with
+the difference on the execution side.
 
-`MLA` bayrakları güncellemez ve `s` sonekli bir sürümü yoktur.
+`MLA` does not update flags and has no version with an `s` suffix.
 
 ---
 
-[← Ders 03](../../README.md)
+[← Lesson 03](../../README.md)

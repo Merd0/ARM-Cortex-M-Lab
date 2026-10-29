@@ -1,8 +1,10 @@
-# Alıştırma — Ertelenmiş işin önceliği
+**Language:** English | [Türkçe](README.tr.md)
 
-Yalnız `priorities.c` içindeki TODO'yu tamamla. SysTick=64 ve PendSV=255 olmalı;
-sekiz öncelik biti bu test platformuna özgüdür. Handler'ları değiştirme.
+# Exercise — Priority of deferred work
 
-`14-exercise-priority` starter'ında yalnız CHECK_PRIORITY=FAIL beklenir.
-Tamamlandıktan sonra bütün kontroller PASS olmalı. Ardından PendSV=0 seçip
-olay sırasındaki değişimi açıkla.
+Complete only the TODO in `priorities.c`. SysTick=64 and PendSV=255 are required;
+the eight priority bits are specific to this test platform. Do not change the handlers.
+
+In the `14-exercise-priority` starter, only CHECK_PRIORITY=FAIL is expected.
+After completion, all checks should PASS. Then select PendSV=0 and explain the
+change in event order.

@@ -1,3 +1,5 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — `sub_numbers`
 
 Exercise: [`../../exercises/01-sub-numbers/`](../../exercises/01-sub-numbers/)
@@ -9,7 +11,7 @@ cmake --build --preset debug --target 03-solution-sub
 ./scripts/run-qemu.sh build/debug/lessons/03-c-and-assembly/03-solution-sub.elf
 ```
 
-## Gerçek çıktı
+## Actual output
 
 ```text
 ===== LESSON 03 SOLUTION 01 =====
@@ -20,7 +22,7 @@ cmake --build --preset debug --target 03-solution-sub
 ===== END =====
 ```
 
-## Üretilen kod (ölçüldü)
+## Generated code (measured)
 
 ```text
 10000040 <sub_numbers>:
@@ -28,32 +30,31 @@ cmake --build --preset debug --target 03-solution-sub
 10000042:  4770    bx    lr
 ```
 
-İki komut, dört byte. `add_numbers` ile birebir aynı yapı — yalnızca
-aritmetik komut değişti. AAPCS tarafında hiçbir şey farklı değil: argümanlar
-`r0`/`r1`, sonuç `r0`, dönüş `lr`.
+Two instructions, four bytes. Exactly the same structure as `add_numbers` — only
+the arithmetic instruction changed. Nothing differs in AAPCS: arguments in
+`r0`/`r1`, result in `r0`, return through `lr`.
 
-## `4294967289` neden?
+## Why `4294967289`?
 
-`4294967289` = `0xFFFFFFF9`. Bu, `-7` sayısının 32 bitlik ikiye tümleyen
-(two's complement) gösterimidir. Register yanlış bir değer tutmuyor; biz onu
-`console_kv_u32()` ile **işaretsiz** olarak bastığımız için öyle görünüyor.
+`4294967289` = `0xFFFFFFF9`. This is the 32-bit two's-complement representation
+of `-7`. The register is not holding an incorrect value; it appears this way
+because we print it as **unsigned** using `console_kv_u32()`.
 
-Buradaki asıl ders: bir register 32 bitlik bir desen tutar. "İşaretli" veya
-"işaretsiz" olması register'ın değil, **onu okuyan kodun** özelliğidir. İşlemci
-`subs` komutunu çalıştırırken ikisini ayırt etmez; ayrımı `BGE` (signed) ile
-`BHS` (unsigned) gibi dallanma komutları yapar.
+The real lesson: a register holds a 32-bit pattern. Being "signed" or "unsigned"
+is a property of **the code reading it**, not the register. The processor does
+not distinguish the two when executing `subs`; branch instructions such as
+`BGE` (signed) and `BHS` (unsigned) make the distinction.
 
-## `subs` mi `sub` mu?
+## `subs` or `sub`?
 
-İkisi de doğru sonucu üretir; fark APSR bayraklarını (N/Z/C/V) güncelleyip
-güncellememeleridir. Burada bayrakları kimse okumuyor, dolayısıyla ikisi de
-çalışır.
+Both produce the correct result; the difference is whether they update APSR flags
+(N/Z/C/V). Nobody reads the flags here, so both work.
 
-`subs` seçildi çünkü düşük register'larla 16-bit kodlamaya sığıyor (`0x1a40`,
-2 byte). Ama bu bir kural değil, bu operand'lar için ölçülmüş bir sonuçtur —
-farklı operand'larda assembler farklı kodlama seçebilir. Doğru alışkanlık:
-ezberlemek yerine `objdump` ile bakmak.
+`subs` was chosen because it fits a 16-bit encoding with low registers (`0x1a40`,
+2 bytes). But this is not a rule; it is a measured result for these operands —
+different operands can lead the assembler to choose a different encoding.
+The right habit is to inspect with `objdump` rather than memorize.
 
 ---
 
-[← Ders 03](../../README.md)
+[← Lesson 03](../../README.md)

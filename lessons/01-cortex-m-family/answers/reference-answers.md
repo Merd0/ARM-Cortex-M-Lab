@@ -1,255 +1,249 @@
-# Lesson 01 — Referans Cevaplar
+**Language:** English | [Türkçe](reference-answers.tr.md)
 
-> Önce kendi cevabını yaz. Bu dosyayı ondan sonra aç.
+# Lesson 01 — Reference Answers
+
+> Write your own answer first. Open this file afterwards.
 >
-> Senaryolarda **tek doğru cevap yok**. Aşağıdakiler "bu gerekçe savunulabilir
-> mi" sorusunun cevabıdır, "doğru seçim budur"un değil. Farklı bir seçim
-> yaptıysan ve gerekçen sağlamsa, cevabın doğrudur.
+> The scenarios have **no single correct answer**. The following answers address
+> "is this justification defensible?", not "this is the correct choice." If you
+> chose differently with sound reasoning, your answer is correct.
 
 ---
 
-# Bölüm 1 — Üç senaryo
+# Part 1 — Three scenarios
 
-## Senaryo A — Secure Smart Lock
+## Scenario A — Secure Smart Lock
 
-**Savunulabilir seçim:** M33 (ya da M23, aşağıdaki şartla).
+**Defensible choice:** M33 (or M23, subject to the condition below).
 
-**Birincil gerekçe — ama varsayımlarıyla birlikte.** Şu üçü doğruysa
-TrustZone güçlü bir gerekçe kazanır: (a) cihaz kalıcı bir sır barındırıyor,
-(b) sahadan güncellenebilir kod çalıştırıyor, (c) tehdit modeli "uygulama
-katmanında bir gün bir açık olacak" varsayımını içeriyor. Bu koşullar altında
-TrustZone, anahtarı Non-secure tarafın adres uzayından tamamen çıkarır.
+**Primary justification — with its assumptions.** TrustZone has a strong case if
+all three hold: (a) the device holds a persistent secret, (b) it executes code
+that can be updated in the field, (c) the threat model assumes "one day the
+application layer will contain a vulnerability." Under these conditions,
+TrustZone removes the key entirely from the Non-secure side's address space.
 
-Koşullar değişirse cevap da değişir: kod sahada güncellenmiyorsa, sır harici
-bir güvenli elemanda duruyorsa veya sertifikasyon gerekmiyorsa, MPU + iyi
-ayrılmış ayrıcalıklı katman savunulabilir bir seçim olur. "TrustZone şarttır"
-cümlesi koşulsuz yazılamaz.
+If the conditions change, so does the answer: if code is not field-updatable,
+the secret resides in an external secure element, or certification is not required,
+an MPU + a well-separated privileged layer is defensible. "TrustZone is mandatory"
+cannot be stated unconditionally.
 
-**MPU yeterli olur muydu?** Kısmen. MPU, unprivileged kodun bir bölgeye
-erişmesini engelleyebilir. Ama MPU'yu privileged kod yapılandırır; privileged
-katmanda bir açık varsa (ve bootloader, sürücüler, RTOS hep oradadır) MPU
-konfigürasyonu değiştirilebilir. TrustZone'da ise secure tarafın belleği
-non-secure taraf için **hiç adreslenebilir değildir** — privileged non-secure
-kod bile göremez.
+**Would the MPU suffice?** Partly. An MPU can prevent unprivileged code from
+accessing a region. But privileged code configures the MPU; a vulnerability in
+the privileged layer (where the bootloader, drivers, and RTOS all reside) can
+allow MPU configuration to change. With TrustZone, Secure memory is **not
+addressable at all** from the Non-secure side — even privileged Non-secure code
+cannot see it.
 
-**Neyi feda ettin:** Parça maliyeti, karmaşıklık, iki ayrı imaj (secure +
-non-secure) build etme külfeti, daha uzun geliştirme süresi.
+**What you sacrificed:** Part cost, complexity, the burden of building two separate
+images (secure + non-secure), and longer development time.
 
-**M23 ne zaman yeterli:** Ağır kripto yoksa ve DSP/FPU gerekmiyorsa. M23
-(Armv8-M Baseline) TrustZone taşır ama performansı ve komut seti M33'ten
-sınırlıdır. Kripto hızlandırıcısı ayrı bir çevre birimi olarak varsa M23 çok
-makul bir seçimdir.
+**When M23 is sufficient:** When there is no heavy crypto and DSP/FPU are not needed.
+M23 (Armv8-M Baseline) carries TrustZone, but its performance and instruction set
+are more limited than M33's. With a crypto accelerator as a separate peripheral,
+M23 is a very reasonable choice.
 
-**2 yıl sonra pişmanlık senaryosu:** Ürün ek bir güvenlik sertifikasyonundan
-geçmek zorunda kalırsa ve seçtiğin parçada Security Extension yoksa, yazılımla
-telafi edemezsin. Silikon değişikliği gerekir.
-
----
-
-## Senaryo B — Low-Power Wearable
-
-**Savunulabilir seçim:** M0+ veya M23.
-
-**Birincil gerekçe:** Güç bütçesi diğer tüm kriterleri eziyor. Adım sayma,
-eşikleme ve hareketli ortalama sabit noktalı (fixed-point) aritmetikle
-rahatça yapılır. FPU'nun buradaki katkısı marjinaldir; maliyeti ise sürekli
-(alan, sızıntı akımı, daha fazla kapı).
-
-**FPU gerçekten gerekli mi?** İvme verisi zaten tamsayı olarak geliyor.
-Kayan noktaya çevirmek genellikle bir **kolaylık** tercihidir, bir gereklilik
-değil. Q15/Q31 sabit noktalı formatla çalışmak biraz daha zahmetlidir ama
-deterministik ve ucuzdur.
-
-**M0+ seçersen ne kaybedersin:**
-- MPU yok (M0+'da opsiyoneldir ve çoğu ucuz parçada yoktur) → task izolasyonu
-  yapamazsın
-- Sınırlı atomik işlem desteği (LDREX/STREX yok) → lock-free yapılar zorlaşır
-- Daha az debug imkânı (DWT/ITM sınırlı veya yok)
-- Bit-band, saturating aritmetik gibi kolaylıklar yok
-
-**2 yıl sonra pişmanlık senaryosu:** Ürün "sağlık verisi" saklamaya başlarsa
-(kalp ritmi, uyku), veri koruma mevzuatı devreye girer ve TrustZone'suzluk
-seni bir anda M23/M33'e taşınmak zorunda bırakır. Bu, yazılımın büyük kısmının
-yeniden doğrulanması demektir.
-
-**Ara yol:** M23, M0+'a göre çok az güç maliyetiyle TrustZone ve daha iyi
-debug getirir. Ürün yol haritası belirsizse M23 sigortadır.
+**Regret scenario 2 years later:** If the product must pass an additional security
+certification and the selected part lacks the Security Extension, software cannot
+compensate. The silicon must change.
 
 ---
 
-## Senaryo C — Robotics / Signal Processing Node
+## Scenario B — Low-Power Wearable
 
-**Savunulabilir seçim:** M33 (FPU + DSP konfigürasyonlu) veya M7.
+**Defensible choice:** M0+ or M23.
 
-**Birincil gerekçe:** Kontrol döngüsü sert gerçek zamanlıdır. Buradaki kritik
-metrik ortalama hız değil, **en kötü durum gecikmesidir (worst-case
-latency)**. Kinematik ve filtre matematiği yoğun kayan noktalı olduğu için
-FPU burada **güçlü bir gerekçe kazanır** — ama koşullu: kinematik ve filtre
-matematiğinin kayan noktalı olması, döngü bütçesinin sabit noktalı yazımla
-karşılanamaması ve hata analizi maliyetinin kabul edilemez olması gerekir.
-Bu üçü ölçülmeden "FPU şarttır" denemez; sabit noktalı (Q15/Q31) bir çözüm
-birçok kontrol döngüsü için yeterlidir.
+**Primary justification:** The power budget dominates every other criterion.
+Step counting, thresholding, and moving averages can comfortably use fixed-point
+arithmetic. An FPU's contribution here is marginal; its cost persists (area,
+leakage current, more gates).
 
-**Cache'li M7 daha hızlı, neden tercih edilmesin?** Çünkü cache
-**determinizmi bozar.** Aynı kod, cache hit ile miss arasında kat kat farklı
-sürede çalışır. Ortalaman iyileşir, ama en kötü durumun sınırını tahmin etmek
-zorlaşır. Sert gerçek zamanlı bir sistemde ölçtüğün şey ortalama değil, tavan
-olmalıdır. M7 kullanılacaksa cache'in kritik bölgeler için kilitlenmesi
-(lockdown) veya TCM kullanımı gerekir — yani ek mühendislik.
+**Is an FPU really necessary?** Acceleration data already arrives as integers.
+Converting it to floating point is usually a **convenience**, not a necessity.
+Working in Q15/Q31 fixed-point format takes somewhat more effort, but is
+deterministic and inexpensive.
 
-**Nasıl ölçerek savunursun:** Kontrol döngüsünün yürütme süresini çok sayıda
-iterasyonda örnekle ve **gözlenen maksimumu** raporla, ortalamayı değil.
-Deadline'a göre bir pay (headroom) belirle. Bunun kanıtlanmış bir WCET
-sınırı **olmadığını** da not et. Bu ölçümü QEMU'da yapamazsın — cycle counter
-çalışmıyor (`docs/TARGET_CAPABILITIES.md`). Gerçek zamanlama için gerçek
-donanım + DWT/trace gerekir. FVP'ler de otomatik çözüm değildir: sıradan bir
-FVP **fonksiyonel** bir modeldir ve cycle sayısı vermez; zamanlama bilgisi
-ancak açıkça "cycle-approximate" olarak belgelenmiş modellerden gelir. Hangi
-modelin ne sunduğunu ürün dokümantasyonundan doğrulamak gerekir.
+**What you lose by selecting M0+:**
+- No MPU (optional in M0+ and absent in many inexpensive parts) → no task isolation
+- Limited atomic-operation support (no LDREX/STREX) → lock-free structures become harder
+- Fewer debug facilities (DWT/ITM limited or absent)
+- No conveniences such as bit-banding or saturating arithmetic
 
-**MVE gerekli mi?** Muhtemelen hayır. Sensör füzyonu ve PID ölçeğindeki iş
-için DSP komutları (tek çevrimde MAC, SIMD) genellikle yeterlidir. MVE, ML
-çıkarımı veya çok kanallı ağır filtreleme ölçeğinde anlam kazanır.
+**Regret scenario 2 years later:** If the product starts storing "health data"
+(heart rhythm, sleep), data-protection regulations enter the picture, and the
+absence of TrustZone can suddenly force migration to M23/M33. This means
+revalidating much of the software.
 
-**Güvenlik:** Robot ağa bağlıysa cevap değişir. Uzaktan komut alan bir eklem
-kontrolcüsünde firmware imzası ve güvenli boot ihtiyacı doğar; o noktada
-TrustZone tekrar masaya gelir.
+**Middle ground:** M23 brings TrustZone and better debug at very little additional
+power cost over M0+. If the product roadmap is uncertain, M23 is insurance.
 
 ---
 
-# Bölüm 2 — Quick Check cevapları
+## Scenario C — Robotics / Signal Processing Node
 
-### 1. TrustZone ile MPU arasındaki fark nedir? Birbirinin yerine geçer mi?
+**Defensible choice:** M33 (configured with FPU + DSP) or M7.
 
-**Hayır — ama sebebi "biri güvenilirlik, diğeri güvenlik" değildir.**
-Farklı **sınırlar** çizerler.
+**Primary justification:** The control loop is hard real-time. The critical metric
+is not average speed but **worst-case latency**. Because kinematics and filtering
+are floating-point-intensive, the FPU has **a strong justification** here — but
+conditionally: the mathematics must require floating point, a fixed-point
+implementation must be unable to meet the loop budget, and error-analysis cost
+must be unacceptable. Without measuring these three, "an FPU is mandatory" is
+unjustified; fixed-point (Q15/Q31) is sufficient for many control loops.
+
+**A cached M7 is faster; why not choose it?** Because cache **harms determinism**.
+The same code can take multiples of the time depending on cache hits versus misses.
+The average improves, but bounding the worst case becomes harder. In a hard
+real-time system, measure the ceiling, not the average. Using M7 requires cache
+lockdown for critical regions or TCM — additional engineering.
+
+**How to defend the choice through measurement:** Sample control-loop execution
+time over many iterations and report the **observed maximum**, not the average.
+Define headroom relative to the deadline. Also note that this is **not** a proven
+WCET bound. You cannot make this measurement in QEMU — the cycle counter does not
+work (`docs/TARGET_CAPABILITIES.md`). Real timing requires real hardware + DWT/trace.
+FVPs are not an automatic solution either: an ordinary FVP is a **functional**
+model and does not provide cycle counts; timing information comes only from models
+explicitly documented as "cycle-approximate." Verify what each model offers in
+its product documentation.
+
+**Is MVE necessary?** Probably not. At the scale of sensor fusion and PID, DSP
+instructions (single-cycle MAC, SIMD) are usually sufficient. MVE becomes relevant
+at the scale of ML inference or intensive multichannel filtering.
+
+**Security:** The answer changes if the robot is network-connected. A joint
+controller receiving remote commands needs firmware signatures and secure boot;
+at that point, TrustZone returns to the discussion.
+
+---
+
+# Part 2 — Quick Check answers
+
+### 1. What is the difference between TrustZone and the MPU? Can they replace each other?
+
+**No — but not because "one is reliability and the other is security."**
+They establish different **boundaries**.
 
 | | MPU | TrustZone (Security Extension) |
 |---|---|---|
-| Neyi ayırır | Privileged ↔ unprivileged erişim | Secure ↔ Non-secure **durum** |
-| Kime karşı koruma sağlar | Ayrıcalıksız yazılıma karşı — hatalı da olsa, düşmanca da olsa | Non-secure tarafın **tamamına** karşı, ayrıcalıklı kodu dahil |
-| Kim yapılandırır | Ayrıcalıklı yazılım | Secure yazılım (SAU) |
-| Neye güvenmek zorunda | Ayrıcalıklı katmanın doğruluğuna | Secure yazılımın doğruluğuna |
+| What it separates | Privileged ↔ unprivileged access | Secure ↔ Non-secure **state** |
+| What it protects against | Unprivileged software, whether faulty or hostile | The **entire** Non-secure side, including privileged code |
+| Who configures it | Privileged software | Secure software (SAU) |
+| What must be trusted | Correctness of the privileged layer | Correctness of Secure software |
 
-MPU **gerçek bir güvenlik sınırı da olabilir**: ayrıcalıklı katman güvenilir
-olduğu sürece, ayrıcalıksız kodu — düşmanca olsa bile — kendi bölgesine
-hapseder. Sandbox'lanmış eklenti kodu, ağdan gelen veriyi ayrıştıran bir
-görev veya kullanıcı uygulaması için bu tam anlamıyla güvenlik korumasıdır.
+An MPU **can be a real security boundary**: as long as the privileged layer is
+trusted, it confines unprivileged code — even hostile code — to its own region.
+For sandboxed plugins, a task parsing network data, or a user application, this
+is security protection in the full sense.
 
-TrustZone farklı bir sınır çizer: Non-secure tarafın **ayrıcalıklı** kodu
-bile Secure belleği göremez. Bu koruma **Secure yazılıma güvenildiği**
-varsayımına dayanır; oradaki bir hata veya yanlış SAU yapılandırması
-korumayı ortadan kaldırır.
+TrustZone draws a different boundary: even **privileged** Non-secure code cannot
+see Secure memory. This protection assumes **Secure software is trusted**; a bug
+there or incorrect SAU configuration removes the protection.
 
-Yani ikisi de "güvenilir bir yazılım katmanı" varsayımını **kaldırmaz**,
-yalnızca o katmanı farklı yere koyar. İkisi birlikte kullanılır: Armv8-M'de
-zaten ayrı MPU_S ve MPU_NS konfigürasyonları vardır.
-
----
-
-### 2. FPU var ama firmware hiç kayan nokta kullanmıyor. Maliyeti nedir?
-
-Üç ayrı maliyet:
-
-1. **Silikon maliyeti** — alan ve sızıntı akımı, kullanılmasa bile ödenir.
-2. **Exception latency riski — ama koşullu.** `CPACR` ile FP erişimine
-   **izin vermek**, her exception'da genişletilmiş frame yazılacağı anlamına
-   gelmez. İzin ile **aktif FP bağlamı** ayrı şeylerdir: belirleyici olan
-   `CONTROL.FPCA`'dır. Ayrıca Armv8-M *lazy* FP durum koruması sunar
-   (`FPCCR.LSPEN`): yer ayrılır ama register'lar ancak gerçekten gerekirse
-   yazılır. Yani maliyet gerçek FP kullanımına ve koruma yapılandırmasına
-   bağlıdır; "FPU'yu açtın, her frame 26 word oldu" fazla kesin bir cümledir.
-3. **ABI ve bütçe riski.** Donanım FP erişimine izin verilmemişken bir FP
-   komutu çalıştırılırsa **otomatik yazılım emülasyonuna düşülmez**; bir
-   fault (UsageFault, NOCP) oluşur. Yazılım FP rutinleri bir **derleme ve
-   link** kararıdır: `-mfloat-abi=soft` derleyiciye FP işlemlerini libgcc
-   çağrılarına çevirtir. Gerçek risk "sessiz emülasyon" değil, **yavaş ama
-   doğru** yazılım FP kodunun bütçeyi aşması — ya da farklı FP ABI'leriyle
-   derlenmiş nesneler karışırsa link/çalışma zamanı hatalarıdır.
-
-Bu repoda tam olarak bu yüzden `-mfloat-abi=soft` kullanılıyor: exception
-frame'i 8 word'de tutmak ders 07/08'i basitleştiriyor. FPU ders 13'te
-**bilerek** açılacak.
+Neither therefore **eliminates** the assumption of a "trusted software layer";
+they place that layer differently. They are used together: Armv8-M already has
+separate MPU_S and MPU_NS configurations.
 
 ---
 
-### 3. `MVFR1.MVE = 0` — simülatörün eksikliği mi, işlemcinin özelliği mi?
+### 2. An FPU exists, but firmware never uses floating point. What is the cost?
 
-İşlemcinin özelliği. Daha doğrusu: **mimarinin sınırı.**
+Three separate costs:
 
-MVE (Helium), Armv8.1-M ile gelen bir vektör uzantısıdır. Cortex-M33 ise
-Armv8-M Mainline uygular. Yani hiçbir Cortex-M33 implementasyonunda MVE
-bulunmaz — bu konfigürasyonla açılabilecek bir seçenek değildir.
+1. **Silicon cost** — area and leakage current are paid even when unused.
+2. **Exception-latency risk — conditionally.** **Permitting** FP access with
+   `CPACR` does not mean an extended frame is written on every exception.
+   Permission and **active FP context** are separate; `CONTROL.FPCA` is decisive.
+   Armv8-M also provides *lazy* FP state preservation (`FPCCR.LSPEN`): space is
+   reserved, but registers are written only when actually needed. Cost therefore
+   depends on actual FP use and preservation configuration; "you enabled the FPU,
+   so every frame became 26 words" is too categorical.
+3. **ABI and budget risk.** Executing an FP instruction without hardware FP access
+   permission does **not automatically fall back to software emulation**; a fault
+   (UsageFault, NOCP) occurs. Software FP routines are a **compile-and-link**
+   decision: `-mfloat-abi=soft` makes the compiler turn FP operations into libgcc
+   calls. The real risk is not "silent emulation," but **slow yet correct**
+   software FP exceeding the budget — or link/runtime errors from mixing objects
+   compiled with different FP ABIs.
 
-**Nasıl ayırt edersin:** İki belgeye bakarsın.
-- *Armv8-M Architecture Reference Manual* → uzantı bu mimaride var mı?
-- *Cortex-M33 Technical Reference Manual / Integration and Implementation
-  Manual* → varsa, bu çekirdekte opsiyonel mi, zorunlu mu?
-
-Karşılaştır: `MPU_REGIONS = 0` okusaydın bu bir **konfigürasyon** kararı
-olurdu; başka bir M33'te 8 veya 16 çıkabilirdi. `MVE = 0` ise mimari gerçektir.
-
----
-
-### 4. (Reasoning) Sert gerçek zamanlı döngü: M7 mi M33 mü?
-
-Cevap Senaryo C'de ayrıntılı. Özeti:
-
-M33 daha doğru seçimdir **eğer** en kötü durum gecikmesi ortalama
-performanstan daha kritikse. M7'nin cache'i ortalamayı iyileştirir ama
-varyansı artırır; sert gerçek zamanlı sistemde karar verdiren şey varyanstır.
-
-Savunma yöntemi: çok sayıda döngü iterasyonunun **maksimum** süresini ölç,
-ortalamayı değil. "M7 %40 daha hızlı" cümlesi, maksimumu ölçmeden hiçbir şey
-ifade etmez.
-
-**Gözlenen maksimum, kanıtlanmış bir WCET
-(worst-case execution time) sınırı değildir.** Ölçüm yalnızca çalıştırdığın
-girdileri ve durumları kapsar; en kötü yolu hiç tetiklememiş olabilirsin.
-Gerçek WCET analizi statik analiz araçları, donanım modelleri ve genellikle
-sertifikasyon süreci ister. Doğru ifade: "gözlenen maksimum X idi, bütçe
-Y'ydi" — "WCET X'tir" değil.
+This is exactly why this repository uses `-mfloat-abi=soft`: keeping the exception
+frame at 8 words simplifies Lessons 07/08. The FPU will be enabled **deliberately**
+in Lesson 13.
 
 ---
 
-### 5. (Reasoning) "TrustZone pahalı, MPU ile hallederiz" — neresi doğru, neresi tehlikeli?
+### 3. `MVFR1.MVE = 0` — simulator limitation or processor property?
 
-**Doğru olan kısım:** MPU gerçek bir izolasyon sağlar ve birçok üründe
-yeterlidir. Maliyet kaygısı da meşrudur. Tehdit modeli "kendi bug'larımızdan
-korunmak" ise MPU doğru araçtır ve TrustZone fazladan karmaşıklıktır.
+A processor property. More precisely, **an architectural boundary**.
 
-**Tehlikeli olan kısım:** İki farklı tehdit modelinin birbirine karıştırılması.
-MPU'yu privileged yazılım yapılandırır. Saldırgan privileged koda ulaşırsa
-(bootloader, bir sürücü, RTOS çekirdeği — hepsi privileged'dır) MPU'yu
-yeniden yapılandırıp korumayı kaldırabilir. Yani MPU, **privileged katmanın
-güvenilir olduğu** varsayımına dayanır.
+MVE (Helium) is a vector extension introduced with Armv8.1-M. Cortex-M33 implements
+Armv8-M Mainline. No Cortex-M33 implementation therefore has MVE — it is not a
+configuration option that can be enabled.
 
-TrustZone bu varsayımı kaldırır: non-secure tarafın privileged kodu bile
-secure belleği göremez.
+**How to distinguish them:** Consult two documents.
+- *Armv8-M Architecture Reference Manual* → does this architecture contain the extension?
+- *Cortex-M33 Technical Reference Manual / Integration and Implementation Manual*
+  → if so, is it optional or mandatory in this core?
 
-**Doğru soru:** "Tehdit modelimiz ne ve saldırgan hangi ayrıcalık düzeyinde
-kod çalıştırabilir?"
-
-- Saldırgan yalnızca **ayrıcalıksız** kod çalıştırabiliyorsa (sandbox'lanmış
-  eklenti, ayrıştırıcı görev, kullanıcı uygulaması), MPU gerçek bir güvenlik
-  sınırıdır ve yeterli olabilir.
-- Saldırgan **ayrıcalıklı** koda ulaşabiliyorsa, ya da cihaz fiziksel erişime
-  açıksa, ya da sertifikasyon Non-secure yazılımdan bağımsız bir sınır
-  istiyorsa, MPU tek başına yetmez.
-
-Yani "MPU güvenlik değildir" de yanlış, "MPU her şeyi çözer" de. Belirleyici
-olan sınırın **nereye** çizildiği ve hangi katmana güvenildiğidir.
+Compare: reading `MPU_REGIONS = 0` would indicate a **configuration** decision;
+another M33 might report 8 or 16. `MVE = 0` is an architectural fact.
 
 ---
 
-## Referanslar
+### 4. (Reasoning) Hard real-time loop: M7 or M33?
 
-- Arm Cortex-M33 Technical Reference Manual — opsiyonel uzantılar, MPU/SAU
+Scenario C covers this in detail. In summary:
+
+M33 is the better choice **if** worst-case latency is more critical than average
+performance. M7's cache improves the average but increases variance; variance
+drives the decision in a hard real-time system.
+
+Defense: measure the **maximum** duration over many loop iterations, not the
+average. "M7 is 40% faster" means nothing without measuring the maximum.
+
+**An observed maximum is not a proven WCET (worst-case execution time) bound.**
+Measurement covers only the inputs and states you exercised; you may never have
+triggered the worst path. Real WCET analysis requires static-analysis tools,
+hardware models, and usually a certification process. The correct statement is
+"the observed maximum was X and the budget was Y," not "WCET is X."
+
+---
+
+### 5. (Reasoning) "TrustZone is expensive; we can manage with the MPU" — what is correct and what is dangerous?
+
+**The correct part:** An MPU provides real isolation and is sufficient in many
+products. Cost concerns are legitimate. If the threat model is "protection from
+our own bugs," the MPU is the right tool and TrustZone adds complexity.
+
+**The dangerous part:** Confusing two different threat models. Privileged software
+configures the MPU. If an attacker reaches privileged code (bootloader, a driver,
+RTOS kernel — all privileged), they can reconfigure the MPU and remove protection.
+The MPU thus assumes **the privileged layer is trusted**.
+
+TrustZone removes this assumption: even privileged code on the non-secure side
+cannot see secure memory.
+
+**The right question:** "What is our threat model, and at what privilege level
+can an attacker execute code?"
+
+- If an attacker can execute only **unprivileged** code (sandboxed plugin, parser
+  task, user application), the MPU is a real security boundary and may suffice.
+- If an attacker can reach **privileged** code, the device is physically accessible,
+  or certification requires a boundary independent of Non-secure software,
+  the MPU alone is insufficient.
+
+Both "the MPU is not security" and "the MPU solves everything" are wrong.
+What matters is **where** the boundary is drawn and which layer is trusted.
+
+---
+
+## References
+
+- Arm Cortex-M33 Technical Reference Manual — optional extensions, MPU/SAU
 - Arm Cortex-M33 Integration and Implementation Manual — `FPU`, `DSP`,
-  `SECEXT`, `MPU_S`, `MPU_NS` konfigürasyon parametreleri
+  `SECEXT`, `MPU_S`, `MPU_NS` configuration parameters
 - Armv8-M Architecture Reference Manual (Arm DDI 0553)
 - [`docs/TARGET_CAPABILITIES.md`](../../../docs/TARGET_CAPABILITIES.md)
 
 ---
 
-[← Ders 01](../README.md)
+[← Lesson 01](../README.md)

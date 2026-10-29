@@ -1,10 +1,12 @@
-# Alıştırma — İlk task frame'i
+**Language:** English | [Türkçe](README.tr.md)
 
-Yalnız `frame.c` TODO'sunu tamamla. Top 8-byte hizalıdır ve 17 word alan vardır.
-Yazılım kısmı R4–R11 + EXC_RETURN; hardware kısmı R0–R3, R12, LR, PC, xPSR.
-R0 task kimliği olmalı; entry Thumb state ile başlatılmalı, task dönüşü exit'e gitmeli.
-Frame başlangıcı ile hardware SP hizasını karıştırma.
+# Exercise — Initial task frame
 
-`15-exercise-frame` starter'ı CHECK_INITIAL_FRAME=FAIL, NO_LAUNCH/STACK_GUARDS/
-NO_FAULT=PASS verir. Çözümden sonra bütün dokuz kernel kontrolü PASS olmalı.
-Scheduler veya testin beklediği değerleri değiştirerek hatayı gizleme.
+Complete only the `frame.c` TODO. The top is 8-byte aligned and 17 words are available.
+The software part is R4–R11 + EXC_RETURN; the hardware part is R0–R3, R12, LR, PC, xPSR.
+R0 must hold the task identity; the entry must start in Thumb state, and task return
+must go to exit. Do not confuse frame-start alignment with hardware SP alignment.
+
+The `15-exercise-frame` starter gives CHECK_INITIAL_FRAME=FAIL and NO_LAUNCH/STACK_GUARDS/
+NO_FAULT=PASS. After solving it, all nine kernel checks should PASS.
+Do not hide the error by changing the scheduler or the values expected by the test.

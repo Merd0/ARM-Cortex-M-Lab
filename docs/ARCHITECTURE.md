@@ -1,108 +1,108 @@
+**Language:** English | [Türkçe](ARCHITECTURE.tr.md)
+
 # Repository Architecture
 
-Tasarim kurali: **her ayrimin gercek bir sebebi olmali.**
-Bu bir embedded ogrenme reposu, enterprise uygulama degil.
+Design rule: **every separation must have a real reason.**
+This is an embedded learning repository, not an enterprise application.
 
-## Katmanlar
+## Layers
 
 ```text
-lessons/  projects/  final-project/      <- ogrenme ve uygulama
+lessons/  projects/  final-project/      <- learning and practice
         |
         v
-common/        (console, tiny libc)      <- target'tan bagimsiz yardimcilar
+common/        (console, tiny libc)      <- target-independent helpers
         |
         v
-platform/mps2-an505/                     <- board'a ozel: startup, UART, linker
+platform/mps2-an505/                     <- board-specific: startup, UART, linker
         |                                   + mps2_an505.h (CMSIS device header)
         v
-external/CMSIS/Core/Include/             <- resmi CMSIS-Core (BASELINE)
+external/CMSIS/Core/Include/             <- official CMSIS-Core (BASELINE)
         |
-        |   (yan yolda, yalnizca dersler icin)
+        |   (alongside, for lessons only)
         +-- core/include/core/cm33_teaching.h
         |
         v
-cmake/  scripts/                         <- build ve calistirma altyapisi
+cmake/  scripts/                         <- build and execution infrastructure
 ```
 
-## Neden bu ayrim?
+## Why this separation?
 
 **`core/` vs `platform/`**
-`core/` Armv8-M **mimarisine** ait olan her seydir (SCB, NVIC, MPU, SAU, DWT).
-Baska bir Cortex-M33 board'una gecince degismez.
-`platform/` **board'a** aittir (UART adresi, bellek haritasi, linker script).
-M55 portu eklenirse sadece `platform/` cogalir.
+`core/` contains everything belonging to the Armv8-M **architecture** (SCB, NVIC,
+MPU, SAU, DWT). It does not change when moving to another Cortex-M33 board.
+`platform/` belongs to the **board** (UART address, memory map, linker script).
+Adding an M55 port only expands `platform/`.
 
-**`common/` ayri**
-Console ve tiny libc board'dan bagimsizdir; UART'i `platform` saglar,
-formatlamayi `common` yapar.
+**Separate `common/`**
+Console and tiny libc are board-independent; `platform` provides the UART,
+and `common` handles formatting.
 
 **CMSIS vs teaching header**
 
-Repository'de Cortex-M33 register'larina iki ayri erisim yolu var. Bu bir
-tutarsizlik degil, bilincli bir ayrim:
+The repository has two separate paths for accessing Cortex-M33 registers.
+This is a deliberate distinction, not an inconsistency:
 
 | | Baseline | Teaching |
 |---|---|---|
-| Dosya | `external/CMSIS/Core/Include/core_cm33.h` (Arm, Apache-2.0) | `core/include/core/cm33_teaching.h` (elle yazilmis, ~200 satir) |
-| Giris noktasi | `platform/mps2_an505.h` (CMSIS device header) | dogrudan include |
-| Kullanan | startup, system init, driver'lar, `tools/`, projeler, final project | yalnizca register'in kendisinin konu oldugu lesson firmware'leri |
-| Amac | Dogruluk, surdurulebilirlik, gercek dunya ile uyum | Gorunurluk |
+| File | `external/CMSIS/Core/Include/core_cm33.h` (Arm, Apache-2.0) | `core/include/core/cm33_teaching.h` (handwritten, ~200 lines) |
+| Entry point | `platform/mps2_an505.h` (CMSIS device header) | direct include |
+| Users | startup, system init, drivers, `tools/`, projects, final project | only lesson firmware where the register itself is the subject |
+| Purpose | Correctness, maintainability, real-world compatibility | Visibility |
 
-**Neden baseline CMSIS?**
-CMSIS-Core, Arm'in resmi Cortex-M soyutlama katmanidir. Her silikon uretici,
-her RTOS ve her ticari SDK onu varsayar. Elle yazilmis bir header uzun vadede
-iki sekilde bozulur: ya bir register alani yanlis/eksik kalir, ya da mimari
-guncellemelerini takip edemez. Bu nedenle altyapıda resmi CMSIS kullanılır.
+**Why CMSIS as the baseline?**
+CMSIS-Core is Arm's official Cortex-M abstraction layer. Every silicon vendor,
+RTOS, and commercial SDK assumes it. Over time, a handwritten header breaks in
+two ways: a register field is incorrect/missing, or it fails to keep up with
+architectural updates. The infrastructure therefore uses official CMSIS.
 
-**Neden hala elle yazilmis bir header var?**
-`core_cm33.h` tek başına 3284 satırdır (ölçüldü). CONTROL register'ının
-adresini ve `__get_CONTROL()` çağrısının nasıl çalıştığını incelemek için
-daha küçük bir eğitim header'ı kullanıyoruz.
+**Why is there still a handwritten header?**
+`core_cm33.h` alone is 3284 lines (measured). We use a smaller teaching header
+to examine the CONTROL register's address and how `__get_CONTROL()` works.
 
-`cm33_teaching.h`, `SCB->CFSR` adresinin `0xE000ED28` olduğunu ve
-`MRS`/`MSR` sarmalayıcılarının iki satır inline assembly ile nasıl yazıldığını
-gösterir. İsimlendirme CMSIS ile aynı tutulmuştur; böylece aynı çağrılar
-iki header ile de kullanılabilir.
+`cm33_teaching.h` shows that the address of `SCB->CFSR` is `0xE000ED28` and how
+`MRS`/`MSR` wrappers are written with two lines of inline assembly. Names match
+CMSIS so the same calls can be used with either header.
 
-**Pratik kural**
+**Practical rule**
 
 ```text
-lessons/          -> register'in kendisi konuysa teaching header kullanilabilir
-diger her sey     -> CMSIS (platform/mps2_an505.h)
+lessons/          -> teaching header may be used when the register itself is the subject
+everything else     -> CMSIS (platform/mps2_an505.h)
 ```
 
-Ders 12'nin bir odevi: ayni firmware'i once teaching header ile, sonra CMSIS
-ile derleyip uretilen makine kodunu karsilastirmak. Fark cikmiyorsa, soyutlama
-bedava demektir — ve bu, soyutlamanin ne zaman guvenli oldugu hakkinda
-somut bir ders olur.
+One Lesson 12 assignment is to compile the same firmware first with the teaching
+header, then with CMSIS, and compare the generated machine code. If there is no
+difference, the abstraction is free — a concrete lesson in when abstraction is safe.
 
-**CMSIS surumu ve guncelleme**
-Kullanilan surum ve tam dosya listesi: [`external/README.md`](../external/README.md).
-Dosyalar oldugu gibi (vendored) tutulur, degistirilmez. Bunun nedeni build'in
-ag erisimine bagimli olmamasi.
+**CMSIS version and updates**
+The version used and complete file list: [`external/README.md`](../external/README.md).
+Files are kept unchanged (vendored) so builds do not depend on network access.
 
-**Platform kapsami**
-Bu repo su an tek guvenlik durumu (Secure) ve tek bir hedef varsayar:
-QEMU `mps2-an505` / `cortex-m33`. Saat frekansi, NVIC oncelik biti sayisi ve
-reset VTOR degeri gibi seyler MIMARI SABIT DEGIL, HEDEFE OZEL sozlesmelerdir;
-kaynaklari `platform/mps2-an505/include/platform/board.h` ve
-`platform/mps2_an505.h` icinde QEMU kaynagina referansla yazilidir.
-Fiziksel kart degerleri bagimsiz olarak dogrulanmamistir.
+**Platform scope**
+This repository uses one QEMU target: `mps2-an505` / `cortex-m33`.
+Most lessons run in a single security state; **Lesson 16 and the final
+project** use distinct Secure/Non-secure images and TrustZone transitions. Clock frequency, NVIC priority-bit count, and
+reset VTOR value are TARGET-SPECIFIC contracts, NOT ARCHITECTURAL CONSTANTS;
+their sources are recorded in `platform/mps2-an505/include/platform/board.h`
+and `platform/mps2_an505.h`, with references to QEMU source.
+Physical-board values have not been independently verified.
 
-**Bilinen sinir: SAU ve `-mcmse`**
-CMSIS-Core `SAU` tanimlarini yalnizca derleyici `-mcmse` ile cagrildiginda
-(`__ARM_FEATURE_CMSE == 3`) acar. Bu repo su an `-mcmse` kullanmiyor, bu
-yuzden `tools/capability-probe` SAU_TYPE'i mimari sabit adresinden okur ve
-bunu kaynak icinde acikca belirtir. Ders 16'da secure/non-secure ayrimi
-kurulurken `-mcmse` acilacak.
+**Known limit: SAU and `-mcmse`**
+CMSIS-Core exposes `SAU` definitions only when the compiler is invoked with
+`-mcmse` (`__ARM_FEATURE_CMSE == 3`). The general
+`tools/capability-probe` target does not use `-mcmse` and reads SAU_TYPE
+from its fixed architectural address. **Lesson 16** already compiles Secure
+code with `-mcmse` and links separate Secure/Non-secure images; this is not
+a future-only capability.
 
-## Build akisi
+## Build flow
 
 ```text
 CMakePresets.json
    |  (toolchainFile)
    v
-cmake/arm-none-eabi.cmake        <- -mcpu/-mthumb/-mfloat-abi TEK yerde
+cmake/arm-none-eabi.cmake        <- -mcpu/-mthumb/-mfloat-abi in ONE place
    |
    v
 CMakeLists.txt
@@ -111,59 +111,58 @@ CMakeLists.txt
    |
    +-- cmake/firmware.cmake                 -> add_firmware()
    |
-   +-- lessons/*/CMakeLists.txt             -> her ders kendi firmware'ini tanimlar
+   +-- lessons/*/CMakeLists.txt             -> each lesson defines its own firmware
 ```
 
-**Platform neden INTERFACE library?**
-Bazi dersler farkli derleyici flag'leri kullanir (ornegin ders 13 FPU'yu
-hard-float ile acar). Onceden derlenmis tek bir static library'yi farkli ABI
-ile link etmek sessiz hatalara yol acar. INTERFACE ile her firmware platform
-kaynaklarini **kendi flag'leriyle** derler. Maliyeti birkac dosyanin
-yeniden derlenmesi; kazanci ABI guvenligi.
+**Why is the platform an INTERFACE library?**
+Some lessons use different compiler flags (for example, Lesson 13 enables the FPU
+with hard-float). Linking one precompiled static library with a different ABI
+causes silent errors. With INTERFACE, each firmware compiles platform sources
+**with its own flags**. The cost is recompiling a few files; the benefit is ABI safety.
 
-**`add_firmware()` neden var?**
-Her ders ayni 6 seyi istiyor: ELF, map, bin, disassembly, size, run/debug
-hedefleri. Bunu 16 kez kopyalamak yerine tek fonksiyon.
+**Why does `add_firmware()` exist?**
+Every lesson wants the same 6 things: ELF, map, bin, disassembly, size, run/debug
+targets. One function instead of copying this 16 times.
 
-## Ogrenci kodu vs altyapi kodu
+## Student code vs infrastructure code
 
-Net ayrim:
+A clear separation:
 
-| Altyapi (hazir gelir) | Ogrenci yazar |
+| Infrastructure (provided) | Written by the student |
 |---|---|
-| CMake, presets, toolchain dosyasi | Lesson icindeki `TODO(student)` bloklari |
-| QEMU/GDB scriptleri | Fault analyzer'in decode mantigi |
-| `platform/` startup (calisan surum) | Ders 11'deki sifirdan startup |
-| Console/UART surucusu | MPU konfigurasyonu, SVC handler'i |
-| `core/cm33_teaching.h` register tanimlari | Context switch kodu, scheduler |
+| CMake, presets, toolchain file | `TODO(student)` blocks within lessons |
+| QEMU/GDB scripts | Fault analyzer decoding logic |
+| `platform/` startup (working version) | Startup from scratch in Lesson 11 |
+| Console/UART driver | MPU configuration, SVC handler |
+| `core/cm33_teaching.h` register definitions | Context-switch code, scheduler |
 
-`platform/` altindaki startup **bilerek** calisir durumdadir: ders 11'e
-gelmeden once de firmware calistirabilmek gerekir. Ders 11'de ogrenci
-kendi startup'ini sifirdan yazar ve ikisini karsilastirir.
+Startup under `platform/` **deliberately** works: firmware must run before the
+learner reaches Lesson 11. In Lesson 11, the student writes startup from scratch
+and compares the two.
 
-## Dizin sorumluluklari
+## Directory responsibilities
 
-| Dizin | Icerik |
+| Directory | Contents |
 |---|---|
-| `core/` | Armv8-M register tanimlari ve intrinsic'ler |
-| `platform/mps2-an505/` | Startup, linker script, UART, board adresleri |
-| `common/` | Console, minimal libc parcalari |
-| `lessons/NN-*/` | Ders anlatimi (README) + calisan ornek |
-| `projects/` | Birden fazla dersi birlestiren buyuk isler |
-| `final-project/` | Specialization sonu entegrasyon projesi |
-| `tools/` | Ogretim disi yardimci firmware (capability probe) |
-| `cmake/` | Toolchain dosyasi ve build yardimcilari |
+| `core/` | Armv8-M register definitions and intrinsics |
+| `platform/mps2-an505/` | Startup, linker script, UART, board addresses |
+| `common/` | Console, minimal libc pieces |
+| `lessons/NN-*/` | Lesson explanation (README) + working example |
+| `projects/` | Larger work combining several lessons |
+| `final-project/` | End-of-specialization integration project |
+| `tools/` | Non-teaching helper firmware (capability probe) |
+| `cmake/` | Toolchain file and build helpers |
 | `scripts/` | Environment check, QEMU, GDB |
-| `docs/` | Kalici referans belgeler |
+| `docs/` | Lasting reference documents |
 | `tests/` | Smoke test |
-| `external/` | Vendored ucuncu taraf kaynak (CMSIS-Core) |
+| `external/` | Vendored third-party sources (CMSIS-Core) |
 
-## Bilincli olarak YAPILMAYANLAR
+## Deliberate NON-GOALS
 
-- Docker zorunlulugu yok
-- HAL/driver framework yok (bu repo cekirdek mimariye odaklanir)
-- Kod uretimi (code generation) yok
-- Dependency manager yok (tek dis bagimlilik: toolchain + QEMU)
-- Soyutlama katmani ekleme: her `platform_*` fonksiyonunun gercek bir sebebi var
+- No mandatory Docker
+- No HAL/driver framework (this repository focuses on core architecture)
+- No code generation
+- No dependency manager (only external dependency: toolchain + QEMU)
+- No gratuitous abstraction layers: every `platform_*` function has a real reason
 
-Gerekce: her ek katman, ogrenilmek istenen donanimi bir adim daha uzaga iter.
+Rationale: each extra layer moves the hardware we want to learn one step further away.

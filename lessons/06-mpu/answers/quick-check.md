@@ -1,49 +1,50 @@
-# Lesson 06 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-> Önce kendi cevabını yaz, sonra aç.
+# Lesson 06 — Quick Check Answers
 
----
-
-### 1. MPU neyi enforce eder? Neyi etmez?
-
-**Eder:** Bir bellek erişiminin, erişimi yapan bağlamın ayrıcalık seviyesine
-göre izinli olup olmadığını. Her erişim (veri okuma/yazma, komut getirme)
-bölge tablosuna karşı denetlenir; izin yoksa `MemManage` üretilir.
-
-Ayrıca erişim izninin yanında **bellek türünü** de tanımlar
-(`RLAR.AttrIndx` → `MAIR`): Normal mi Device mi, cacheability, shareability.
-
-**Etmez:**
-
-- Kodun *mantıksal* doğruluğunu. İzinli bir bölgeye yanlış veri yazmak
-  MPU'nun umurunda değildir.
-- Güvenlik durumu ayrımını (Secure/Non-secure) — o TrustZone'un işi.
-- Çevre birimi erişim denetimini SoC seviyesinde — o PPC'nin işi (soru 10).
-- Ayrıcalıklı yazılımın kendisini. MPU'yu ayrıcalıklı kod yapılandırır;
-  oradaki bir hata korumayı ortadan kaldırır.
+> Write your own answer before opening this file.
 
 ---
 
-### 2. Ayrıcalık ile MPU arasındaki ilişki nedir?
+### 1. What does the MPU enforce? What does it not enforce?
 
-**Ayrıcalık seviyeyi verir, MPU o seviyeye göre belleği kapatır.** Tek
-başlarına ikisi de yetersiz:
+**It enforces:** whether a memory access is permitted for the accessing
+context's privilege level. Each access (data read/write, instruction fetch)
+is checked against the region table; without permission, `MemManage` is raised.
 
-| Sadece ayrıcalık (ders 05) | Sadece MPU |
+Alongside permissions, it defines **memory type** (`RLAR.AttrIndx` → `MAIR`):
+Normal or Device, cacheability, shareability.
+
+**It does not enforce:**
+
+- *Logical* correctness of code. Writing incorrect data into a permitted
+  region does not concern the MPU.
+- Security-state separation (Secure/Non-secure) — TrustZone's job.
+- SoC-level peripheral access control — the PPC's job (question 10).
+- Protection of privileged software itself. Privileged code configures
+  the MPU; a bug there can remove protection.
+
+---
+
+### 2. How do privilege and the MPU relate?
+
+**Privilege supplies the level; the MPU restricts memory according to it.**
+Neither suffices alone:
+
+| Privilege alone (Lesson 05) | MPU alone |
 |---|---|
-| "Bu kod ayrıcalıksız çalışıyor" | Anlamsız — bölge izinleri `NP` bitiyle **ayrıcalığa göre** tanımlanır |
-| Ama tüm RAM'e erişebilir | Ayrıcalık kavramı olmadan "kim" sorusunun cevabı yok |
+| “This code runs unprivileged” | Meaningless — region permissions use `NP` to depend **on privilege** |
+| But it can access all RAM | Without privilege, there is no answer to “who” |
 
-Ders 05 ile ders 06 arasındaki fark somut: aynı `g_service_counter`, aynı
-ayrıcalıksız Thread. Ders 05'te doğrudan yazma **çalışıyordu** (sözleşme),
-ders 06'da `MemManage` üretiyor (donanım kuralı). Değişen tek şey MPU
-politikası.
+The difference between Lessons 05 and 06 is concrete: same `g_service_counter`,
+same unprivileged Thread. Direct writes **worked** in Lesson 05 (a contract);
+in Lesson 06 they cause `MemManage` (a hardware rule). Only the MPU policy changed.
 
 ---
 
-### 3. Ayrıcalıksız Thread neden kendi stack'ine erişebiliyor?
+### 3. Why can unprivileged Thread access its own stack?
 
-Çünkü Region 1 tam olarak bunun için tanımlandı:
+Region 1 was defined precisely for that purpose:
 
 ```text
 RBAR = 0x30000023
@@ -55,221 +56,215 @@ RLAR = 0x30000321
        EN  = 1
 ```
 
-`NP = 1` biti "ayrıcalıksız erişime de izin ver" demektir. Thread'in stack'i
-ve kendi veri alanı bu aralığın içinde; ölçülen değer
-`STACK_WRITE_MAGIC = 0xA5A5C0DE`.
+`NP = 1` means “allow unprivileged access too.” Thread's stack and data area
+lie in this range; the measured value was `STACK_WRITE_MAGIC = 0xA5A5C0DE`.
 
-`XN = 1` ise ayrı bir koruma: stack'e enjekte edilen veriden kod
-çalıştırılamaz (soru 7).
+`XN = 1` provides separate protection: data injected into the stack cannot
+be executed as code (question 7).
 
 ---
 
-### 4. Aynı Thread neden `g_service_counter`'a erişemiyor?
+### 4. Why can the same Thread not access `g_service_counter`?
 
-Çünkü **onu kapsayan hiçbir bölge tanımlanmadı.**
+Because **no region was defined to cover it**.
 
-Bu ters gibi görünür: koruma bir bölge *eklemekten* değil, **eklememekten**
-geliyor. Armv8-M kuralı şudur: MPU etkinken, ayrıcalıksız bir erişim eşleşen
-bir bölge bulamazsa **reddedilir**. Ayrıcalıklı erişimlerin `PRIVDEFENA`
-kurtarma yolu vardır, ayrıcalıksız erişimlerin yoktur.
+This seems reversed: protection comes from **omitting** a region, not
+*adding* one. The Armv8-M rule is: with the MPU enabled, an unprivileged
+access without a matching region is **denied**. Privileged accesses have
+the `PRIVDEFENA` fallback; unprivileged accesses do not.
 
-Ölçülen adresler:
+Measured addresses:
 
 ```text
 COUNTER_ADDR  = 0x30000000
-UNPRIV_BASE   = 0x30000020   <- Region 1 buradan basliyor
+UNPRIV_BASE   = 0x30000020   <- Region 1 starts here
 ```
 
-Sayaç, ayrıcalıksız bölgenin **altında** kalıyor ve başka bölge de yok.
+The counter lies **below** the unprivileged region, with no other region covering it.
 
 ---
 
-### 5. `SVC_Handler` aynı değişkene neden erişebiliyor?
+### 5. Why can `SVC_Handler` access the same variable?
 
-Üç adımlı zincir:
+A three-step chain:
 
-1. `SVC` bir exception'dır → işlemci **Handler Mode**'a geçer.
-2. Handler Mode **her zaman ayrıcalıklıdır** (ders 05).
-3. `MPU_CTRL.PRIVDEFENA = 1` olduğu için, ayrıcalıklı bir erişim hiçbir
-   bölgeyle eşleşmediğinde **varsayılan bellek haritası** devreye girer ve
-   erişim izinli olur.
+1. `SVC` is an exception → the processor enters **Handler Mode**.
+2. Handler Mode is **always privileged** (Lesson 05).
+3. With `MPU_CTRL.PRIVDEFENA = 1`, a privileged access without a matching
+   region uses the **default memory map**, permitting the access.
 
-Yani handler'ın ayrıcalığı kodundan değil bağlamından geliyor, erişim izni de
-politikadan değil `PRIVDEFENA`'dan.
+The handler's privilege comes from context, not code; its access permission
+comes from `PRIVDEFENA`, not an explicit region policy.
 
-Ölçülen değerler: `SVC_INCREMENT_1 = 1`, `SVC_INCREMENT_2 = 2` — aynı değişken,
-aynı firmware, farklı bağlam.
-
----
-
-### 6. `PRIVDEFENA` ne sağlar? `0` olsaydı ne kırılırdı?
-
-`MPU_CTRL.PRIVDEFENA = 1`: ayrıcalıklı erişimler, hiçbir bölge eşleşmezse
-mimarinin **varsayılan bellek haritasını** kullanır.
-
-`0` olsaydı, ayrıcalıklı kod için de "eşleşme yoksa reddet" kuralı geçerli
-olurdu. Bu derste her şey kırılırdı:
-
-- `main()` kendi MSP stack'ine (`0x30007FF0` civarı) erişemezdi — o bölge
-  tanımlı değil.
-- Handler `g_service_counter`'a erişemezdi.
-- Konsol çıktısı için UART'a erişilemezdi.
-
-Yani `PRIVDEFENA = 0` seçersen **her ayrıcalıklı erişim için de** bölge
-tanımlaman gerekir. Bazı yüksek güvenlikli tasarımlar bunu bilerek yapar
-(ayrıcalıklı kodun da sınırlanması için), ama o zaman politika çok daha
-büyür — 8 bölge hızla yetmez.
-
-Ölçülen: `MPU_CTRL = 0x00000005` = `ENABLE | PRIVDEFENA`.
+Measured values: `SVC_INCREMENT_1 = 1`, `SVC_INCREMENT_2 = 2` — same variable,
+same firmware, different context.
 
 ---
 
-### 7. `XN` neyi engeller? Thread bloğunda neden `XN = 1`?
+### 6. What does `PRIVDEFENA` provide? What would break with `0`?
 
-`XN` (execute never) o bölgeden **komut getirilmesini** engeller. İhlal
-edildiğinde `MMFSR.IACCVIOL` set olur — bu derste ölçtüğümüz `DACCVIOL`'den
-farklı bir bit.
+`MPU_CTRL.PRIVDEFENA = 1`: privileged accesses without a matching region
+use the architecture's **default memory map**.
 
-Thread bloğu stack ve veri içeriyor; oradan kod çalıştırmak için meşru bir
-sebep yok. `XN = 1` klasik bir sertleştirme önlemidir: stack taşması veya
-tampon aşımı ile enjekte edilen veri **çalıştırılamaz**. Masaüstündeki
-W^X / DEP ile aynı fikir.
+With `0`, privileged code would also follow “no match means deny.” Everything
+in this lesson would break:
 
-Simetrik olarak Region 0 (FLASH) `XN = 0` ve `RO = 1`: çalıştırılabilir ama
-yazılamaz. İkisi birlikte "yazılabilir olan çalıştırılamaz, çalıştırılabilir
-olan yazılamaz" kuralını kurar.
+- `main()` could not access its own MSP stack (around `0x30007FF0`) — no
+  region covers it.
+- The handler could not access `g_service_counter`.
+- UART would be inaccessible for console output.
+
+Selecting `PRIVDEFENA = 0` therefore requires regions for **every privileged
+access too**. Some high-security designs deliberately do this to constrain
+privileged code, but the policy grows much larger — 8 regions quickly run out.
+
+Measured: `MPU_CTRL = 0x00000005` = `ENABLE | PRIVDEFENA`.
 
 ---
 
-### 8. Armv8-M `RBAR`/`RLAR` modeli Armv7-M'den nasıl farklı?
+### 7. What does `XN` prevent? Why use `XN = 1` for the Thread block?
+
+`XN` (execute never) prevents **instruction fetch** from that region.
+Violating it sets `MMFSR.IACCVIOL`, a different bit from the `DACCVIOL`
+measured in this lesson.
+
+The Thread block contains stack and data, with no legitimate reason to
+execute code there. `XN = 1` is classic hardening: data injected through
+stack or buffer overflow **cannot execute**. The same idea as desktop W^X / DEP.
+
+Symmetrically, Region 0 (FLASH) has `XN = 0` and `RO = 1`: executable but
+not writable. Together they establish “writable memory is not executable;
+executable memory is not writable.”
+
+---
+
+### 8. How does Armv8-M's `RBAR`/`RLAR` model differ from Armv7-M?
 
 | | Armv7-M (PMSAv7) | Armv8-M (PMSAv8) |
 |---|---|---|
-| Bölge tanımı | `base` + **kodlanmış boyut alanı** (2'nin kuvveti) | `RBAR.BASE` + `RLAR.LIMIT` |
-| Hizalama | Bölge **kendi boyutuna** hizalı olmalı | 32 byte granularite yeter |
-| Alt bölgeler | `SRD` (subregion disable) alanı var | **Yok** |
-| Bellek türü | `TEX`/`C`/`B`/`S` alanları bölge içinde | `RLAR.AttrIndx` → `MAIR` |
-| Boyut | 2'nin kuvveti olmak zorunda | Herhangi bir 32 byte katı |
+| Region definition | `base` + **encoded size field** (power of 2) | `RBAR.BASE` + `RLAR.LIMIT` |
+| Alignment | Region must align to **its own size** | 32-byte granularity suffices |
+| Subregions | `SRD` (subregion disable) field | **None** |
+| Memory type | `TEX`/`C`/`B`/`S` fields within the region | `RLAR.AttrIndx` → `MAIR` |
+| Size | Must be a power of 2 | Any multiple of 32 bytes |
 
-`LIMIT` **dahildir** (bölgenin son byte'ı), "bitiş + 1" değil.
+`LIMIT` is **inclusive** (the region's final byte), not “end + 1.”
 
-**Neden internetteki örnekler kullanılamaz:** Armv7-M örnekleri `SIZE`
-alanını doldurur, `SRD` kullanır ve boyuta hizalama varsayar. Bu alanların
-hiçbiri Armv8-M'de yoktur. Kopyalarsan ya derlenmez ya da tamamen farklı bir
-bölge programlarsın. Doğru refleks: Armv8-M ARM'a veya vendored
-`armv8m_mpu.h`'a bakmak.
-
----
-
-### 9. MemManage exception'ı neden önemli? `MEMFAULTENA` kapalıysa ihlal kaybolur mu?
-
-**Kaybolmaz.** MPU ihlali her zaman bir fault üretir; `MEMFAULTENA` yalnızca
-onu **hangi handler'ın** göreceğini belirler.
-
-`MEMFAULTENA = 1` (bu dersteki durum): ihlal doğrudan MemManage handler'ına
-gider. Ölçülen: `IPSR = 4`, `HFSR = 0` — escalation yok, `MMFSR`/`MMFAR`
-doğrudan okunabiliyor.
-
-`MEMFAULTENA = 0`: MemManage etkin değildir, dolayısıyla fault **HardFault'a
-yükseltilir** (escalation) ve `HFSR.FORCED` set olur. Ders 02'de bunu
-`HFSR = 0x40000000` olarak görmüştük.
-
-Neden önemli? Çünkü teşhis kalitesi değişir. HardFault "bir şey oldu" der;
-MemManage "şu adrese şu tür erişim reddedildi" der. Ayrıca bir RTOS,
-MemManage'i yakalayıp **yalnızca hatalı görevi** sonlandırabilir; HardFault
-genelde sistem geneli bir çöküştür.
-
-> Bu cevaptaki `MEMFAULTENA = 0` davranışı bu derste **ölçülmedi** —
-> Deney 3 olarak sana bırakıldı. Mimari kuralı yazıyorum, ölçümü sen yap.
+**Why online examples cannot be used:** Armv7-M examples populate `SIZE`,
+use `SRD`, and assume size alignment. None of these fields exists in Armv8-M.
+Copying them either fails to compile or programs an entirely different
+region. The right habit: consult the Armv8-M ARM or vendored `armv8m_mpu.h`.
 
 ---
 
-### 10. (Reasoning) Ders 05'teki UART engeli neden MPU örneği değildi?
+### 9. Why does MemManage matter? Does disabling `MEMFAULTENA` remove a violation?
 
-Çünkü o sırada **MPU hiç etkinleştirilmemişti.** Ders 05 firmware'i
-`MPU->CTRL`'e hiç dokunmadı; ölçüm de bunu doğruluyor (ders 06 `[1]`
-bölümünde `MPU_CTRL = 0x00000000`).
+**No.** An MPU violation still causes a fault; `MEMFAULTENA` determines only
+**which handler** receives it.
 
-Engelin kaynağı SoC'nin **Peripheral Protection Controller**'ıydı. QEMU
-v8.2.2 `hw/misc/tz-ppc.c` içindeki `tz_ppc_check()` erişim "usermode" ise ve
-o portun `cfg_ap` biti sıfırsa işlemi bloklar; `cfg_sec_resp = 0` iken
-okumaya `0` döndürür.
+`MEMFAULTENA = 1` (this lesson): the violation goes directly to the MemManage
+handler. Measured: `IPSR = 4`, `HFSR = 0` — no escalation, and `MMFSR`/`MMFAR`
+can be read directly.
 
-Ayırt edici işaret **davranış farkı**:
+`MEMFAULTENA = 0`: MemManage is disabled, so the fault **escalates to HardFault**
+and sets `HFSR.FORCED`. We saw this as `HFSR = 0x40000000` in Lesson 02.
 
-| | PPC (ders 05) | MPU (ders 06) |
+Why does this matter? Diagnostic quality changes. HardFault says “something
+happened”; MemManage says “this type of access to this address was denied.”
+An RTOS can also catch MemManage and terminate **only the faulty task**;
+HardFault generally represents a system-wide crash.
+
+> The `MEMFAULTENA = 0` behavior in this answer was **not measured** in this
+> lesson — it is left to you as Experiment 3. This states the architectural
+> rule; you make the measurement.
+
+---
+
+### 10. (Reasoning) Why was Lesson 05's UART restriction not an MPU example?
+
+Because **the MPU had never been enabled**. Lesson 05 firmware never touched
+`MPU->CTRL`; measurement confirms this (`MPU_CTRL = 0x00000000` in Lesson 06,
+section `[1]`).
+
+The restriction came from the SoC's **Peripheral Protection Controller**.
+In QEMU v8.2.2's `hw/misc/tz-ppc.c`, `tz_ppc_check()` blocks a “usermode”
+access if that port's `cfg_ap` bit is zero; with `cfg_sec_resp = 0`, a read
+returns `0`.
+
+The distinguishing sign is the **difference in behavior**:
+
+| | PPC (Lesson 05) | MPU (Lesson 06) |
 |---|---|---|
-| İhlal sonucu | Sessiz: `UART_BAUDDIV_UNPRIV = 0` | Exception: `IPSR = 4` |
-| Hata adresi | Yok | `MMFAR = 0x30000000` |
-| Nerede | İşlemcinin dışında | İşlemcinin içinde |
+| Violation outcome | Silent: `UART_BAUDDIV_UNPRIV = 0` | Exception: `IPSR = 4` |
+| Fault address | None | `MMFAR = 0x30000000` |
+| Location | Outside the processor | Inside the processor |
 
-Pratik kural: beklenmedik bir erişim hatasında **hangi bloğun** reddettiğini
-sor. Exception geldiyse MPU; sessizce yanlış veri geldiyse sistem seviyesinde
-bir denetleyici olabilir.
+Practical rule: for unexpected access failure, ask **which block** rejected
+it. An exception points to the MPU; silent incorrect data may indicate a
+system-level controller.
 
 ---
 
-### 11. (Reasoning) MPU, TrustZone'un yerine geçer mi?
+### 11. (Reasoning) Can the MPU replace TrustZone?
 
-Hayır — **farklı eksenlerde** çalışırlar.
+No — they act on **different axes**.
 
 | | MPU | TrustZone |
 |---|---|---|
-| Eksen | Ayrıcalık (privileged / unprivileged) | Güvenlik durumu (Secure / Non-secure) |
-| Kim yapılandırır | Ayrıcalıklı yazılım | Secure yazılım (SAU) |
-| Neye güvenir | Ayrıcalıklı katmanın doğruluğuna | Secure yazılımın doğruluğuna |
-| Koruduğu | Ayrıcalıksız koda karşı | **Non-secure ayrıcalıklı koda karşı dahil** |
+| Axis | Privilege (privileged / unprivileged) | Security state (Secure / Non-secure) |
+| Configured by | Privileged software | Secure software (SAU) |
+| Trusts | Correctness of the privileged layer | Correctness of Secure software |
+| Protects against | Unprivileged code | **Including privileged Non-secure code** |
 
-**MPU'nun yeterli olduğu tehdit modeli:** Saldırgan yalnızca ayrıcalıksız kod
-çalıştırabiliyor — sandbox'lanmış eklenti, ağdan gelen veriyi ayrıştıran bir
-görev, kullanıcı uygulaması. Ayrıcalıklı katman güvenilir olduğu sürece MPU
-gerçek bir güvenlik sınırıdır.
+**Threat model where the MPU suffices:** the attacker can execute only
+unprivileged code — a sandboxed plugin, a task parsing network input, or a
+user application. As long as the privileged layer is trusted, the MPU is
+a real security boundary.
 
-**MPU'nun yetmediği tehdit modeli:** Saldırgan ayrıcalıklı koda ulaşabiliyor
-(bootloader, sürücü, RTOS çekirdeği — hepsi ayrıcalıklıdır). MPU'yu
-ayrıcalıklı kod yapılandırır; oraya ulaşan saldırgan politikayı yeniden
-yazabilir. Cihaz fiziksel erişime açıksa veya sertifikasyon Non-secure
-yazılımdan bağımsız bir sınır istiyorsa da yetmez.
+**Threat model where the MPU does not suffice:** the attacker can reach
+privileged code (bootloader, driver, RTOS kernel — all privileged). Privileged
+code configures the MPU; an attacker reaching it can rewrite the policy.
+It also does not suffice if the device is physically accessible or
+certification requires a boundary independent of Non-secure software.
 
-İkisi birlikte kullanılır: TrustZone Secure/Non-secure sınırını, MPU her iki
-tarafın kendi içindeki görev izolasyonunu sağlar. Armv8-M'de zaten ayrı
-`MPU` ve `MPU_NS` bankaları vardır.
-
----
-
-### 12. (Reasoning) MPU açıkken yazılım otomatik güvenli mi olur?
-
-Hayır. MPU bir **araçtır**, politika değil. Koruma, yazdığın politikanın
-doğruluğu kadardır.
-
-Sessizce her şeyi açabilecek hatalar:
-
-- Fazla geniş bir `LIMIT` — korunan veri yanlışlıkla izinli bölgeye girer.
-- Unutulmuş `XN` — veri bölgesinden kod çalıştırılabilir.
-- `RO` yerine `RW` — salt-okunur olması gereken bölge yazılabilir.
-- Bölge önceliği: Armv8-M'de bölgeler **çakışmamalıdır**; çakışma tanımsız
-  davranıştır.
-- Bölge sayısının yetmemesi — bu hedefte 8 tane var ve gerçek bir sistemde
-  çevre birimleri + görev başına stack hızla tüketir.
-- 32 byte granularite: "tek bir değişkeni" koruyamazsın, komşuları da aynı
-  bölgeye girer. Bu derste `~0x1Fu` maskelemesi tam olarak bunu gösteriyor.
-
-Ayrıca MPU'nun **hiç göremediği** şeyler var: mantık hataları, izinli bir
-bölgeye yazılan yanlış veri, zamanlama hataları, yan kanal saldırıları.
-
-Doğru cümle: *"MPU, doğru yapılandırıldığında belirli bir tehdit modeline
-karşı donanımsal bir sınır sağlar."* — *"MPU açık, artık güvenliyiz"* değil.
+They are used together: TrustZone establishes the Secure/Non-secure boundary,
+and the MPU isolates tasks within each side. Armv8-M already has separate
+`MPU` and `MPU_NS` banks.
 
 ---
 
-## Referanslar
+### 12. (Reasoning) Does enabling the MPU automatically make software secure?
+
+No. The MPU is **a tool**, not a policy. Protection is only as correct as
+the policy you write.
+
+Mistakes that can silently leave everything open:
+
+- An overly broad `LIMIT` accidentally includes protected data in a permitted region.
+- Omitted `XN` permits execution from a data region.
+- `RW` instead of `RO` makes an intended read-only region writable.
+- Region priority: Armv8-M regions **must not overlap**; overlap is undefined behavior.
+- Too few regions — this target has 8, quickly consumed by peripherals and
+  per-task stacks in a real system.
+- 32-byte granularity: you cannot protect “one variable”; its neighbors
+  enter the same region. The `~0x1Fu` mask in this lesson demonstrates exactly this.
+
+The MPU also **cannot see** logic errors, incorrect data written into permitted
+regions, timing errors, or side-channel attacks.
+
+The accurate statement is: *“A correctly configured MPU provides a hardware
+boundary against a particular threat model.”* Not *“the MPU is on, so we are secure.”*
+
+---
+
+## References
 
 - Armv8-M ARM (Arm DDI 0553) — PMSAv8, `MPU_RBAR`/`MPU_RLAR`/`MPU_CTRL`,
   `MMFSR`, `MMFAR`, `SHCSR.MEMFAULTENA`
 - Cortex-M33 Devices Generic User Guide (Arm 100235)
 - CMSIS-Core Armv8-M MPU API — `external/CMSIS/Core/Include/m-profile/armv8m_mpu.h`
-- QEMU v8.2.2 `hw/misc/tz-ppc.c` — ders 05 PPC gözlemi
+- QEMU v8.2.2 `hw/misc/tz-ppc.c` — Lesson 05 PPC observation
 
 ---
 
-[← Ders 06](../README.md) · [Ders 07 →](../../07-exceptions/)
+[← Lesson 06](../README.md) · [Lesson 07 →](../../07-exceptions/)

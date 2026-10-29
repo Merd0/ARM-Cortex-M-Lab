@@ -1,58 +1,59 @@
+**Language:** English | [Türkçe](ENVIRONMENT.tr.md)
+
 # Environment Setup
 
-Hedef: fiziksel board olmadan Cortex-M33 firmware derleyip çalıştırıp debug
-edebilmek.
+Goal: build, run, and debug Cortex-M33 firmware without a physical board.
 
 ---
 
-## Doğrulama ortamları
+## Verification environments
 
-Bootstrap Linux container üzerinde yapıldı. Proje/final entegrasyon commit'i `11fde900` için
-Ubuntu 24.04 GitHub Actions üç preset geçti. Yerel mühendislik doğrulaması
-Windows üzerinde native Arm GCC/QEMU/GDB ve MSYS2 Bash ile yürütülür;
-[son kapı kaydı](ENGINEERING_AUDIT.md) yerel sonuçları ayrıca gösterir.
+Bootstrap was performed in a Linux container. Ubuntu 24.04 GitHub Actions passed
+three presets for project/final integration commit `11fde900`. Local engineering
+verification runs on Windows with native Arm GCC/QEMU/GDB and MSYS2 Bash;
+the [final gate record](ENGINEERING_AUDIT.md) shows local results separately.
 
-- Windows: native CMake/Ninja build, Python QEMU/GDB kapıları;
-  Bash testleri MSYS2 ile çalıştırılır. `scripts/check-environment.ps1`
-  2026-10-27'de çalıştırıldı ve tüm araçları buldu.
-- Ubuntu: CI'da build, QEMU, GDB ve regresyon kapıları.
-- WSL2 ve macOS: bu son kapıda doğrulanmadı. WSL servisinin bulunmaması
-  native Windows testleri için engel değildir.
-- VS Code tasks/launch etkileşimli akışı ve sıfırdan paket kurulumu bu
-  denetimde sınanmadı; bütün `.ps1` araçları test edilmiş sayılmaz.
+- Windows: native CMake/Ninja builds, Python QEMU/GDB gates;
+  Bash tests run through MSYS2. `scripts/check-environment.ps1` ran on
+  2026-10-27 and found all tools.
+- Ubuntu: build, QEMU, GDB, and regression gates in CI.
+- WSL2 and macOS: not verified in this final gate. The absence of a WSL service
+  does not prevent native Windows testing.
+- The interactive VS Code tasks/launch flow and package installation from scratch
+  were not tested in this audit; not all `.ps1` tools should be considered tested.
 
-Gerçekte kullanılan sürümler [Tool Versions](TOOL_VERSIONS.md) içindedir.
-QEMU sürümleri arasındaki model farkları fiziksel Cortex-M33 garantisi değildir.
-
----
-
-## Gereken beş şey
-
-**Arm GNU Toolchain · CMake · Ninja · QEMU · bir editör (VS Code)**
-
-Hepsi ücretsiz, kurulum ~15 dakika.
+Versions actually used are in [Tool Versions](TOOL_VERSIONS.md).
+Model differences between QEMU versions are not physical Cortex-M33 guarantees.
 
 ---
 
-# Yol A — Windows'ta native kurulum
+## Five things you need
+
+**Arm GNU Toolchain · CMake · Ninja · QEMU · an editor (VS Code)**
+
+All are free; installation takes ~15 minutes.
+
+---
+
+# Route A — Native Windows installation
 
 ## A1. Arm GNU Toolchain
 
-Resmi indirme sayfası:
+Official download page:
 <https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads>
 
-- Hedef: **`arm-none-eabi`** (AArch32 bare-metal)
-- Windows için `.exe` installer en kolayı
-- Kurulumda **"Add path to environment variable"** kutusunu işaretle
+- Target: **`arm-none-eabi`** (AArch32 bare-metal)
+- The `.exe` installer is easiest on Windows
+- Check **"Add path to environment variable"** during installation
 
-Alternatif olarak winget:
+Alternatively, use winget:
 
 ```powershell
 winget install Arm.GnuArmEmbeddedToolchain
 ```
 
-> winget paket adı Arm tarafından değiştirilebilir. Bulunamazsa
-> `winget search arm-none-eabi` dene, olmadı resmi installer'ı kullan.
+> Arm may change the winget package name. If it is not found,
+> try `winget search arm-none-eabi`; otherwise use the official installer.
 
 ## A2. CMake, Ninja, Git
 
@@ -68,10 +69,10 @@ winget install Git.Git
 winget install SoftwareFreedomConservancy.QEMU
 ```
 
-winget sürümü sorun çıkarırsa resmi Windows binary'leri:
+If the winget version causes trouble, official Windows binaries are available at:
 <https://www.qemu.org/download/#windows>
 
-QEMU dizini (tipik olarak `C:\Program Files\qemu`) PATH'te değilse:
+If the QEMU directory (typically `C:\Program Files\qemu`) is not on PATH:
 
 ```powershell
 [Environment]::SetEnvironmentVariable(
@@ -80,7 +81,7 @@ QEMU dizini (tipik olarak `C:\Program Files\qemu`) PATH'te değilse:
     "User")
 ```
 
-PATH değişikliğinden sonra **terminali kapat ve yeniden aç.**
+After changing PATH, **close and reopen the terminal.**
 
 ## A4. VS Code
 
@@ -88,12 +89,12 @@ PATH değişikliğinden sonra **terminali kapat ve yeniden aç.**
 winget install Microsoft.VisualStudioCode
 ```
 
-Repo'yu açtığında VS Code önerilen eklentileri soracak
-(`.vscode/extensions.json`): C/C++ ve CMake Tools.
+When you open the repository, VS Code will suggest the recommended extensions
+(`.vscode/extensions.json`): C/C++ and CMake Tools.
 
-## A5. Kurulumu doğrula
+## A5. Verify the installation
 
-Yeni bir PowerShell penceresinde:
+In a new PowerShell window:
 
 ```powershell
 arm-none-eabi-gcc --version
@@ -103,16 +104,16 @@ ninja --version
 qemu-system-arm --version
 ```
 
-Beşi de sürüm basıyorsa hazırsın. Repo'daki script aynı şeyi yapar:
+If all five print versions, you are ready. The repository script does the same:
 
 ```powershell
 .\scripts\check-environment.ps1
 ```
 
-> Bu script mevcut Windows ortamında geçti. Başka bir kurulumda araç
-> eksikse yukarıdaki komutlarla PATH ve sürümleri kontrol et.
+> This script passed in the current Windows environment. If a tool is missing
+> in another installation, check PATH and versions using the commands above.
 
-## A6. Build ve çalıştır
+## A6. Build and run
 
 ```powershell
 git clone <repo-url>
@@ -122,33 +123,33 @@ cmake --preset debug
 cmake --build --preset debug
 ```
 
-Beklenen: her firmware için `--print-memory-usage` çıktısı ve `size` tablosu.
+Expected: `--print-memory-usage` output and a `size` table for each firmware.
 
 ```powershell
 cmake --build --preset debug --target run-02-programmer-model
 ```
 
-QEMU'dan çıkış: **Ctrl-A**, sonra **X**.
+Exit QEMU: **Ctrl-A**, then **X**.
 
-> Ctrl-A bazı terminallerde yutulur. Windows Terminal kullanıyorsan çalışır.
+> Some terminals swallow Ctrl-A. It works in Windows Terminal.
 
 ## A7. Debug
 
-İki terminal gerekir.
+Two terminals are required.
 
-Terminal 1 — QEMU durdurulmuş halde GDB bekler:
+Terminal 1 — QEMU waits halted for GDB:
 
 ```powershell
 cmake --build --preset debug --target debug-02-programmer-model
 ```
 
-Terminal 2 — GDB bağlanır:
+Terminal 2 — GDB connects:
 
 ```powershell
 arm-none-eabi-gdb build\debug\lessons\02-programmer-model\02-programmer-model.elf
 ```
 
-GDB içinde:
+Inside GDB:
 
 ```gdb
 set architecture armv8-m.main
@@ -159,22 +160,22 @@ b main
 continue
 ```
 
-VS Code'dan: **F5** → "Attach to QEMU (lesson 02)". Bu yol da Windows'ta
-denenmedi; çalışmazsa yukarıdaki iki terminal yöntemi her zaman çalışır —
-ve öğretici olan da zaten odur.
+From VS Code: **F5** → "Attach to QEMU (lesson 02)". This route was not tested on
+Windows either; if it fails, the two-terminal method above always works — and
+is the more instructive approach anyway.
 
 ---
 
-# Yol B — WSL2 (doğrulanmış ortama en yakın)
+# Route B — WSL2 (closest to the verified environment)
 
-Windows tarafında bir şey çalışmazsa, doğrulamanın yapıldığı ortamın aynısını
-kurmanın yolu budur.
+If something does not work on Windows, this is how to set up the same environment
+used for verification.
 
 ```powershell
 wsl --install -d Ubuntu-24.04
 ```
 
-WSL içinde:
+Inside WSL:
 
 ```bash
 sudo apt-get update
@@ -183,7 +184,7 @@ sudo apt-get install -y \
     qemu-system-arm cmake ninja-build gdb-multiarch git
 ```
 
-Doğrula ve çalıştır:
+Verify and run:
 
 ```bash
 ./scripts/check-environment.sh
@@ -192,45 +193,45 @@ cmake --build --preset debug
 ./tests/smoke-test.sh
 ```
 
-Bu komut dizisinin container'daki sonucu: **26 PASS / 0 FAIL.**
+Result of this command sequence in the container: **26 PASS / 0 FAIL.**
 
-## WSL notları
+## WSL notes
 
-- `arm-none-eabi-gdb` Ubuntu depolarında yok; `gdb-multiarch` kullanılır.
-  Bu repo için farkı yoktur — tüm GDB doğrulamaları onunla yapıldı:
+- `arm-none-eabi-gdb` is not in the Ubuntu repositories; use `gdb-multiarch`.
+  It makes no difference for this repository — all GDB verification used it:
   ```bash
   gdb-multiarch -q build/debug/lessons/02-programmer-model/02-programmer-model.elf
   (gdb) set architecture armv8-m.main
   (gdb) target remote :3333
   ```
-- Kod Windows diskinde (`/mnt/c/...`) değil, WSL dosya sisteminde (`~/`)
-  dursun. `/mnt/c` üzerindeki build belirgin şekilde yavaştır.
-- VS Code + "WSL" eklentisi ile WSL klasörünü doğrudan açabilirsin:
-  Windows'ta editör, Linux'ta toolchain.
+- Keep code in the WSL filesystem (`~/`), not on the Windows disk (`/mnt/c/...`).
+  Builds under `/mnt/c` are noticeably slower.
+- With VS Code + the "WSL" extension, you can open the WSL folder directly:
+  editor on Windows, toolchain on Linux.
 
 ---
 
-## Sorun giderme
+## Troubleshooting
 
-| Belirti | Olası neden | Çözüm |
+| Symptom | Likely cause | Solution |
 |---|---|---|
-| `arm-none-eabi-gcc: command not found` | PATH'e eklenmemiş | Terminali yeniden aç; olmazsa kurulum `bin` dizinini PATH'e ekle |
-| `CMAKE_C_COMPILER not found` | Toolchain PATH'te değil | `cmake -DARM_TOOLCHAIN_BIN=C:/path/to/bin --preset debug` |
-| `Ninja generator not found` | Ninja kurulu değil | `winget install Ninja-build.Ninja` |
-| `unsupported machine type` | QEMU çok eski | `qemu-system-arm -M help \| findstr mps2` → `mps2-an505` listede olmalı |
-| QEMU açılıyor, çıktı yok | `-serial stdio` eksik | Repo'nun `run-*` hedeflerini kullan |
-| GDB `Remote connection closed` | QEMU başlamadan bağlanıldı | Terminal 1'in beklediğinden emin ol |
-| GDB'de register değerleri tutarsız | Mimari ayarlanmamış | `set architecture armv8-m.main` |
+| `arm-none-eabi-gcc: command not found` | Not added to PATH | Reopen the terminal; if necessary, add the installation's `bin` directory to PATH |
+| `CMAKE_C_COMPILER not found` | Toolchain not on PATH | `cmake -DARM_TOOLCHAIN_BIN=C:/path/to/bin --preset debug` |
+| `Ninja generator not found` | Ninja not installed | `winget install Ninja-build.Ninja` |
+| `unsupported machine type` | QEMU too old | `qemu-system-arm -M help \| findstr mps2` → `mps2-an505` must appear in the list |
+| QEMU opens without output | Missing `-serial stdio` | Use the repository's `run-*` targets |
+| GDB `Remote connection closed` | Connected before QEMU started | Ensure Terminal 1 is waiting |
+| Inconsistent register values in GDB | Architecture not set | `set architecture armv8-m.main` |
 | `.ps1 cannot be loaded` | Execution policy | `powershell -ExecutionPolicy Bypass -File scripts\check-environment.ps1` |
 
 ---
 
-## Kurulumu bitirince
+## After setup
 
-`docs/TOOL_VERSIONS.md` içindeki doğrulanmış Windows sürümlerini kendi
-çıktılarınla karşılaştır. Farklı bir ortamın sonuçlarını ayrı kaydet; ölçülmüş
-sürüm kaydını varsayımlarla değiştirme.
+Compare the verified Windows versions in `docs/TOOL_VERSIONS.md` with your own
+output. Record results from a different environment separately; do not replace
+measured version records with assumptions.
 
 ---
 
-[← Ana sayfa](../README.md) · [Araç sürümleri](TOOL_VERSIONS.md) · [Bilinen sınırlar](LIMITATIONS.md)
+[← Home](../README.md) · [Tool versions](TOOL_VERSIONS.md) · [Known limitations](LIMITATIONS.md)

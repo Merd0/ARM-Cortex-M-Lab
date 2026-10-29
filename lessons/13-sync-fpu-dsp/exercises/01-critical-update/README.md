@@ -1,23 +1,25 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Preserve the Critical Section
 
-Önce [dersin](../../README.md) kayıp güncelleme deneyini çalıştır.
-[`critical.c`](critical.c) içindeki tek TODO'yu tamamla. Starter bilerek iş
-yapmaz; sürücü **2/6 PASS** bildirir. Yalnız maskeyi bozmamak yeterli değildir.
+First run the [lesson's](../../README.md) lost-update experiment.
+Complete the single TODO in [`critical.c`](critical.c). The starter intentionally
+does no work; the driver reports **2/6 PASS**. Merely leaving the mask intact is insufficient.
 
-## Sözleşme
+## Contract
 
-`l13_protected_increment(counter)` Secure privileged Thread/MSP üzerinde,
-geçerli ve word-aligned bir Normal SRAM sayacıyla çağrılır:
+`l13_protected_increment(counter)` is called in Secure privileged Thread/MSP with
+a valid, word-aligned Normal SRAM counter:
 
-1. Mevcut PRIMASK'ı kaydet, maskelenebilir exception'ları maskele.
-2. Sayacı oku; **okuma ile yazma arasında `l13_pend_update()` çağır**.
-3. Okunan değere 1 ekleyip sayaca yaz.
-4. Girişteki PRIMASK'ı geri yükle. Koşulsuz `__enable_irq()` kullanma.
+1. Save the current PRIMASK and mask maskable exceptions.
+2. Read the counter; **call `l13_pend_update()` between the read and write**.
+3. Add 1 to the value read and write it to the counter.
+4. Restore the entry PRIMASK. Do not use unconditional `__enable_irq()`.
 
-`l13_pend_update()` tek SysTick exception'ını pending yapar; zamanlayıcı kurmaz.
-Çağıran, gerekiyorsa maskeyi açıp deferred exception'ın çalışmasını bekler.
-Bu fonksiyonda maskeliyken IRQ beklemek deadlock olur. Sürücüyü, handler'ı ve
-beklenen sonuçları değiştirme. NMI/HardFault bu korumanın kapsamında değildir.
+`l13_pend_update()` makes one SysTick exception pending; it does not configure a
+timer. If needed, the caller unmasks and waits for the deferred exception to run.
+Waiting for an IRQ while masked in this function would deadlock. Do not change the
+driver, handler, or expected results. NMI/HardFault are outside this protection's scope.
 
 ```bash
 cmake --preset debug
@@ -25,17 +27,17 @@ cmake --build --preset debug --target 13-exercise-critical
 ./scripts/run-qemu.sh build/debug/lessons/13-sync-fpu-dsp/13-exercise-critical.elf
 ```
 
-Sürücü iki durumu sınar: girişte PRIMASK=0 ve girişte PRIMASK=1.
-İkisinde de Thread ve handler birer artış yapmalı, toplam 2 olmalı.
-İkinci çağrıda fonksiyon dönünce PRIMASK hâlâ 1 ve handler sayısı 0 olmalı;
-maskeyi sürücü açar. Tam çözüm üç preset'te **6/6** vermelidir.
-Başlangıç sürümünü çözülmüş gibi işaretleme; ana test starter için 2/6 bekler.
+The driver tests two cases: PRIMASK=0 on entry and PRIMASK=1 on entry.
+In both, Thread and handler must each increment once, giving a total of 2.
+On the second call, PRIMASK must still be 1 and the handler count 0 when the
+function returns; the driver unmasks. A complete solution must give **6/6** in all
+three presets. Do not mark the starter as solved; the main test expects 2/6 for it.
 
 ## Break / Debug
 
-- Maskeyi güncellemeden sonra kapatırsan stale read nasıl kaybolur?
-- Maskeliyken pending exception'ın ne zaman çalışmasını beklersin?
-- İç içe korumada koşulsuz enable neden çağıranın sözleşmesini bozar?
-- DMB eklemek okuma–değiştirme–yazmayı tek başına atomik yapar mı?
+- If you mask only after the update, how is the stale read lost?
+- When do you expect a pending exception to run while masked?
+- Why does unconditional enable in nested protection violate the caller's contract?
+- Does adding DMB alone make read–modify–write atomic?
 
-[Ayrı referans çözüm](../../solutions/01-critical-update/).
+[Separate reference solution](../../solutions/01-critical-update/).

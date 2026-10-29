@@ -1,6 +1,8 @@
-# Quick Check cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-1. Pending biti tek durumdur; birden çok istek birleşebilir.
-2. Eşit öncelikler preemption sağlamaz; SysTick bitince PendSV yine çalışabilir.
-3. CMSIS yardımcısı SysTick önceliğini en düşük değere yazar.
-4. Hayır. Thread MSP üzerinde kaldı; context switching sonraki derstedir.
+# Quick Check answers
+
+1. A pending bit is a single state; multiple requests can coalesce.
+2. Equal priorities do not allow preemption; PendSV can still run after SysTick finishes.
+3. The CMSIS helper writes the lowest priority to SysTick.
+4. No. Thread remained on MSP; context switching is covered in the next lesson.

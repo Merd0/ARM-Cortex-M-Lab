@@ -1,14 +1,17 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Project — Educational Mini Kernel
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-Lesson 15 kernel/frame/context kaynakları değiştirilmiş kopyalar yerine doğrudan
-derlenir. Üç küçük weak uygulama hook'u yalnız bounded iş ve sonuç raporlaması
-ekler; dersin varsayılan davranışı değişmez. Ready hook'u queue boşalmadan
-bitişe izin vermez; testin beklediği 16 örnek azaltılmaz. [application.c](src/application.c)
-iki task arasında sekiz slot'lu ring buffer kullanır: producer 0..15 üretir,
-consumer toplamı hesaplar. Counter ve queue güncellemesi mevcut kısa observation
-kritik bölümünde yapılır; UART yalnız bitiş Handler'ındadır.
+Lesson 15 kernel/frame/context sources are compiled directly instead of maintaining
+modified copies. Three small weak application hooks add only bounded work and
+result reporting; the lesson's default behavior does not change. The ready hook
+prevents completion before the queue drains; the 16 samples expected by the test
+are not reduced. [application.c](src/application.c) uses an eight-slot ring buffer
+between two tasks: the producer generates 0..15, and the consumer calculates the
+sum. Counters and the queue are updated in the existing short observation critical
+section; UART is used only in the completion Handler.
 
 ```bash
 cmake --preset debug
@@ -18,14 +21,15 @@ python tests/system-smoke.py
 ```
 
 Debug/QEMU: PRODUCED=16, CONSUMED=16, QUEUE_SUM=120, CHECK_QUEUE=PASS.
-Kernel'in dokuz context/stack/progress kontrolü de PASS. İlk cooperative
-yield'lerden sonra task'lar timer preemption ile ilerler. R4–R11 ve EXC_RETURN
-saklanır; stack sınırı STM'den önce doğrulanır. PSP task'lara, MSP Handler'lara
-aittir; ilk MSP frame'i tekrar kullanılmaz.
+The kernel's nine context/stack/progress checks also PASS. After the initial
+cooperative yields, tasks progress through timer preemption. R4–R11 and EXC_RETURN
+are saved; stack bounds are validated before STM. PSP belongs to tasks and MSP to
+Handlers; the initial MSP frame is not reused.
 
-Bu referans sürüm privileged task/basic Secure frame kullanır; FP task context,
-MPU task izolasyonu, priority inheritance veya üretim RTOS garantisi yoktur.
-Unprivileged ve TrustZone entegrasyonu final projede ayrı doğrulanacak.
-[Lesson 15](../../lessons/15-mini-kernel/) starter ve çözümü ayrı kalır.
+This reference version uses privileged tasks/basic Secure frames; it provides no
+FP task context, MPU task isolation, priority inheritance, or production RTOS
+guarantee. Unprivileged and TrustZone integration will be verified separately in
+the final project. The [Lesson 15](../../lessons/15-mini-kernel/) starter and
+solution remain separate.
 
 [Projects](../README.md)

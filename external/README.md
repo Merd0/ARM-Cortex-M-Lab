@@ -1,7 +1,9 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # external/ — vendored third-party sources
 
-Buradaki hiçbir dosya elle değiştirilmez. Değiştirilirse "resmi kaynak"
-olma özelliğini kaybeder ve güncellenemez hale gelir.
+No file here is edited by hand. Doing so would remove its status as an "official
+source" and make it impossible to update reliably.
 
 ---
 
@@ -9,61 +11,60 @@ olma özelliğini kaybeder ve güncellenemez hale gelir.
 
 | | |
 |---|---|
-| Kaynak | https://github.com/ARM-software/CMSIS_6 — `CMSIS/Core/Include` |
-| Sürüm başlığı | CMSIS-Core(M) **6.3** (`__CM_CMSIS_VERSION_MAIN = 6`, `_SUB = 3`) |
-| Alındığı ref | `main` (hareketli dal) |
-| İndirme tarihi | 2026-09-19 |
-| Bütünlük kaydı | [`CMSIS/SHA256SUMS.txt`](CMSIS/SHA256SUMS.txt) |
-| Lisans | Apache-2.0 — [`CMSIS/LICENSE`](CMSIS/LICENSE) |
+| Source | https://github.com/ARM-software/CMSIS_6 — `CMSIS/Core/Include` |
+| Version header | CMSIS-Core(M) **6.3** (`__CM_CMSIS_VERSION_MAIN = 6`, `_SUB = 3`) |
+| Retrieved ref | `main` (moving branch) |
+| Download date | 2026-09-19 |
+| Integrity record | [`CMSIS/SHA256SUMS.txt`](CMSIS/SHA256SUMS.txt) |
+| License | Apache-2.0 — [`CMSIS/LICENSE`](CMSIS/LICENSE) |
 
-Bu repository'nin **production / baseline core API'si** budur. Startup,
-system init, platform driver'ları, `tools/` ve projeler bunu kullanır.
-Giriş noktası CMSIS device header'ıdır:
+This is the repository's **production / baseline core API**. Startup, system init,
+platform drivers, `tools/`, and projects use it. The entry point is the CMSIS
+device header:
 [`platform/mps2-an505/include/platform/mps2_an505.h`](../platform/mps2-an505/include/platform/mps2_an505.h).
 
-### Provenance — ne doğrulandı, ne doğrulanamadı
+### Provenance — what was and was not verified
 
-Denetim, kaydın **değişmez bir yukarı akış revizyonu** içermediğini haklı
-olarak işaret etti. 2026-09-20'de şunu doğruladım:
+The audit correctly identified that the record does not contain an **immutable
+upstream revision**. On 2026-09-20, I verified the following:
 
-| Karşılaştırma | Sonuç |
+| Comparison | Result |
 |---|---|
-| Vendored `core_cm33.h` ↔ `main` (2026-09-20) | **Birebir aynı** (sha256 `7adc886f…`, diff 0 satır) |
-| Vendored `core_cm33.h` ↔ tag `v6.3.0` | **Farklı** — 37 satır; `main`'de tag sonrası eklenen `SCB_SFSR_*` tanımları var |
+| Vendored `core_cm33.h` ↔ `main` (2026-09-20) | **Identical** (sha256 `7adc886f…`, 0-line diff) |
+| Vendored `core_cm33.h` ↔ tag `v6.3.0` | **Different** — 37 lines; `main` includes `SCB_SFSR_*` definitions added after the tag |
 
-Yani snapshot **v6.3.0 sonrası bir `main` durumudur**, yayımlanmış bir tag'e
-karşılık gelmez.
+Thus the snapshot is **a state of `main` after v6.3.0**, not a published tag.
 
-**Değişmez bir commit SHA'sı kaydedilemedi.** Dosyalar `raw.githubusercontent.com`
-üzerinden dal adıyla çekildi; o isteğin hangi commit'e denk geldiği bilgisi
-saklanmadı ve `main` o tarihten sonra ilerlemiş olabilir. Uydurma bir hash
-yazmıyorum.
+**An immutable commit SHA could not be recorded.** Files were fetched through
+`raw.githubusercontent.com` by branch name; the commit corresponding to that
+request was not retained, and `main` may have advanced since that date. I am not
+inventing a hash.
 
-Bunun yerine elde edilebilen kanıt kaydedildi: her vendored dosyanın sha256
-özeti [`CMSIS/SHA256SUMS.txt`](CMSIS/SHA256SUMS.txt) içinde. Bu, **yerel
-bütünlüğü** garanti eder (dosyalar değiştirilmediyse doğrular) ama yukarı akış
-kimliğini kanıtlamaz.
+Instead, the available evidence was recorded: the sha256 digest of every vendored
+file is in [`CMSIS/SHA256SUMS.txt`](CMSIS/SHA256SUMS.txt). This establishes **local
+integrity** (verification succeeds if the files have not changed), but it does
+not prove upstream identity.
 
-Doğrulamak için:
+To verify:
 
 ```bash
 cd external/CMSIS && sha256sum -c SHA256SUMS.txt
 ```
 
-**Bir sonraki güncellemede yapılacak:** bir tag'den (`v6.x.y`) veya bilinen
-bir commit SHA'sından çekip o referansı buraya yazmak.
+**At the next update:** fetch from a tag (`v6.x.y`) or a known commit SHA and
+record that reference here.
 
-### Neden vendored (submodule değil)
+### Why vendored (not a submodule)
 
-- Build ağ erişimine bağımlı olmasın; `git clone` + `cmake` yeter.
-- CI'da ek bir checkout adımı gerekmesin.
-- Sürüm bu dosyada yazılı olarak sabit kalsın.
+- Builds should not depend on network access; `git clone` + `cmake` should suffice.
+- CI should not require an extra checkout step.
+- The version should remain explicitly recorded in this file.
 
-Maliyeti: güncelleme elle yapılır. Aşağıdaki adımlar bunun içindir.
+The cost is manual updates. The steps below serve that purpose.
 
-### Kopyalanan dosyalar
+### Copied files
 
-Tüm CMSIS değil, yalnızca Cortex-M33 için gerekli olanlar (~490 KB):
+Not all of CMSIS, only what is needed for Cortex-M33 (~490 KB):
 
 ```text
 CMSIS/Core/Include/
@@ -78,11 +79,11 @@ CMSIS/Core/Include/
 CMSIS/LICENSE
 ```
 
-A-profile ve R-profile dosyaları ile diğer çekirdeklerin (`core_cm0.h`,
-`core_cm55.h`, …) header'ları bilerek alınmadı. M55 portu eklenirse
-`core_cm55.h` de buraya eklenir.
+A-profile and R-profile files and headers for other cores (`core_cm0.h`,
+`core_cm55.h`, …) were deliberately excluded. If an M55 port is added,
+`core_cm55.h` will also be added here.
 
-### Güncelleme
+### Updating
 
 ```bash
 curl -L -o /tmp/cmsis.tar.gz \
@@ -95,36 +96,36 @@ cp /tmp/CMSIS_6-main/CMSIS/Core/Include/{core_cm33.h,cmsis_*.h} \
 cp /tmp/CMSIS_6-main/LICENSE external/CMSIS/LICENSE
 ```
 
-Sonrasında **mutlaka**:
+Afterwards, **always** run:
 
 ```bash
 ./tests/smoke-test.sh
 cd external/CMSIS && sha256sum -c SHA256SUMS.txt   # eski kayit artik gecersiz
 ```
 
-ve bu dosyadaki sürüm/ref satırının + `SHA256SUMS.txt`'in güncellenmesi.
-Mümkünse dal yerine **bir tag veya commit SHA'sı** kullan.
+and update the version/ref line in this file and `SHA256SUMS.txt`.
+Use **a tag or commit SHA** instead of a branch where possible.
 
-### Build entegrasyonu
+### Build integration
 
-[`external/CMakeLists.txt`](CMakeLists.txt) tek bir INTERFACE hedef tanımlar:
+[`external/CMakeLists.txt`](CMakeLists.txt) defines one INTERFACE target:
 
 ```cmake
 add_library(cmsis-core INTERFACE)
 target_include_directories(cmsis-core SYSTEM INTERFACE ...)
 ```
 
-`SYSTEM` önemli: üçüncü taraf header'lardan gelen uyarılar repo'nun kendi
-`-Wall -Wextra -Wshadow` uyarılarını boğmasın diye.
+`SYSTEM` matters: warnings from third-party headers should not drown out the
+repository's own `-Wall -Wextra -Wshadow` warnings.
 
 ---
 
-## Lisans notu
+## License note
 
-CMSIS Apache-2.0 ile lisanslıdır ve bu repository MIT'dir. İkisi uyumludur;
-`external/CMSIS/LICENSE` olduğu gibi korunur ve bu dizindeki koda
-uygulanmaya devam eder.
+CMSIS is licensed under Apache-2.0 and this repository under MIT. They are
+compatible; `external/CMSIS/LICENSE` is preserved unchanged and continues to
+apply to the code in that directory.
 
 ---
 
-[← Ana sayfa](../README.md) · [Mimari](../docs/ARCHITECTURE.md)
+[← Home](../README.md) · [Architecture](../docs/ARCHITECTURE.md)

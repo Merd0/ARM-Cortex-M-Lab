@@ -1,97 +1,97 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 06 — MPU: Hardware-Enforced Isolation
 
-`[STANDARD]` · Day 3 · Tahmini süre: 70–90 dk
+`[STANDARD]` · Day 3 · Estimated time: 70–90 min
 
 ---
 
 ## Why This Matters
 
-Ders 05'te `g_service_counter` sıradan RAM'deydi. "SVC yolundan geçmelisin"
-bir **yazılım sözleşmesiydi** — ayrıcalıksız kod onu doğrudan bozabilirdi
-ve hiçbir şey olmazdı.
+In Lesson 05, `g_service_counter` lived in ordinary RAM. “You must go through
+SVC” was a **software contract** — unprivileged code could violate it directly
+without anything happening.
 
-Bu ders o cümleyi **donanım kuralına** çeviriyor. Aynı doğrudan yazma artık
-bir `MemManage` fault üretecek ve `MMFAR` tam olarak hangi adresin ihlal
-edildiğini söyleyecek.
+This lesson turns that statement into a **hardware rule**. The same direct
+write will now cause a `MemManage` fault, and `MMFAR` will identify the exact
+address of the violation.
 
-Bu, bir RTOS'un görev izolasyonunun, bir bootloader'ın kendini korumasının ve
-bir syscall sınırının temelidir.
+This underpins RTOS task isolation, bootloader self-protection, and a syscall boundary.
 
 ---
 
 ## Core Idea
 
-### Ayrıcalık ne yapar, MPU ne yapar?
+### What does privilege do, and what does the MPU do?
 
-> **Ayrıcalık bir yürütme seviyesi sağlar. MPU ise o seviyeye göre hangi
-> belleğe erişilebileceğini donanımda uygular.**
+> **Privilege establishes an execution level. The MPU enforces in hardware
+> which memory that level may access.**
 
-İkisi ayrı ayrı yetersiz:
+Neither suffices alone:
 
-| | Tek başına ne verir | Eksik kalan |
+| | What it provides alone | What is missing |
 |---|---|---|
-| Ayrıcalık (ders 05) | "Bu kod ayrıcalıksız çalışıyor" | Ayrıcalıksız kod yine de tüm RAM'e erişebilir |
-| MPU | "Bu adres aralığına şu seviyede erişilebilir" | Seviyeyi tanımlayan şey ayrıcalıktır |
+| Privilege (Lesson 05) | “This code runs unprivileged” | Unprivileged code can still access all RAM |
+| MPU | “This address range is accessible at this level” | Privilege defines that level |
 
-Birleştiklerinde izolasyon çıkar.
+Together, they provide isolation.
 
-### PMSAv8: base + limit (Armv7-M değil!)
+### PMSAv8: base + limit (not Armv7-M!)
 
-Armv8-M'in MPU'su (PMSAv8) bölgeleri **iki register** ile tanımlar:
+The Armv8-M MPU (PMSAv8) defines regions with **two registers**:
 
 ```text
 RBAR  bit0      XN        (execute never)
-      bits[2:1] AP        (erisim izni)
+      bits[2:1] AP        (access permission)
       bits[4:3] SH        (shareability)
-      bits[31:5] BASE     (bolge baslangici, 32 byte granularite)
+      bits[31:5] BASE     (region start, 32-byte granularity)
 
-RLAR  bit0      EN        (bolge etkin)
-      bits[3:1] AttrIndx  (MAIR icindeki attribute indeksi)
+RLAR  bit0      EN        (region enabled)
+      bits[3:1] AttrIndx  (attribute index in MAIR)
       bit4      PXN       (privileged execute never)
-      bits[31:5] LIMIT    (bolgenin SON byte'i - DAHIL)
+      bits[31:5] LIMIT    (region LAST byte - INCLUSIVE)
 ```
 
-İki nokta kritik:
+Two points are critical:
 
-1. **`LIMIT` dahildir.** Bölgenin son byte'ının adresidir, "bitiş+1" değil.
-   CMSIS başlığının kendi ifadesiyle `LIMIT` değeri bir-genişletilir (one
-   extended), yani alt 5 bit 1 kabul edilir.
-2. **Granularite 32 byte.** `BASE` ve `LIMIT` yalnızca bit [31:5] tutar.
-   Bölge başlangıcı 32'ye hizalı, bitiş adresi `...1F` ile biter.
+1. **`LIMIT` is inclusive.** It is the address of the region's last byte,
+   not “end+1.” In the CMSIS header's own terms, `LIMIT` is one-extended:
+   its low 5 bits are treated as 1.
+2. **Granularity is 32 bytes.** `BASE` and `LIMIT` hold only bits [31:5].
+   The region start is aligned to 32; its ending address ends in `...1F`.
 
-**Armv7-M'den fark:** Armv7-M'de bölge `base` + **kodlanmış boyut alanı**
-(2'nin kuvveti) ile tanımlanır ve bölge kendi boyutuna hizalı olmak
-zorundadır. Armv8-M'de böyle bir `size` alanı **yoktur**. İnternette
-bulacağın MPU örneklerinin çoğu Armv7-M içindir ve buraya doğrudan
-uygulanamaz.
+**Difference from Armv7-M:** Armv7-M defines a region using `base` + an
+**encoded size field** (a power of 2), and the region must align to its own
+size. Armv8-M has **no** such `size` field. Most MPU examples found online
+are for Armv7-M and cannot be applied directly here.
 
-### Eşleşme yoksa ne olur? `PRIVDEFENA`
+### What happens without a match? `PRIVDEFENA`
 
 ```text
-MPU_CTRL.ENABLE     = 1   MPU acik
-MPU_CTRL.PRIVDEFENA = 1   ayricalikli erisimler, hicbir bolge eslesmezse
-                          VARSAYILAN bellek haritasini kullanir
+MPU_CTRL.ENABLE     = 1   MPU enabled
+MPU_CTRL.PRIVDEFENA = 1   privileged accesses without a matching region
+                          use the DEFAULT memory map
 ```
 
-Ayrıcalıksız erişimler için böyle bir kurtarma yolu **yoktur**: eşleşen bir
-bölge yoksa erişim reddedilir.
+Unprivileged accesses have **no** such fallback: without a matching region,
+the access is denied.
 
-Bu dersin politikası tam olarak bu asimetriye dayanıyor. `g_service_counter`
-için bilerek **hiçbir bölge tanımlanmadı**:
+This lesson's policy relies on precisely that asymmetry. **No region** is
+deliberately defined for `g_service_counter`:
 
-- Ayrıcalıklı handler → `PRIVDEFENA` sayesinde erişebilir.
-- Ayrıcalıksız Thread → eşleşme yok → reddedilir.
+- Privileged handler → can access it through `PRIVDEFENA`.
+- Unprivileged Thread → no match → denied.
 
-Koruma bir bölge *eklemekten* değil, **eklememekten** geliyor.
+Protection comes from **omitting** a region, not *adding* one.
 
-### MAIR: "kim" değil, "ne tür bellek"
+### MAIR: “what kind of memory,” not “who”
 
-`RLAR.AttrIndx`, `MAIR0`/`MAIR1` içindeki 8 attribute girdisinden birini
-seçer. MPU yalnızca erişim iznini değil, işlemcinin o belleği **ne tür bellek
-olarak ele alacağını** da tanımlar (Normal / Device, cacheability, shareability).
+`RLAR.AttrIndx` selects one of the 8 attribute entries in `MAIR0`/`MAIR1`.
+The MPU defines not only access permissions, but **what kind of memory** the
+processor treats it as (Normal / Device, cacheability, shareability).
 
-Bu derste tek bir attribute kullanıyoruz — Normal bellek, Write-Back,
-non-transient, read/write allocate:
+We use one attribute here — Normal memory, Write-Back, non-transient,
+read/write allocate:
 
 ```c
 ARM_MPU_SetMemAttr(0u,
@@ -99,63 +99,63 @@ ARM_MPU_SetMemAttr(0u,
                  ARM_MPU_ATTR_MEMORY_(1,1,1,1)));  /* Inner */
 ```
 
-`ARM_MPU_ATTR_MEMORY_(NT, WB, RA, WA)` parametreleri CMSIS başlığının kendi
-tanımıdır: non-transient, write-back, read-allocate, write-allocate. Sonuç
-`MAIR0 = 0x000000FF` olarak ölçüldü.
+The parameters of `ARM_MPU_ATTR_MEMORY_(NT, WB, RA, WA)` come directly from
+the CMSIS header: non-transient, write-back, read-allocate, write-allocate.
+The measured result was `MAIR0 = 0x000000FF`.
 
-Cache davranışı bu dersin konusu değil; burada bilinmesi gereken tek şey
-attribute'un **zorunlu** olduğu — indekssiz bir bölge tanımlayamazsın.
+Cache behavior is outside this lesson. What matters here is that the
+attribute is **mandatory** — a region cannot be defined without an index.
 
 ---
 
 ## Mental Model
 
-MPU'yu **bina kat planına iliştirilmiş kart okuyucular** gibi düşün. Ayrıcalık
-kartının rengini belirler (ders 05); MPU ise hangi kapının hangi renge
-açılacağını belirler.
+Think of the MPU as **card readers attached to a building floor plan**.
+Privilege determines the color of your card (Lesson 05); the MPU determines
+which door opens for which color.
 
 ```text
 FLASH  0x10000000 ... 0x1007FFFF
 ┌──────────────────────────────────────┐
-│ Program kodu + sabitler              │
-│ Ayricaliksiz: OKU + CALISTIR         │  Region 0
-│ Yazma: YOK                           │
+│ Program code + constants             │
+│ Unprivileged: READ + EXECUTE         │  Region 0
+│ Write: NO                            │
 └──────────────────────────────────────┘
 
 RAM
 ┌──────────────────────────────────────┐
 │ g_service_counter                    │
-│ Ayricaliksiz: HICBIR BOLGE YOK       │  (bilerek)
-│ Ayricalikli : PRIVDEFENA ile erisir  │
+│ Unprivileged: NO REGION              │  (deliberate)
+│ Privileged: access via PRIVDEFENA    │
 ├──────────────────────────────────────┤
-│ Thread stack + Thread verisi         │
-│ Ayricaliksiz: OKU + YAZ              │  Region 1
-│ Calistirma  : ASLA (XN)              │
+│ Thread stack + Thread data           │
+│ Unprivileged: READ + WRITE           │  Region 1
+│ Execution: NEVER (XN)                │
 └──────────────────────────────────────┘
 ```
 
-Akış:
+Flow:
 
 ```text
 Unprivileged Thread
         |
-        |  dogrudan counter yazmasi
-        X  MPU reddeder
+        |  direct counter write
+        X  MPU denies
         |
         v
     MemManage
         |
-        |  MMFAR = ihlal edilen adres
+        |  MMFAR = violated address
 
 Unprivileged Thread
         |
         |  SVC
         v
-Handler Mode (ayricalikli)
+Handler Mode (privileged)
         |
         |  g_service_counter++
         v
-      IZINLI
+      PERMITTED
 ```
 
 ---
@@ -166,14 +166,14 @@ Handler Mode (ayricalikli)
 flowchart TD
     T["Unprivileged Thread<br/>CONTROL.nPRIV = 1"]
     D["str r1, [r0]<br/>r0 = &g_service_counter"]
-    M{"MPU: eşleşen bölge<br/>var mı?"}
+    M{"MPU: any matching<br/>region?"}
     F["MemManage<br/>IPSR = 4<br/>MMFSR.DACCVIOL = 1<br/>MMFAR = 0x30000000"]
     S["SVC #1"]
-    H["Handler Mode · Privileged<br/>PRIVDEFENA → varsayılan harita"]
-    OK["g_service_counter++<br/>İZİNLİ"]
+    H["Handler Mode · Privileged<br/>PRIVDEFENA → default map"]
+    OK["g_service_counter++<br/>PERMITTED"]
 
     T --> D --> M
-    M -- "hayır (unprivileged)" --> F
+    M -- "no (unprivileged)" --> F
     T --> S --> H --> OK
 ```
 
@@ -181,15 +181,14 @@ flowchart TD
 
 ## Tiny Example
 
-Kaynaklar: [`example/main.c`](example/main.c),
-[`example/mpu_probe.S`](example/mpu_probe.S),
-ve ders 04/05'ten değişmeden gelen
+Sources: [`example/main.c`](example/main.c),
+[`example/mpu_probe.S`](example/mpu_probe.S), and
 [`example/psp_start.S`](example/psp_start.S),
-[`example/svc_handler.S`](example/svc_handler.S).
+[`example/svc_handler.S`](example/svc_handler.S), unchanged from Lessons 04/05.
 
-### Bellek yerleşimi
+### Memory layout
 
-Ayrıcalıksız Thread'in dokunabileceği her şey **tek bir blokta**:
+Everything the unprivileged Thread may touch is in **one block**:
 
 ```c
 typedef struct {
@@ -202,11 +201,10 @@ static unpriv_block_t g_unpriv __attribute__((aligned(32)));
 static volatile uint32_t g_service_counter;    /* blogun DISINDA     */
 ```
 
-`aligned(32)` zorunlu: MPU bölge sınırları 32 byte granularite ile ifade
-edilir. Boyut da 32'nin katı olmalı — `unpriv_obs_t` içindeki `pad` alanı
-bunun için var.
+`aligned(32)` is required: MPU region boundaries have 32-byte granularity.
+Size must also be a multiple of 32 — that is the purpose of `pad` in `unpriv_obs_t`.
 
-### Politika
+### Policy
 
 ```c
 ARM_MPU_Disable();
@@ -229,26 +227,26 @@ SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;
 ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk);
 ```
 
-Neden CMSIS API'si? Çünkü repo'da vendored olarak duran resmi
-`armv8m_mpu.h`, register alanlarını birebir yansıtıyor — kendi soyutlamamızı
-yazmak için sebep yok. Yine de ürettiği ham değerleri hem firmware'den hem
-GDB'den register olarak doğrulayacağız.
+Why the CMSIS API? The official vendored `armv8m_mpu.h` mirrors the register
+fields directly — there is no reason to invent an abstraction. We will still
+verify the raw register values it produces in both firmware and GDB.
 
-### `MEMFAULTENA` neden gerekli?
+### Why is `MEMFAULTENA` required?
 
-`SCB->SHCSR` içindeki bu bit MemManage exception'ını etkinleştirir.
-Etkinleştirilmezse MPU ihlali **HardFault'a yükseltilir** (escalation) ve
-`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılır ama teşhis bir adım
-dolaylı hale gelir. Deney 3 bunu ölçüyor.
+This bit in `SCB->SHCSR` enables the MemManage exception. Without it, an MPU
+violation **escalates to HardFault** and sets `HFSR.FORCED`; `MMFSR`/`MMFAR`
+may still contain diagnostic information, but diagnosis takes an extra step.
+Experiment 3 **proposes measuring this**; no result is claimed here.
 
-### Neden ayrıcalıksız Thread konsola yazmıyor?
+### Why does unprivileged Thread not write to the console?
 
-Bu tasarım kararı **MPU'dan gelmiyor**. Ders 05'te ölçülmüştü: bu hedefte
-ayrıcalıksız kod UART'a erişemiyor ve sebebi SoC'nin **Peripheral Protection
-Controller**'ı. Bu yüzden ayrıcalıksız bölüm gözlemleri kendi (izinli) veri
-alanına yazıyor, ayrıcalık geri geldikten sonra basılıyor.
+This design decision **does not come from the MPU**. Lesson 05 measured that
+unprivileged code cannot access UART on this target because of the SoC's
+**Peripheral Protection Controller**. The unprivileged section therefore
+records observations in its own permitted data area, and they are printed
+after privilege is restored.
 
-Ayrıntı için aşağıdaki "PPC vs MPU" bölümü.
+See “PPC vs MPU” below for details.
 
 ---
 
@@ -264,7 +262,7 @@ cmake --build --preset debug --target 06-mpu
 
 ## Expected Output
 
-Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
+Actual output (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 
 ```text
 ===== LESSON 06: MPU =====
@@ -309,44 +307,44 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 ===== END =====
 ```
 
-> **ARCHITECTURE / TARGET CONFIG / OBSERVATION ayrımı.**
-> `MPU_TYPE = 0x00000800` → 8 bölge, **bu hedefin ölçülmüş
-> konfigürasyonudur**; evrensel bir Cortex-M33 özelliği değildir. Bölge
-> sayısı bir uygulama seçeneğidir. Adresler de build'e özeldir.
+> **Distinguish ARCHITECTURE / TARGET CONFIG / OBSERVATION.**
+> `MPU_TYPE = 0x00000800` → 8 regions is **this target's measured configuration**,
+> not a universal Cortex-M33 property. Region count is an implementation
+> option. Addresses are also build-specific.
 
-### Register değerlerini elle çöz
+### Decode the register values by hand
 
-Ezberlemeden okumayı öğren:
+Learn to read them instead of memorizing them:
 
 ```text
 RBAR = 0x10000006
-       bit0      = 0  -> XN = 0  (calistirilabilir)
-       bits[2:1] = 3  -> AP: RO=1, NP=1 (salt-okunur, ayricaliksiz erisime acik)
+       bit0      = 0  -> XN = 0  (executable)
+       bits[2:1] = 3  -> AP: RO=1, NP=1 (read-only, unprivileged access allowed)
        bits[4:3] = 0  -> SH = non-shareable
        bits[31:5]     -> BASE = 0x10000000
 
 RLAR = 0x1007FFE1
-       bit0      = 1  -> EN  (bolge etkin)
-       bits[3:1] = 0  -> AttrIndx = 0  (MAIR0 alt byte)
+       bit0      = 1  -> EN  (region enabled)
+       bits[3:1] = 0  -> AttrIndx = 0  (MAIR0 low byte)
        bit4      = 0  -> PXN = 0
-       bits[31:5]     -> LIMIT = 0x1007FFE0 -> DAHIL son byte 0x1007FFFF
+       bits[31:5]     -> LIMIT = 0x1007FFE0 -> INCLUSIVE last byte 0x1007FFFF
 ```
 
 ```text
 RBAR = 0x30000023
-       bit0      = 1  -> XN = 1  (buradan KOD CALISTIRILAMAZ)
-       bits[2:1] = 1  -> AP: RO=0, NP=1 (oku/yaz, ayricaliksiz acik)
+       bit0      = 1  -> XN = 1  (NO CODE EXECUTION here)
+       bits[2:1] = 1  -> AP: RO=0, NP=1 (read/write, unprivileged access allowed)
        bits[31:5]     -> BASE = 0x30000020
 
 RLAR = 0x30000321
        bit0      = 1  -> EN
        bits[3:1] = 0  -> AttrIndx = 0
-       bits[31:5]     -> LIMIT = 0x30000320 -> DAHIL son byte 0x3000033F
+       bits[31:5]     -> LIMIT = 0x30000320 -> INCLUSIVE last byte 0x3000033F
 ```
 
-Şimdi tabloyu oku: `COUNTER_ADDR = 0x30000000`, ayrıcalıksız bölge ise
-`0x30000020`'de başlıyor. Sayaç **hiçbir bölgenin içinde değil** — koruma
-buradan geliyor.
+Now read the table: `COUNTER_ADDR = 0x30000000`, while the unprivileged
+region starts at `0x30000020`. The counter is **outside every region** —
+that is where its protection comes from.
 
 ---
 
@@ -367,7 +365,7 @@ target remote :3333
 source scripts/gdb/cortex-m.gdb
 ```
 
-### A — Yapılandırmadan önce
+### A — Before configuration
 
 ```gdb
 (gdb) break mpu_configure
@@ -380,10 +378,10 @@ MPU_TYPE = 0x00000800  (region sayisi = 8)
 MPU_CTRL = 0x00000000  (bit0 ENABLE, bit2 PRIVDEFENA)
 ```
 
-**Gözlem:** Donanımda 8 bölge var ama MPU **kapalı**. Reset sonrası
-varsayılan durum budur; koruma yazılım tarafından kurulur.
+**Observation:** hardware provides 8 regions, but the MPU is **disabled**.
+This is the default after reset; software establishes protection.
 
-### B — Yapılandırmadan sonra
+### B — After configuration
 
 ```gdb
 (gdb) break thread_entry
@@ -396,7 +394,7 @@ MPU_TYPE = 0x00000800  (region sayisi = 8)
 MPU_CTRL = 0x00000005  (bit0 ENABLE, bit2 PRIVDEFENA)
 ```
 
-`0x5` = `ENABLE | PRIVDEFENA`. MemManage etkin mi?
+`0x5` = `ENABLE | PRIVDEFENA`. Is MemManage enabled?
 
 ```gdb
 (gdb) printf "SHCSR = 0x%08X\n", *(unsigned int*)0xE000ED24
@@ -405,11 +403,11 @@ SHCSR = 0x00010000
 
 Bit 16 = `MEMFAULTENA`. ✓
 
-**Bölgeleri tek tek okumak için bir uyarı.** GDB'den `MPU->RNR`'a yazıp
-`RBAR`/`RLAR` okumak **bu kurulumda işe yaramıyor** — ölçüldü: yazma etkisiz
-kalıyor ve her iki okumada da aynı bölge görünüyor. (Aynı davranışı ders
-01'de NVIC öncelik register'larında da gördük.) Bu yüzden bölge bazlı görünüm
-firmware'den alınıyor:
+**A warning about reading regions individually.** Writing `MPU->RNR` from
+GDB and reading `RBAR`/`RLAR` **does not work in this setup** — measured:
+the write has no effect, and both reads show the same region. (We saw the
+same behavior with NVIC priority registers in Lesson 01.) The per-region
+view is therefore obtained from firmware:
 
 ```gdb
 (gdb) break check_region_policy
@@ -423,11 +421,10 @@ R0: RBAR=0x10000006 RLAR=0x1007FFE1
 R0 base=0x10000000 AP=3 XN=0 EN=1
 ```
 
-Her bölge için cevaplaman gereken soru: **"bu bölge hangi adres aralığını
-kapsıyor ve ayrıcalıksız Thread burada ne yapabilir?"** Yukarıdaki bit
-çözümlemesini kullan.
+For each region, answer: **“Which address range does it cover, and what may
+unprivileged Thread do here?”** Use the bit decoding above.
 
-### C — Ayrıcalıksız Thread
+### C — Unprivileged Thread
 
 ```gdb
 (gdb) delete
@@ -444,11 +441,10 @@ Stack     : MSP (0x30007ff0)
             PSP = 0x...
 ```
 
-**Gözlem:** Thread ayrıcalıksızdı (`nPRIV = 1`), ama bu SVC
-handler'ına ulaşabildi ve handler ayrıcalıklı. Ders 05'in zinciri MPU
-açıkken de aynen çalışıyor.
+**Observation:** Thread was unprivileged (`nPRIV = 1`), yet reached this SVC
+handler, which is privileged. Lesson 05's chain still works with the MPU enabled.
 
-### D — Korunan veriye erişim başarılı
+### D — Access to protected data succeeds
 
 ```gdb
 (gdb) p/x g_service_counter
@@ -456,24 +452,24 @@ açıkken de aynen çalışıyor.
 (gdb) p/x g_service_counter
 ```
 
-Handler içinde sayaç artıyor. **Aynı değişkene aynı anda Thread erişemezdi**
-— aradaki tek fark yürütme bağlamı.
+The counter increments inside the handler. **Thread could not access the
+same variable at this point** — only the execution context differs.
 
 ---
 
 ## Experiment
 
-**Deney 1 — Politikayı değiştir, sonucu değiştir.**
+**Experiment 1 — Change the policy, change the result.**
 
-Aynı doğrudan yazma, iki farklı politika altında. Sayaç için ayrıcalıksız bir
-RW bölgesi eklenmiş sürüm ayrı bir hedef:
+The same direct write under two policies. A separate target adds an
+unprivileged RW region for the counter:
 
 ```bash
 cmake --build --preset debug --target 06-mpu-permissive
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-mpu-permissive.elf
 ```
 
-Eklenen tek şey:
+The only addition:
 
 ```c
 ARM_MPU_SetRegion(2u,
@@ -482,7 +478,7 @@ ARM_MPU_SetRegion(2u,
     ARM_MPU_RLAR(((uint32_t)&g_service_counter & ~0x1Fu) + 0x1Fu, ATTR_IDX_NORMAL));
 ```
 
-Gerçek çıktı (son satırlar):
+Actual output (final lines):
 
 ```text
 [  DIRECT_WRITE_MARKER] 2
@@ -491,42 +487,45 @@ Gerçek çıktı (son satırlar):
 ===== END =====
 ```
 
-Aynı `str r1, [r0]` komutu: politika A'da `MemManage`, politika B'de başarılı.
-**Kod aynı; değişen MPU politikası.** Erişim sonucunu MPU izinleri
-belirliyor.
+The same `str r1, [r0]` instruction: `MemManage` under policy A, success under
+policy B. **Same code; different MPU policy.** MPU permissions determine
+the outcome of the access.
 
-`~0x1Fu` maskelemesi de bir ders: 32 byte granularite yüzünden bölge
-`0x30000000..0x3000001F` aralığının tamamını kapsıyor — yalnızca o dört
-byte'ı değil. MPU ile "tek bir değişkeni" koruyamazsın; **hizalanmış bir
-bölgeyi** korursun. Gerçek projelerde korunan veri bu yüzden linker
-script'inde kendi hizalı bölümüne konur.
+The `~0x1Fu` mask is another lesson: because of 32-byte granularity, the
+region covers all of `0x30000000..0x3000001F`, not just those four bytes.
+The MPU cannot protect “one variable”; it protects **an aligned region**.
+Real projects therefore place protected data in its own aligned linker section.
 
-**Deney 2 — Bölge sınırının tam yerini bul.**
+**Experiment 2 — Locate the exact region boundary.**
 
-`UNPRIV_LIMIT = 0x3000033F`. Ayrıcalıksız Thread `0x3000033F`'ye yazabilir mi?
-`0x30000340`'a? `mpu_store_word()` ile ikisini de dene ve `LIMIT`'in
-**dahil** olduğunu kendin doğrula.
+`UNPRIV_LIMIT = 0x3000033F` is the last **permitted byte** address.
+Because `mpu_store_word()` issues a four-byte `STR`, accessing
+`0x3000033F` with it is unaligned and crosses the MPU boundary.
+Instead, compare aligned word accesses at `0x3000033C` (the last word
+entirely inside the region) and `0x30000340` (the first word outside).
+This distinguishes an **inclusive** `LIMIT` byte boundary from the requirement that
+all four bytes of a word store must be permitted.
 
-**Deney 3 — `MEMFAULTENA` olmadan ne olur? (Deep Dive)**
+**Experiment 3 — What happens without `MEMFAULTENA`? (Deep Dive)**
 
-`mpu_configure()` içindeki `SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;`
-satırını yorum satırı yap, `06-mpu-broken` hedefini yeniden derle ve
-GDB'de fault'a bak. `IPSR` ne oldu? `HFSR.FORCED`? `MMFSR`/`MMFAR` hâlâ
-dolu mu?
+Comment out `SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;` in `mpu_configure()`,
+rebuild `06-mpu-broken`, and inspect the fault in GDB. What happened to
+`IPSR`? `HFSR.FORCED`? Are `MMFSR`/`MMFAR` still populated?
 
-Bu deneyi ben **ölçmedim**, bu yüzden beklenen çıktıyı buraya yazmıyorum —
-kendi ölçümün sonuç olacak. (Ders 02'de escalation'ı `HFSR = 0x40000000`
-olarak görmüştün; karşılaştır.)
+I **did not measure** this experiment, so no expected output is supplied
+here — your measurement will be the result. (You saw escalation as
+`HFSR = 0x40000000` in Lesson 02; compare.)
 
 ---
 
 ## Break It
 
-Ayrı hedef: ayrıcalıksız Thread korunan sayaca **doğrudan** yazmayı deniyor.
+A separate target: unprivileged Thread attempts to write **directly** to
+the protected counter.
 
-Tetikleyici bilerek küçük bir assembly fonksiyonu
-([`example/mpu_probe.S`](example/mpu_probe.S)) — hata üreten komutun tam
-olarak hangisi olduğunu bilmek için:
+The trigger is deliberately a small assembly function
+([`example/mpu_probe.S`](example/mpu_probe.S)), so the exact faulting
+instruction is known:
 
 ```asm
 mpu_store_word:
@@ -539,9 +538,9 @@ cmake --build --preset debug --target 06-mpu-broken
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-mpu-broken.elf
 ```
 
-Çıktı `[2]` bloğundan sonra **duruyor**: `[3]`, `[4]` ve `===== END =====`
-basılmıyor. Thread ayrıcalıksızken `str` komutunu çalıştırdı ve MemManage
-handler'ına düştü.
+Output **stops** after block `[2]`: `[3]`, `[4]`, and `===== END =====` are
+not printed. Thread executed `str` while unprivileged and entered the
+MemManage handler.
 
 ---
 
@@ -563,7 +562,7 @@ cm-exc-return $lr
 cm-frame $psp $lr
 ```
 
-Gerçek ölçüm (**OBSERVATION** — bu build, bu QEMU çalışması):
+Actual measurement (**OBSERVATION** — this build, this QEMU run):
 
 ```text
 Mode      : Handler Mode (exception 4)
@@ -590,22 +589,22 @@ stacked PC = 0x10000078
 xPSR       = 0x21000000
 ```
 
-Bu değerler birlikte yorumlandığında:
+Interpreting the values together:
 
-| Gözlem | Anlamı |
+| Observation | Meaning |
 |---|---|
-| `IPSR = 4` | MemManage — HardFault değil, çünkü `MEMFAULTENA` açıktı |
-| `HFSR = 0` | Escalation olmadı |
-| `MMFSR.DACCVIOL = 1` | **Veri** erişim ihlali (komut getirme değil) |
-| `MMARVALID = 1` | `MMFAR` içeriği geçerli |
-| `MMFAR = 0x30000000` | `&g_service_counter` ile birebir aynı |
-| `R0 = 0x30000000`, `R1 = 0x0badc0de` | `mpu_store_word()` argümanları — frame'de duruyor |
+| `IPSR = 4` | MemManage, not HardFault, because `MEMFAULTENA` was enabled |
+| `HFSR = 0` | No escalation |
+| `MMFSR.DACCVIOL = 1` | **Data** access violation, not instruction fetch |
+| `MMARVALID = 1` | `MMFAR` contents are valid |
+| `MMFAR = 0x30000000` | Exactly matches `&g_service_counter` |
+| `R0 = 0x30000000`, `R1 = 0x0badc0de` | Arguments to `mpu_store_word()`, retained in the frame |
 
-`cm-frame` burada kullanılabildi çünkü ön koşulları sağlanıyor: stacking
-hatası yok (`MSTKERR = 0`), standart frame, tek güvenlik durumu. Stacking
-hatası olsaydı reddederdi — ders 02 ve 04'te öyle olmuştu.
+`cm-frame` was usable because its prerequisites hold: no stacking error
+(`MSTKERR = 0`), standard frame, single security state. It would reject a
+stacking error, as in Lessons 02 and 04.
 
-### Hata veren komut
+### The faulting instruction
 
 ```gdb
 (gdb) x/2i *(unsigned int*)($psp+24)
@@ -616,21 +615,22 @@ hatası olsaydı reddederdi — ders 02 ve 04'te öyle olmuştu.
    0x1000007a <mpu_store_word+2>:   bx   lr
 ```
 
-Yığılmış PC, `str` komutunun **kendi adresini** gösteriyor.
+Stacked PC points to **the address of `str` itself**.
 
-> **Genelleme yapma.** Bu, *bu* fault için ölçülen sonuçtur: precise bir MPU
-> veri erişim ihlalinde yığılmış PC hata veren komutu gösterir. "Her fault'ta
-> yığılmış PC hatalı komuttur" **doğru değildir** — imprecise fault'larda
-> bağlam çoktan ilerlemiş olabilir. Ders 08 bunu açacak.
+> **Do not generalize.** This is the measured result for *this* fault: for
+a precise MPU data access violation, stacked PC identifies the faulting
+instruction. “Stacked PC always identifies the faulting instruction” is
+**false** — with imprecise faults, the context may already have advanced.
+Lesson 08 expands this.
 
-### Cevaplaman gereken sorular
+### Questions to answer
 
-1. `IPSR = 4` hangi exception? Vektör tablosunun kaçıncı girdisi?
-2. `DACCVIOL` yerine `IACCVIOL` görseydin ne yapmış olurdun?
-3. `MMFAR`'a **neden** güvenebiliyoruz? Hangi bit bunu söylüyor?
-4. `stacked PC` ile `stacked LR` (`0x10000281`) farklı. İkincisi ne?
-5. Fault handler'ı bu hatadan "kurtarabilir" mi? Ne yapması gerekirdi ve
-   bunun riski ne olurdu?
+1. Which exception is `IPSR = 4`? Which vector table entry?
+2. What would you have done if you saw `IACCVIOL` instead of `DACCVIOL`?
+3. **Why** can we trust `MMFAR`? Which bit says so?
+4. `stacked PC` and `stacked LR` (`0x10000281`) differ. What is the latter?
+5. Could the fault handler “recover” from this error? What would it need
+   to do, and what risk would that introduce?
 
 ---
 
@@ -638,32 +638,31 @@ Yığılmış PC, `str` komutunun **kendi adresini** gösteriyor.
 
 ### Exercise 01 — Build the Thread MPU Policy
 
-Başlangıç firmware'inde hazır olanlar: PSP Thread bağlamı, ayrıcalık
-düşürme, SVC servisi, `g_service_counter`, `MAIR` ayarı.
+Already provided in the starter: a PSP Thread context, privilege drop,
+SVC service, `g_service_counter`, and `MAIR` configuration.
 
-Senin yazacağın: **`mpu_configure()` fonksiyonunun geri kalanı.**
+You write **the rest of `mpu_configure()`**.
 
 ```text
 exercises/01-thread-mpu-policy/main.c
 ```
 
-Dört adım:
+Four steps:
 
-1. **Region 0 — FLASH:** ayrıcalıksız okuma + çalıştırma, yazma yok.
-2. **Region 1 — Thread bloğu:** ayrıcalıksız okuma + yazma, çalıştırma yok (XN).
-3. **MemManage** exception'ını etkinleştir.
-4. MPU'yu, ayrıcalıklı erişimler varsayılan haritayı kullanacak şekilde
-   **enable** et.
+1. **Region 0 — FLASH:** unprivileged read + execute, no write.
+2. **Region 1 — Thread block:** unprivileged read + write, no execution (XN).
+3. Enable the **MemManage** exception.
+4. **Enable** the MPU with privileged accesses using the default map.
 
-`g_service_counter` için bölge **tanımlama** — koruma bir bölge eklememekten
-geliyor.
+**Do not define** a region for `g_service_counter` — protection comes from
+omitting a region.
 
 ```bash
 cmake --build --preset debug --target 06-exercise-mpu
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-exercise-mpu.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [  CHECK_MPU_ENABLED] FAIL
@@ -677,54 +676,55 @@ Başlangıç çıktısı (gerçek):
 ===== END =====
 ```
 
-MPU kapalı olduğu için firmware sorunsuz çalışıyor ve SVC yolu işliyor —
-ama **koruma yok**. Bu beklenen başlangıç durumudur.
+With the MPU disabled, firmware runs normally and the SVC path works —
+but **there is no protection**. This is the expected initial state.
 
-**Doğrulama ölçütü:** beş `FAIL` de `PASS` olmalı, diğerleri `PASS` kalmalı.
+**Verification criterion:** all five `FAIL` checks must become `PASS`,
+with the others remaining `PASS`.
 
-Politikan doğruysa ihlali de doğrula: `06-mpu-broken` hedefiyle aynı doğrudan
-yazmayı kendi politikanla dene ve `MemManage` aldığını gör.
+Once the policy is correct, verify the violation too: try the same direct
+write as `06-mpu-broken` with your policy and observe `MemManage`.
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-thread-mpu-policy/`](solutions/01-thread-mpu-policy/) | `06-solution-mpu` |
+| Exercise 01 solution | [`solutions/01-thread-mpu-policy/`](solutions/01-thread-mpu-policy/) | `06-solution-mpu` |
 
 ```bash
 cmake --build --preset debug --target 06-solution-mpu
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-solution-mpu.elf
 ```
 
-Sekiz `CHECK_*` satırının hepsi `PASS`. Çözüm README'si her bölgenin **neden**
-gerektiğini, `PRIVDEFENA`'nın rolünü ve Armv7-M örneklerinin neden doğrudan
-kullanılamayacağını açıklıyor.
+All eight `CHECK_*` lines are `PASS`. The solution README explains **why**
+each region is required, the role of `PRIVDEFENA`, and why Armv7-M examples
+cannot be used directly.
 
 ---
 
 ## What I Learned
 
-> Bu bölüm senin.
+> This section is yours.
 
-**Ayrıcalık ile MPU arasındaki iş bölümü:**
-
-<!-- -->
-
-**Korumanın bir bölge *eklememekten* gelmesi:**
+**The division of responsibilities between privilege and the MPU:**
 
 <!-- -->
 
-**RBAR/RLAR'ı elle çözerken zorlandığım yer:**
+**How protection comes from *omitting* a region:**
 
 <!-- -->
 
-**Beni şaşırtan şey:**
+**Where I struggled while decoding RBAR/RLAR by hand:**
 
-<!-- örn: 32 byte granularite, ya da MMFAR'ın tam adresi vermesi -->
+<!-- -->
 
-**Ders 07'ye taşıdığım soru:**
+**What surprised me:**
+
+<!-- e.g. 32-byte granularity, or MMFAR identifying the exact address -->
+
+**The question I am taking into Lesson 07:**
 
 <!-- -->
 
@@ -732,91 +732,88 @@ kullanılamayacağını açıklıyor.
 
 ## Quick Check
 
-1. MPU tam olarak neyi enforce eder? Neyi etmez?
-2. Ayrıcalık ile MPU arasındaki ilişki nedir? Biri olmadan diğeri ne kadar iş
-   görür?
-3. Ayrıcalıksız Thread neden kendi stack'ine erişebiliyor?
-4. Aynı Thread neden `g_service_counter`'a erişemiyor? Onu koruyan tam olarak
-   ne?
-5. `SVC_Handler` aynı değişkene neden erişebiliyor?
-6. `PRIVDEFENA` ne sağlar? `0` olsaydı bu derste ne kırılırdı?
-7. `XN` neyi engeller? Thread bloğunda neden `XN = 1` seçildi?
-8. Armv8-M'in `RBAR`/`RLAR` modeli Armv7-M MPU'dan nasıl farklıdır?
-   İnternetteki Armv7-M örneklerini neden doğrudan kullanamazsın?
-9. MemManage exception'ı neden önemli? `MEMFAULTENA` kapalıyken ihlal
-   kaybolur mu?
-10. **(Reasoning)** Ders 05'teki UART engeli neden bir MPU örneği **değildi**?
-11. **(Reasoning)** MPU, TrustZone'un yerine geçer mi? Hangi tehdit modelinde
-    yeterli, hangisinde değil?
-12. **(Reasoning)** MPU açıkken yazılım otomatik olarak "güvenli" mi olur?
+1. What exactly does the MPU enforce? What does it not enforce?
+2. How do privilege and the MPU relate? How useful is either without the other?
+3. Why can unprivileged Thread access its own stack?
+4. Why can the same Thread not access `g_service_counter`? What precisely protects it?
+5. Why can `SVC_Handler` access the same variable?
+6. What does `PRIVDEFENA` provide? What would break in this lesson if it were `0`?
+7. What does `XN` prevent? Why is `XN = 1` selected for the Thread block?
+8. How does Armv8-M's `RBAR`/`RLAR` model differ from the Armv7-M MPU?
+   Why cannot online Armv7-M examples be used directly?
+9. Why does the MemManage exception matter? Does a violation disappear
+   when `MEMFAULTENA` is disabled?
+10. **(Reasoning)** Why was Lesson 05's UART restriction **not** an MPU example?
+11. **(Reasoning)** Can the MPU replace TrustZone? For which threat model
+    is it sufficient, and for which is it not?
+12. **(Reasoning)** Does enabling the MPU automatically make software “secure”?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
 
 ---
 
 ## Takeaway
 
-- **Ayrıcalık seviyeyi verir, MPU o seviyeye göre belleği kapatır.** İkisi
-  birlikte izolasyon üretir; ayrı ayrı yetersizdirler.
-- Armv8-M MPU **base + limit** modelidir (`RBAR`/`RLAR`), Armv7-M'in
-  `size` alanı **yoktur**. `LIMIT` **dahildir**, granularite **32 byte**.
-- `PRIVDEFENA = 1` ayrıcalıklı erişimlere varsayılan haritayı açar;
-  ayrıcalıksız erişimlerin böyle bir kurtarma yolu yoktur. Bu dersin koruması
-  tam olarak bu asimetriye dayanıyor — **bölge eklememek** koruma yöntemidir.
-- `RLAR.AttrIndx` + `MAIR` zorunludur: MPU yalnızca "kim erişebilir"i değil,
-  "bu ne tür bellek"i de tanımlar.
-- MPU ihlali `MemManage` üretir; `MMFSR.DACCVIOL` türü, `MMFAR` adresi verir —
-  ama `MMFAR`'a ancak `MMARVALID = 1` iken güvenilir.
-- **MPU ≠ TrustZone, MPU ≠ PPC.** Üçü farklı mekanizmadır.
+- **Privilege supplies the level; the MPU restricts memory according to it.**
+  Together they provide isolation; neither is sufficient alone.
+- The Armv8-M MPU uses **base + limit** (`RBAR`/`RLAR`), with **no** Armv7-M
+  `size` field. `LIMIT` is **inclusive**; granularity is **32 bytes**.
+- `PRIVDEFENA = 1` opens the default map to privileged accesses; unprivileged
+  accesses have no fallback. Protection here relies on this exact asymmetry —
+  **omitting a region** is the protection method.
+- `RLAR.AttrIndx` + `MAIR` are mandatory: the MPU defines both “who may access”
+  and “what kind of memory this is.”
+- An MPU violation causes `MemManage`; `MMFSR.DACCVIOL` gives the type and
+  `MMFAR` the address — but trust `MMFAR` only when `MMARVALID = 1`.
+- **MPU ≠ TrustZone, MPU ≠ PPC.** Three different mechanisms.
 
 ---
 
-## PPC vs MPU — ders 05 bulgusunu doğru yerine koymak
+## PPC vs MPU — placing Lesson 05's finding in context
 
-Ders 05'te ayrıcalıksız Thread'in UART'a erişemediğini ölçmüştük
-(`UART_BAUDDIV_PRIV = 173`, `UART_BAUDDIV_UNPRIV = 0`). O zaman MPU
-**hiç etkinleştirilmemişti**.
+Lesson 05 measured that unprivileged Thread could not access UART
+(`UART_BAUDDIV_PRIV = 173`, `UART_BAUDDIV_UNPRIV = 0`). The MPU had
+**never been enabled** then.
 
-| | Ders 05 UART engeli | Ders 06 RAM engeli |
+| | Lesson 05 UART restriction | Lesson 06 RAM restriction |
 |---|---|---|
-| Mekanizma | SoC Peripheral Protection Controller (PPC) | Cortex-M33 MPU |
-| Nerede | İşlemcinin **dışında**, SoC ara bağlantısında | İşlemcinin **içinde** |
-| Yapılandıran | SSE-200 güvenlik denetleyicisi (`cfg_ap`) | `MPU_RBAR` / `MPU_RLAR` / `MPU_CTRL` |
-| İhlal davranışı | Sessiz: okuma `0` döner (`cfg_sec_resp = 0`) | `MemManage` exception |
-| Bu repodaki gözlem | `UART_BAUDDIV_UNPRIV = 0` | `IPSR = 4`, `MMFAR = 0x30000000` |
+| Mechanism | SoC Peripheral Protection Controller (PPC) | Cortex-M33 MPU |
+| Location | **Outside** the processor, in the SoC interconnect | **Inside** the processor |
+| Configured by | SSE-200 security controller (`cfg_ap`) | `MPU_RBAR` / `MPU_RLAR` / `MPU_CTRL` |
+| Violation behavior | Silent: read returns `0` (`cfg_sec_resp = 0`) | `MemManage` exception |
+| Observation in this repository | `UART_BAUDDIV_UNPRIV = 0` | `IPSR = 4`, `MMFAR = 0x30000000` |
 
-**"Ayrıcalıksız kod UART'a yazamıyor çünkü MPU engelliyor" cümlesi
-yanlıştır.** Ders 05'te MPU kapalıydı. İkisi de ayrıcalık ekseninde çalışır
-ama farklı donanım bloklarıdır ve farklı davranırlar — biri sessizce sıfır
-döndürür, diğeri exception üretir.
+**“Unprivileged code cannot write UART because the MPU blocks it” is false.**
+The MPU was disabled in Lesson 05. Both act along the privilege axis, but
+they are different hardware blocks with different behavior: one silently
+returns zero; the other raises an exception.
 
-Pratik sonuç: bir erişim beklenmedik şekilde başarısız olduğunda "MPU
-politikam yanlış" demeden önce **hangi bloğun** reddettiğini sor. Exception
-geldiyse MPU; sessizce yanlış veri geldiyse sistem seviyesinde bir denetleyici
-olabilir.
+Practical consequence: when access unexpectedly fails, ask **which block**
+rejected it before concluding “my MPU policy is wrong.” An exception points
+to the MPU; silent incorrect data may point to a system-level controller.
 
 ---
 
 ## Known Boundaries
 
-- **QEMU ≠ fiziksel kart.** 8 bölge, PPC varsayılanları ve fault davranışı bu
-  emülatörde ölçüldü. Fiziksel MPS2+ AN505 doğrulanmadı.
-- **Tek güvenlik durumu.** Bu ders Secure state içinde çalışıyor. TrustZone
-  etkin sistemlerde güvenlik durumuna göre ayrı MPU bankaları vardır
-  (`MPU` / `MPU_NS`) ve `SAU` bambaşka bir eksendir. Ders 16.
-- **MPU ≠ TrustZone.** MPU ayrıcalık ekseninde çalışır ve ayrıcalıklı yazılıma
-  güvenir — MPU'yu yapılandıran odur. TrustZone farklı bir sınır çizer ve
-  Non-secure ayrıcalıklı koda karşı da korur.
-- **MPU yazılımı otomatik güvenli yapmaz.** Koruma, yazdığın politikanın
-  doğruluğu kadardır. Yanlış bir bölge, unutulmuş bir `XN`, fazla geniş bir
-  `LIMIT` — hepsi sessizce açık bırakır. Ayrıca bu ders yalnızca iki bölge
-  tanımlıyor; gerçek bir sistemde çevre birimleri, paylaşılan tamponlar ve
-  her görev için ayrı stack bölgeleri gerekir.
-- **32 byte granularite bir tasarım kısıtıdır.** "Tek bir değişkeni"
-  koruyamazsın; hizalı bir bölge korursun. Gerçek projelerde korunan veri
-  linker script'inde kendi hizalı bölümüne konur — bu repo henüz onu yapmıyor.
-- `MEMFAULTENA` kapalıyken davranış bu derste **ölçülmedi** (Deney 3 olarak
-  okuyucuya bırakıldı).
+- **QEMU ≠ physical board.** The 8 regions, PPC defaults, and fault behavior
+  were measured in this emulator. Physical MPS2+ AN505 was not verified.
+- **One security state.** This lesson operates in Secure state. TrustZone
+  systems have separate MPU banks per security state (`MPU` / `MPU_NS`),
+  while `SAU` is a different axis entirely. Lesson 16.
+- **MPU ≠ TrustZone.** The MPU works along the privilege axis and trusts the
+  privileged software that configures it. TrustZone establishes a different
+  boundary, protecting against privileged Non-secure code too.
+- **The MPU does not automatically make software secure.** Protection is
+  only as correct as the policy. A wrong region, omitted `XN`, or oversized
+  `LIMIT` silently leaves access open. This lesson also defines only two
+  regions; a real system needs peripherals, shared buffers, and separate
+  stack regions for each task.
+- **32-byte granularity is a design constraint.** You cannot protect “one
+  variable”; you protect an aligned region. Real projects put protected data
+  in its own aligned linker section — this repository does not yet do so.
+- Behavior with `MEMFAULTENA` disabled was **not measured** in this lesson
+  (left to the reader as Experiment 3).
 
 ---
 
@@ -825,22 +822,22 @@ olabilir.
 - **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — PMSAv8 MPU:
   `MPU_TYPE`, `MPU_CTRL` (`ENABLE`, `PRIVDEFENA`), `MPU_RNR`, `MPU_RBAR`
   (`XN`, `AP`, `SH`, `BASE`), `MPU_RLAR` (`EN`, `AttrIndx`, `PXN`, `LIMIT`),
-  `MPU_MAIR0/1`, bölge eşleşme kuralları; `MMFSR` (`IACCVIOL`, `DACCVIOL`,
+  `MPU_MAIR0/1`, region matching rules; `MMFSR` (`IACCVIOL`, `DACCVIOL`,
   `MMARVALID`), `MMFAR`, `SHCSR.MEMFAULTENA`.
   <https://developer.arm.com/documentation/ddi0553/latest/>
 - **Cortex-M33 Devices Generic User Guide (Arm 100235)** — MPU register
-  tanımları ve bu çekirdekteki kullanımı.
+  definitions and their use on this core.
   <https://developer.arm.com/documentation/100235/latest/>
-- **CMSIS-Core (M), Armv8-M MPU API** — bu repoda vendored:
+- **CMSIS-Core (M), Armv8-M MPU API** — vendored in this repository:
   `external/CMSIS/Core/Include/m-profile/armv8m_mpu.h`. `ARM_MPU_RBAR`,
-  `ARM_MPU_RLAR` (LIMIT "one extended"), `ARM_MPU_ATTR`,
+  `ARM_MPU_RLAR` (LIMIT “one extended”), `ARM_MPU_ATTR`,
   `ARM_MPU_ATTR_MEMORY_(NT, WB, RA, WA)`, `ARM_MPU_SetMemAttr`,
   `ARM_MPU_SetRegion`, `ARM_MPU_Enable`.
   <https://arm-software.github.io/CMSIS_6/latest/Core/index.html>
-- **QEMU v8.2.2, `hw/misc/tz-ppc.c`** — yalnızca emülatöre özgü PPC gözlemi
-  için (ders 05 bulgusu).
+- **QEMU v8.2.2, `hw/misc/tz-ppc.c`** — solely for the emulator-specific PPC
+  observation (Lesson 05's finding).
   <https://github.com/qemu/qemu/blob/v8.2.2/hw/misc/tz-ppc.c>
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
   `mps2-an505 / cortex-m33`, `debug` preset.
 
 ---

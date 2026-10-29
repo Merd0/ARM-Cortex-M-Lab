@@ -1,80 +1,80 @@
-# Limitations - Simulator ile Gercek Donanim Farklari
+**Language:** English | [Türkçe](LIMITATIONS.tr.md)
 
-QEMU **fonksiyonel** bir emülatördür: komut sonuçlarını modeller, donanım
-zamanlamasını modellemez. Deney sonuçları aşağıdaki sınırlar içinde
-yorumlanmalıdır.
+# Limitations - Simulator vs Real Hardware
 
-Olculen degerler icin: `docs/TARGET_CAPABILITIES.md`
+QEMU is a **functional** emulator: it models instruction results, not hardware
+timing. Experiment results must be interpreted within the following limits.
 
-## 1. Timing gercek degil
+For measured values: `docs/TARGET_CAPABILITIES.md`
 
-QEMU komutlari ceviri blogu (TB) halinde calistirir. Bir "cycle" kavrami
-gercek anlamda yoktur.
+## 1. Timing is not real
 
-Bu yuzden:
+QEMU runs instructions in translation blocks (TBs). There is no "cycle" concept
+in the real sense.
 
-- "Bu fonksiyon 120 cycle suruyor" gibi iddialari QEMU'da **yapamayiz**
-- `-O2` ile `-O0`'i **kod boyutu ve uretilen assembly** uzerinden karsilastiririz,
-  duvar saati uzerinden degil
+Therefore:
 
-## 2. DWT cycle counter SAYMIYOR
+- We **cannot** make claims such as "this function takes 120 cycles" in QEMU
+- We compare `-O2` and `-O0` using **code size and generated assembly**, not wall time
 
-Olculdu: `CYCCNTENA` acilsa bile `DWT->CYCCNT` sifirda kaliyor.
+## 2. The DWT cycle counter DOES NOT COUNT
+
+Measured: even with `CYCCNTENA` enabled, `DWT->CYCCNT` remains zero.
 
 ```text
 DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 ```
 
-Sonuc: klasik "DWT ile cycle say" profiling yontemi bu target'ta
-**calistirilamaz**. Ders 12 bu sınırı gösterir ve
-alternatif ölçüm yöntemlerini kullanır (`docs/PERFORMANCE_MEASUREMENT.md`).
+Result: the classic "count cycles with DWT" profiling method **cannot be run** on
+this target. Lesson 12 demonstrates this limitation and uses alternative
+measurement methods (`docs/PERFORMANCE_MEASUREMENT.md`).
 
-## 3. Cache yok
+## 3. No cache
 
-Cortex-M33'te mimari olarak cache yoktur; QEMU'nun eksigi degildir.
-Cache davranisi (temizleme, invalidate, coherency) bu target'ta
-**gozlemlenemez**. Ders 16'da teorik olarak islenir, deney icin
-M7/M55 sinifi bir target veya gercek donanim gerekir.
+Cortex-M33 architecturally has no cache; this is not a QEMU omission.
+Cache behavior (cleaning, invalidation, coherency) **cannot be observed** on this
+target. Lesson 16 covers it theoretically; experiments require an M7/M55-class
+target or real hardware.
 
-## 4. Bellek erisim hatalari farkli olabilir
+## 4. Memory access errors can differ
 
-Gercek bir MCU'da tanimsiz adrese erisim bus hatasi uretir.
-QEMU'da bazi adresler sessizce okunabilir/yazilabilir. Ornegin
-`0x00000000` bu board'da gercek bir RAM alias'idir; "null pointer
-yazdim, hemen fault almaliydim" beklentisi burada yanilticidir.
+On a real MCU, accessing an undefined address produces a bus error.
+In QEMU, some addresses can be read/written silently. For example, `0x00000000`
+is an actual RAM alias on this board; expecting "I wrote through a null pointer,
+so I should immediately fault" is misleading here.
 
-Bu yuzden fault derslerinde hatayi **adres uydurup** degil,
-MPU kurup **tanimli bir ihlal** yaparak uretiyoruz.
+Therefore, in the fault lessons we generate errors by configuring the MPU and
+performing a **defined violation**, rather than **inventing an address**.
 
-## 5. Peripheral seti sinirli
+## 5. The peripheral set is limited
 
-QEMU AN505 modelinde CMSDK UART, timer, watchdog gibi temel cevre birimleri
-vardir. Gercek bir MCU'nun ADC/SPI/I2C surucu deneyimi burada yoktur.
-Bu repo zaten **cekirdek mimariye** odaklanir, surucu yazmaya degil.
+The QEMU AN505 model has basic peripherals such as CMSDK UART, timers, and a
+watchdog. It does not provide real-MCU ADC/SPI/I2C driver experience here.
+This repository focuses on **core architecture**, not writing drivers.
 
-## 6. Reset ve power davranisi
+## 6. Reset and power behavior
 
-Brown-out, power-on reset gecikmesi, clock tree konfigurasyonu, PLL kilitlenmesi
-gibi konular modellenmiyor. `SystemInit()` icinde saat kurulumu yapmamizin
-gerekmemesi bunun sonucudur; gercek donanimda bu adim zorunludur.
+Brown-out, power-on reset delay, clock-tree configuration, PLL locking, and similar
+topics are not modeled. This is why we do not need to configure clocks inside
+`SystemInit()`; on real hardware this step is necessary.
 
-## 7. Bunlar sorun mu?
+## 7. Are these problems?
 
-Ogrenmek istedigimiz konularin buyuk cogunlugu icin **hayir**:
+For the vast majority of the topics we want to learn, **no**:
 
-| Konu | QEMU'da ogrenilebilir mi |
+| Topic | Can it be learned in QEMU? |
 |---|---|
-| Programmer model, register'lar | Evet |
-| Stack, MSP/PSP, calling convention | Evet |
-| Privilege, CONTROL, SVC | Evet |
-| MPU, memory protection | Evet |
-| Exceptions, faults, EXC_RETURN | Evet |
-| Linker, ELF, startup | Evet |
-| Context switching, PendSV | Evet |
-| TrustZone temel ayrimi | Evet |
-| **Cycle-accurate performans** | Hayir |
-| **Cache davranisi** | Hayir |
-| **Gercek cevre birimi suruculeri** | Hayir |
-| **Elektriksel/analog davranis** | Hayir |
+| Programmer model, registers | Yes |
+| Stack, MSP/PSP, calling convention | Yes |
+| Privilege, CONTROL, SVC | Yes |
+| MPU, memory protection | Yes |
+| Exceptions, faults, EXC_RETURN | Yes |
+| Linker, ELF, startup | Yes |
+| Context switching, PendSV | Yes |
+| Basic TrustZone separation | Yes |
+| **Cycle-accurate performance** | No |
+| **Cache behavior** | No |
+| **Real peripheral drivers** | No |
+| **Electrical/analog behavior** | No |
 
-Board alindiginda nelerin degisecegi: `docs/REAL_HARDWARE_MIGRATION.md`
+What changes when you obtain a board: `docs/REAL_HARDWARE_MIGRATION.md`

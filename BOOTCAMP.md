@@ -1,48 +1,53 @@
+**Language:** English | [Türkçe](BOOTCAMP.tr.md)
+
 # ARM Cortex-M — 7 Day Practical Bootcamp
 
-Bu dosya günlük ders planını ve çalışma kontrol listesini içerir.
+This file contains the daily lesson plan and study checklist.
 
-**Etiketler:** `[QUICK]` 20–35 dk · `[STANDARD]` 45–75 dk · `[DEEP]` 90 dk+
-Zamanın daralırsa `QUICK` ve `STANDARD` üzerinden ilerle, `DEEP` olanları
-DEEP TRACK'e bırak.
+**Labels:** `[QUICK]` 20–35 min · `[STANDARD]` 45–75 min · `[DEEP]` 90 min+
+If time is short, work through `QUICK` and `STANDARD`; leave `DEEP` items
+for the DEEP TRACK.
 
-**Durum:** `[ ]` yapılmadı · `[~]` devam ediyor · `[x]` bitti
+**Status:** `[ ]` not done · `[~]` in progress · `[x]` done
 
-Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilince
-otomatik işaretlenmez. Repository teknik teslimi: 16 ders, beş proje ve final
-sensor node uygulandı; yerel üç-preset/QEMU ve kritik GDB kapıları geçti.
-Ders 13 PR #9, Lesson 14–16 PR #10 ile üç preset CI sonrası merge edildi.
-Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS. Güncel
-yayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.md) içindedir.
-Öğrenci çalışma kutuları teknik teslim adına otomatik doldurulmaz. Güncel teknik durum: [Progress](docs/PROGRESS.md).
-
----
-
-## Day 0 — Kurulum (bir kez)
-
-- [ ] `[QUICK]` Ortam kontrolü — `./scripts/check-environment.sh` veya `.\scripts\check-environment.ps1`
-- [ ] `[QUICK]` İlk build — `cmake --preset debug && cmake --build --preset debug`
-- [ ] `[QUICK]` İlk çalıştırma — `./scripts/run-qemu.sh build/debug/tools/capability-probe/capability-probe.elf`
-- [ ] `[QUICK]` İlk GDB bağlantısı — [`docs/DEBUGGING.md`](docs/DEBUGGING.md)
-- [ ] `[QUICK]` Smoke test — `./tests/smoke-test.sh` (normal/bozuk/eksik hedeflerin beklenen davranışları doğrulanmalı)
-- [ ] `[QUICK]` Kendi tool sürümlerini kaydet — [`docs/TOOL_VERSIONS.md`](docs/TOOL_VERSIONS.md)
+These boxes are the learner's personal study record; they are not checked
+automatically when the repository is developed. Repository technical delivery:
+16 lessons, five projects, and the final sensor node were implemented; local
+three-preset/QEMU and critical GDB gates passed.
+Lesson 13 was merged through PR #9 and Lessons 14–16 through PR #10 after
+three-preset CI. Project/final PR #11 was also merged; three-preset CI PASS for
+11fde900 main. This is a **historical integration checkpoint**, not a
+measurement attributed to the v1.0.0 release commit. Current publication and
+remote verification links are in [Progress](docs/PROGRESS.md). Student study boxes are not filled automatically
+on behalf of technical delivery. Current technical status: [Progress](docs/PROGRESS.md).
 
 ---
 
-> **Başlangıç:** Dersleri `lessons/01` ile başlayarak sırayla takip et.
-> `README.md` de aynı sırayı gösterir.
+## Day 0 — Setup (once)
+
+- [ ] `[QUICK]` Environment check — `./scripts/check-environment.sh` or `.\scripts\check-environment.ps1`
+- [ ] `[QUICK]` First build — `cmake --preset debug && cmake --build --preset debug`
+- [ ] `[QUICK]` First run — `./scripts/run-qemu.sh build/debug/tools/capability-probe/capability-probe.elf`
+- [ ] `[QUICK]` First GDB connection — [`docs/DEBUGGING.md`](docs/DEBUGGING.md)
+- [ ] `[QUICK]` Smoke test — `./tests/smoke-test.sh` (expected behavior of normal/broken/incomplete targets must be verified)
+- [ ] `[QUICK]` Record your own tool versions — [`docs/TOOL_VERSIONS.md`](docs/TOOL_VERSIONS.md)
+
+---
+
+> **Start:** Follow the lessons in order, starting with `lessons/01`.
+> `README.md` shows the same order.
 
 ## Day 1 — Cortex-M Fundamentals
 
 - [ ] `[QUICK]` [01 — Cortex-M Family & Processor Selection](lessons/01-cortex-m-family/)
 - [ ] `[STANDARD]` [02 — Programmer Model & Registers](lessons/02-programmer-model/)
-- [ ] `[QUICK]` Ders 02'deki `decode_apsr_flags()` TODO'sunu tamamla
-- [ ] `[QUICK]` Ders 02 "Break It" + "Debug It" — HardFault'u kendin teşhis et
-- [ ] `[QUICK]` Ders 01 ve 02'nin "What I Learned" bölümlerini doldur
+- [ ] `[QUICK]` Complete the `decode_apsr_flags()` TODO in Lesson 02
+- [ ] `[QUICK]` Lesson 02 "Break It" + "Debug It" — diagnose the HardFault yourself
+- [ ] `[QUICK]` Fill in the "What I Learned" sections of Lessons 01 and 02
 
-**Gün sonu hedefi:** R0–R12/SP/LR/PC/xPSR'yi GDB'de görebiliyorum;
-CONTROL'ün `nPRIV` ve `SPSEL` alanlarını açıklayabiliyorum; bir HardFault'un kaynağını
-CFSR/HFSR'den bulabiliyorum.
+**End-of-day goal:** I can see R0–R12/SP/LR/PC/xPSR in GDB;
+I can explain CONTROL's `nPRIV` and `SPSEL` fields; I can identify the source
+of a HardFault from CFSR/HFSR.
 
 ---
 
@@ -50,12 +55,12 @@ CFSR/HFSR'den bulabiliyorum.
 
 - [ ] `[STANDARD]` [03 — C and Assembly](lessons/03-c-and-assembly/)
 - [ ] `[STANDARD]` [04 — Stack, MSP & PSP](lessons/04-stack-msp-psp/)
-- [ ] `[QUICK]` Kendi assembly fonksiyonunu yaz ve C'den çağır
-- [ ] `[QUICK]` Thread Mode'u PSP'ye geçir, GDB'de doğrula
+- [ ] `[QUICK]` Write your own assembly function and call it from C
+- [ ] `[QUICK]` Switch Thread Mode to PSP and verify it in GDB
 
-**Gün sonu hedefi:** Bir C fonksiyonunun assembly karşılığını satır satır
-takip edebiliyorum; stack'in nasıl büyüdüğünü bellekte görebiliyorum;
-MSP ile PSP arasında bilerek geçiş yapabiliyorum.
+**End-of-day goal:** I can follow a C function's assembly equivalent line by line;
+I can see how the stack grows in memory; I can deliberately switch between MSP
+and PSP.
 
 ---
 
@@ -63,13 +68,13 @@ MSP ile PSP arasında bilerek geçiş yapabiliyorum.
 
 - [ ] `[STANDARD]` [05 — Privilege & SVC](lessons/05-privilege-svc/)
 - [ ] `[STANDARD]` [06 — MPU](lessons/06-mpu/)
-- [ ] `[QUICK]` Unprivileged Thread Mode'a geç ve sınırı test et
-- [ ] `[QUICK]` SVC ile privileged bir servis çağır
-- [ ] `[STANDARD]` MPU ile korumalı bölge kur, ihlali MemManage ile doğrula
+- [ ] `[QUICK]` Enter unprivileged Thread Mode and test the boundary
+- [ ] `[QUICK]` Call a privileged service through SVC
+- [ ] `[STANDARD]` Configure an MPU-protected region and verify the violation with MemManage
 
-**Gün sonu hedefi:** Privileged/unprivileged ayrımını kodda kurabiliyorum;
-MPU ihlalini sadece "crash oldu" diye değil, fault status register'larıyla
-açıklayabiliyorum.
+**End-of-day goal:** I can establish the privileged/unprivileged distinction in
+code; I can explain an MPU violation using fault status registers, rather than
+merely saying "it crashed."
 
 ---
 
@@ -79,11 +84,11 @@ açıklayabiliyorum.
 - [ ] `[STANDARD]` [08 — Faults & Fault Analyzer](lessons/08-faults/)
 - [ ] `[STANDARD]` [09 — Compiler, Optimization & AAPCS](lessons/09-compiler-aapcs/)
 - [ ] `[STANDARD]` [10 — Linker, ELF & Memory Layout](lessons/10-linker-elf-memory/)
-- [ ] `[DEEP]` Fault analyzer'ın CFSR decode kısmını kendin yaz
+- [ ] `[DEEP]` Write the fault analyzer's CFSR decoding yourself
 
-**Gün sonu hedefi:** Exception stack frame'ini bellekte elle çözebiliyorum;
-EXC_RETURN'ün ne anlattığını biliyorum; bir global değişkenin ELF'te nerede
-olduğunu map file'dan bulabiliyorum.
+**End-of-day goal:** I can decode an exception stack frame in memory by hand;
+I know what EXC_RETURN tells me; I can locate a global variable in the ELF using
+the map file.
 
 ---
 
@@ -91,12 +96,12 @@ olduğunu map file'dan bulabiliyorum.
 
 - [ ] `[STANDARD]` [11 — Startup: Reset to main](lessons/11-startup/)
 - [ ] `[STANDARD]` [12 — Debugging & DWT Profiling](lessons/12-debug-dwt/)
-- [ ] `[DEEP]` Kendi `Reset_Handler`'ını sıfırdan yaz
-- [ ] `[QUICK]` Reset'ten `main`'e kadar sadece `stepi` ile git
-- [ ] `[QUICK]` DWT'nin bu target'ta saymadığını kendin doğrula
+- [ ] `[DEEP]` Write your own `Reset_Handler` from scratch
+- [ ] `[QUICK]` Go from Reset to `main` using only `stepi`
+- [ ] `[QUICK]` Verify for yourself that DWT does not count on this target
 
-**Gün sonu hedefi:** `main` çalışmadan önce ne olduğunu adım adım
-anlatabiliyorum; bir ölçümün neden geçersiz olduğunu savunabiliyorum.
+**End-of-day goal:** I can explain step by step what happens before `main` runs;
+I can justify why a measurement is invalid.
 
 ---
 
@@ -104,11 +109,11 @@ anlatabiliyorum; bir ölçümün neden geçersiz olduğunu savunabiliyorum.
 
 - [ ] `[DEEP]` [13 — Synchronization, FPU & DSP](lessons/13-sync-fpu-dsp/)
 - [ ] `[STANDARD]` [14 — SysTick & PendSV](lessons/14-systick-pendsv/)
-- [ ] `[QUICK]` Race condition üret, sonra exclusive access ile düzelt
-- [ ] `[QUICK]` 1 ms tick kur ve çalıştığını doğrula
+- [ ] `[QUICK]` Produce a race condition, then fix it with exclusive access
+- [ ] `[QUICK]` Configure a 1 ms tick and verify that it works
 
-**Gün sonu hedefi:** Bir race condition'ı hem üretebiliyorum hem
-düzeltebiliyorum; memory barrier'ın ne zaman gerektiğini açıklayabiliyorum.
+**End-of-day goal:** I can both produce and fix a race condition;
+I can explain when a memory barrier is necessary.
 
 ---
 
@@ -116,44 +121,44 @@ düzeltebiliyorum; memory barrier'ın ne zaman gerektiğini açıklayabiliyorum.
 
 - [ ] `[DEEP]` [15 — Educational Mini Kernel](lessons/15-mini-kernel/)
 - [ ] `[DEEP]` [16 — TrustZone & Advanced Features](lessons/16-trustzone-advanced/)
-- [ ] `[DEEP]` İki task arasında context switch çalıştır
-- [ ] `[STANDARD]` SAU ile secure/non-secure ayrımını kur
-- [ ] `[QUICK]` Cache / PACBTI / MVE için target desteğini **ölç**, sonucu kaydet
-- [ ] `[STANDARD]` Final entegrasyon planını yaz — [`final-project/`](final-project/)
+- [ ] `[DEEP]` Run a context switch between two tasks
+- [ ] `[STANDARD]` Establish Secure/Non-secure separation using the SAU
+- [ ] `[QUICK]` **Measure** target support for Cache / PACBTI / MVE and record the result
+- [ ] `[STANDARD]` Write the final integration plan — [`final-project/`](final-project/)
 
-**Gün sonu hedefi:** Kendi yazdığım context switch ile iki task çalışıyor;
-TrustZone sınırının neyi engellediğini deneyle gösterebiliyorum.
-
----
-
-## DEEP TRACK — sonra dönülecekler
-
-Bu çalışmalar FAST TRACK için ön koşul değildir; daha sonra tamamlanabilir:
-
-- [ ] M55 (`mps3-an547`) platform portu — MVE capability'sini ölç
-- [ ] Arm FVP kurulumu — QEMU'da gözlemlenemeyenler için
-- [ ] Fault analyzer'ı tam sürüme çıkar (tüm CFSR bitleri)
-- [ ] MPU ile task isolation — mini kernel üzerine
-- [ ] Cache davranışı (uygun target bulunduğunda)
-- [ ] PACBTI demo (target desteği doğrulandıktan sonra)
-- [ ] Gerçek donanıma geçiş — [`docs/REAL_HARDWARE_MIGRATION.md`](docs/REAL_HARDWARE_MIGRATION.md)
+**End-of-day goal:** Two tasks run with the context switch I wrote;
+I can demonstrate experimentally what the TrustZone boundary prevents.
 
 ---
 
-## Günlük rutin
+## DEEP TRACK — return to these later
 
-1. Bu dosyadan günün derslerini aç
-2. Dersi oku → build et → çalıştır → GDB'de gözle
-3. **Experiment** ve **Break It** deneylerini çalıştır
-4. Gözlemlerini **What I Learned** bölümüne kaydet
-5. Kutuyu işaretle, [`docs/PROGRESS.md`](docs/PROGRESS.md) ve README progress'i güncelle
+These activities are not prerequisites for the FAST TRACK; they can be completed later:
 
-## Takıldığında
+- [ ] M55 (`mps3-an547`) platform port — measure MVE capability
+- [ ] Arm FVP setup — for what cannot be observed in QEMU
+- [ ] Extend the fault analyzer to a complete version (all CFSR bits)
+- [ ] Task isolation with the MPU — on top of the mini kernel
+- [ ] Cache behavior (when a suitable target is available)
+- [ ] PACBTI demo (after target support is verified)
+- [ ] Move to real hardware — [`docs/REAL_HARDWARE_MIGRATION.md`](docs/REAL_HARDWARE_MIGRATION.md)
 
-| Sorun | Bak |
+---
+
+## Daily routine
+
+1. Open the day's lessons from this file
+2. Read the lesson → build → run → observe in GDB
+3. Run the **Experiment** and **Break It** experiments
+4. Record your observations in **What I Learned**
+5. Check the box and update [`docs/PROGRESS.md`](docs/PROGRESS.md) and the README progress
+
+## When you get stuck
+
+| Problem | See |
 |---|---|
-| Build olmuyor | [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) |
-| Fault aldım, anlamıyorum | [`docs/DEBUGGING.md`](docs/DEBUGGING.md) |
-| Bu özellik neden çalışmıyor | [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) |
-| Adresler nereden geliyor | [`docs/MEMORY_MAP.md`](docs/MEMORY_MAP.md) |
-| Terim anlamadım | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) |
+| Build does not work | [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) |
+| I got a fault and do not understand it | [`docs/DEBUGGING.md`](docs/DEBUGGING.md) |
+| Why does this feature not work? | [`docs/TARGET_CAPABILITIES.md`](docs/TARGET_CAPABILITIES.md) |
+| Where do the addresses come from? | [`docs/MEMORY_MAP.md`](docs/MEMORY_MAP.md) |
+| I do not understand a term | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) |

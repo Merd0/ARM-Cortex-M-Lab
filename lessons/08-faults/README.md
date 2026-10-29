@@ -1,142 +1,139 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 08 — Faults: MemManage, BusFault, UsageFault & HardFault
 
-`[STANDARD]` · Day 4 · Tahmini süre: 75–90 dk
+`[STANDARD]` · Day 4 · Estimated time: 75–90 min
 
 ---
 
 ## Why This Matters
 
-Beş derstir fault görüyoruz — ama her seferinde tek bir vakayı, tek başına:
+We have seen faults for five lessons — but one isolated case at a time:
 
-| Ders | Görülen | Öğretilen |
+| Lesson | Observed | Taught |
 |---|---|---|
-| 02 | `STKERR` + HardFault | Geçersiz stack |
-| 04 | `STKOF` | Stack limiti |
-| 06 | `DACCVIOL` → MemManage | MPU politikası |
-| 07 | Aynı `DACCVIOL`, handler kapalı → HardFault + `FORCED` | Escalation |
+| 02 | `STKERR` + HardFault | Invalid stack |
+| 04 | `STKOF` | Stack limit |
+| 06 | `DACCVIOL` → MemManage | MPU policy |
+| 07 | Same `DACCVIOL`, handler disabled → HardFault + `FORCED` | Escalation |
 
-Bu ders o dağınık gözlemleri **tekrarlanabilir bir teşhis yöntemine** çeviriyor.
+This lesson turns those scattered observations into **a repeatable diagnostic method**.
 
-Tek cümlelik ders:
+The lesson in one sentence:
 
-> **Bir Cortex-M fault'unu tek bir register'dan teşhis etme.**
+> **Do not diagnose a Cortex-M fault from a single register.**
 
-Sahada bir cihaz HardFault'ta durduğunda, "HardFault oldu" bilgisi neredeyse
-hiçbir şey söylemez. Söyleyen şey register'ların **birlikte** okunmasıdır —
-ve hangisine ne zaman güvenilebileceğini bilmek.
+When a field device stops in HardFault, "a HardFault happened" says almost nothing.
+What matters is reading registers **together**, and knowing when each can be trusted.
 
 ---
 
 ## Core Idea
 
-### Dört fault sınıfı — mekanizmalar, dramatik etiketler değil
+### Four fault classes — mechanisms, not dramatic labels
 
-| Sınıf | `IPSR` | Ne zaman | Alt register |
+| Class | `IPSR` | When | Subregister |
 |---|---|---|---|
-| **MemManage** | 4 | Bellek koruma ihlali (MPU ve ilgili denetimler) | `MMFSR` + `MMFAR` |
-| **BusFault** | 5 | Bellek/veri yolu sistemi erişimi reddetti | `BFSR` + `BFAR` |
-| **UsageFault** | 6 | Komut veya yürütme durumu kullanım hatası | `UFSR` (adres yok) |
-| **HardFault** | 3 | Yüksek öncelikli fault mekanizması; kendi handler'ı kullanılamayan fault'ların **yükseltildiği** hedef | `HFSR` |
+| **MemManage** | 4 | Memory-protection violation (MPU and related checks) | `MMFSR` + `MMFAR` |
+| **BusFault** | 5 | Memory/bus system rejected an access | `BFSR` + `BFAR` |
+| **UsageFault** | 6 | Incorrect instruction or execution-state usage | `UFSR` (no address) |
+| **HardFault** | 3 | High-priority fault mechanism; destination for faults **escalated** because their own handler is unavailable | `HFSR` |
 
-İlk üçü **yapılandırılabilir** (configurable): `SHCSR` içindeki
-`MEMFAULTENA`, `BUSFAULTENA`, `USGFAULTENA` bitleriyle etkinleştirilir ve
-öncelikleri ayarlanabilir.
+The first three are **configurable**: enabled by `MEMFAULTENA`, `BUSFAULTENA`,
+and `USGFAULTENA` in `SHCSR`, with configurable priorities.
 
-**HardFault "en kötü fault" değildir.** Ne de "bilinmeyen her hata"dır. Bir
-**mekanizmadır**: kendi handler'ı etkin olmayan veya çalıştırılamayan bir
-fault'un gittiği yer.
+**HardFault is not "the worst fault,"** nor "every unknown error." It is a
+**mechanism**: the destination of a fault whose own handler is not enabled or cannot run.
 
-### Fault ≠ kök sebep
+### Fault ≠ root cause
 
-Bu dersin ana fikri. Ders 07'de ölçülen:
+The central idea. Measured in Lesson 07:
 
-| | MemManage ETKİN | MemManage DEVRE DIŞI |
+| | MemManage ENABLED | MemManage DISABLED |
 |---|---|---|
-| Aktif handler | MemManage (`IPSR = 4`) | **HardFault** (`IPSR = 3`) |
-| `CFSR` | `DACCVIOL` | `DACCVIOL` — **aynı** |
+| Active handler | MemManage (`IPSR = 4`) | **HardFault** (`IPSR = 3`) |
+| `CFSR` | `DACCVIOL` | `DACCVIOL` — **same** |
 | `HFSR.FORCED` | 0 | **1** |
 
-İhlal aynı; değişen yalnızca **onu hangi handler'ın gördüğü**.
+Same violation; only **which handler saw it** changed.
 
-> **"HardFault aktif" ≠ "asıl sorun doğası gereği bir HardFault'tu."**
+> **"HardFault is active" ≠ "the underlying problem was inherently a HardFault."**
 
-HardFault teşhisi çoğu zaman **HardFault'un altına** bakmayı gerektirir:
-önce `HFSR.FORCED`, sonra `CFSR`.
+Diagnosing HardFault often requires looking **beneath HardFault**:
+first `HFSR.FORCED`, then `CFSR`.
 
-### CFSR'nin yapısı
+### CFSR structure
 
 ```text
 CFSR (0xE000ED28)
-├── MMFSR   bits [7:0]     MemManage durumu
-├── BFSR    bits [15:8]    BusFault durumu
-└── UFSR    bits [31:16]   UsageFault durumu
+├── MMFSR   bits [7:0]     MemManage status
+├── BFSR    bits [15:8]    BusFault status
+└── UFSR    bits [31:16]   UsageFault status
 ```
 
-Bu dersin kullandığı bitler (konumlar vendored CMSIS `core_cm33.h` ile
-doğrulandı — Armv8-M):
+Bits used in this lesson (positions verified against vendored CMSIS `core_cm33.h` — Armv8-M):
 
 ```text
-MMFSR  bit0 IACCVIOL   komut getirme ihlali
-       bit1 DACCVIOL   veri erisim ihlali
-       bit3 MUNSTKERR  exception DONUSUNDE geri yukleme hatasi
-       bit4 MSTKERR    exception GIRISINDE yigma hatasi
-       bit5 MLSPERR    lazy FP koruma hatasi (FP'ye ozel)
-       bit7 MMARVALID  MMFAR gecerli
+MMFSR  bit0 IACCVIOL   instruction fetch violation
+       bit1 DACCVIOL   data access violation
+       bit3 MUNSTKERR  unstacking error on exception RETURN
+       bit4 MSTKERR    stacking error on exception ENTRY
+       bit5 MLSPERR    lazy FP preservation error (FP-specific)
+       bit7 MMARVALID  MMFAR valid
 
-BFSR   bit0 IBUSERR    komut getirme veri yolu hatasi
-       bit1 PRECISERR  precise veri yolu hatasi
-       bit2 (genel Armv8-M/CMSIS: IMPRECISERR)  -> asagidaki nota bak
-       bit3 UNSTKERR   donuste geri yukleme hatasi
-       bit4 STKERR     giriste yigma hatasi
-       bit5 LSPERR     lazy FP koruma hatasi
-       bit7 BFARVALID  BFAR gecerli
+BFSR   bit0 IBUSERR    instruction fetch bus error
+       bit1 PRECISERR  precise bus error
+       bit2 (generic Armv8-M/CMSIS: IMPRECISERR)  -> see note below
+       bit3 UNSTKERR   unstacking error on return
+       bit4 STKERR     stacking error on entry
+       bit5 LSPERR     lazy FP preservation error
+       bit7 BFARVALID  BFAR valid
 
-UFSR   bit0 UNDEFINSTR tanimsiz komut
-       bit1 INVSTATE   gecersiz yurutme durumu (orn. Thumb biti 0)
-       bit2 INVPC      gecersiz EXC_RETURN / PC yuklemesi
-       bit3 NOCP       coprocessor erisimi (FP kapaliyken FP komutu)
-       bit4 STKOF      stack limiti asildi   <- Armv8-M'e OZEL
-       bit8 UNALIGNED  hizasiz erisim (UNALIGN_TRP acikken)
-       bit9 DIVBYZERO  sifira bolme (DIV_0_TRP acikken)
+UFSR   bit0 UNDEFINSTR undefined instruction
+       bit1 INVSTATE   invalid execution state (e.g. Thumb bit 0)
+       bit2 INVPC      invalid EXC_RETURN / PC load
+       bit3 NOCP       coprocessor access (FP instruction while FP disabled)
+       bit4 STKOF      stack limit exceeded <- Armv8-M-SPECIFIC
+       bit8 UNALIGNED  unaligned access (UNALIGN_TRP enabled)
+       bit9 DIVBYZERO  division by zero (DIV_0_TRP enabled)
 ```
 
-`STKOF` Armv7-M tablolarında **yoktur** — Armv7-M'den kopyalanmış bir CFSR
-tablosu bu dersin ders 04 vakasını açıklayamaz.
+`STKOF` is **absent** from Armv7-M tables — a CFSR table copied from Armv7-M
+cannot explain this lesson's Lesson 04 case.
 
-> **BFSR bit 2 — genel tanım ≠ Cortex-M33 gerçekleştirmesi.** Genel Armv8-M
-> materyali ve vendored CMSIS (`SCB_CFSR_IMPRECISERR_Msk`) bit 2'yi
-> `IMPRECISERR` olarak tanımlar. Bağımsız denetim, Cortex-M33'e özgü BFSR
-> register tablosunun bu biti **Reserved / RES0** olarak işaretlediğini
-> bildirdi. Bu repo o tabloyu kendi başına yeniden okuyamadı; ulaşılabilen
-> Cortex-M33 Generic User Guide r0p4 metninde ise özet "fault types" tablosu
-> (Tablo 2-25) `IMPRECISERR`'i hâlâ listeliyor. Kaynaklar tutarlı olmadığı
-> için bu laboratuvar bit 2'yi **Cortex-M33'te gerçekleştirilmiş bir durum
-> alanı olarak sunmuyor**: firmware ve `cm-fault` onu yalnızca
-> "`bit2 (generic IMPRECISERR)`" diye etiketler, çözüm kodu onu bir sebep
-> biti olarak seçmez. Bu derste hiçbir vakada set olmadı.
+> **BFSR bit 2 — generic definition ≠ Cortex-M33 implementation.** Generic
+> Armv8-M material and vendored CMSIS (`SCB_CFSR_IMPRECISERR_Msk`) define bit 2
+> as `IMPRECISERR`. The independent audit reported that the Cortex-M33-specific
+> BFSR register table marks it **Reserved / RES0**. This repository could not
+> independently reread that table; in the accessible Cortex-M33 Generic User Guide
+> r0p4 text, the summary "fault types" table (Table 2-25) still lists `IMPRECISERR`.
+> Because the sources are inconsistent, this lab **does not present bit 2 as an
+> implemented Cortex-M33 status field**: firmware and `cm-fault` label it only
+> "`bit2 (generic IMPRECISERR)`", and the solution does not select it as a cause
+> bit. It was not set in any case in this lesson.
 
-### Adres register'ı + geçerlilik biti = kanıt
+### Address register + validity bit = evidence
 
 ```text
-MMFAR icerigi  +  MMARVALID = 1   ->  kullanilabilir kanit
-MMFAR icerigi  +  MMARVALID = 0   ->  ANLAMSIZ, kullanma
+MMFAR contents  +  MMARVALID = 1   ->  usable evidence
+MMFAR contents  +  MMARVALID = 0   ->  MEANINGLESS, do not use
 
-BFAR  icerigi  +  BFARVALID = 1   ->  kullanilabilir kanit
-BFAR  icerigi  +  BFARVALID = 0   ->  ANLAMSIZ, kullanma
+BFAR  contents  +  BFARVALID = 1   ->  usable evidence
+BFAR  contents  +  BFARVALID = 0   ->  MEANINGLESS, do not use
 ```
 
-> **ARCHITECTURE:** `MMFAR`/`BFAR` yalnızca ilgili `VALID` biti set iken
-> teşhis değeri taşır. Aksi halde eski bir değer veya çöp olabilir.
+> **ARCHITECTURE:** `MMFAR`/`BFAR` are diagnostically meaningful only when their
+> corresponding `VALID` bit is set. Otherwise they may contain stale values or garbage.
 
-UsageFault'un adres register'ı **yoktur**.
+UsageFault has **no** address register.
 
-### Durum bitleri yapışkandır (sticky), W1C ile temizlenir
+### Status bits are sticky and cleared with W1C
 
-`CFSR` ve `HFSR` bitleri, açıkça temizlenene kadar (veya reset'e kadar) set
-kalır. Temizleme **write-one-to-clear**'dır: bir biti temizlemek için ona
-**1** yazılır. **0 yazmak hiçbir şeyi temizlemez.**
+`CFSR` and `HFSR` bits remain set until explicitly cleared (or reset).
+They use **write-one-to-clear**: write **1** to clear a bit.
+**Writing 0 clears nothing.**
 
-İkisi aynı prensibe dayansa da Cortex-M33'te **farklı ele alınır**:
+Although based on the same principle, they are **handled differently** on Cortex-M33:
 
 ```c
 /* CFSR: tanimli bitlerin hepsi W1C, ayrilmis bitler 0 okunur.
@@ -150,95 +147,92 @@ SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk |                            /* bit31 = 1 */
             (hfsr & (SCB_HFSR_FORCED_Msk | SCB_HFSR_VECTTBL_Msk)); /* bit30, bit1 */
 ```
 
-| HFSR biti | Yazılan | Sebep |
+| HFSR bit | Written value | Reason |
 |---|---|---|
-| 31 `DEBUGEVT` | **her zaman 1** | Cortex-M33'e özgü yazma kuralı (aşağıya bak). W1C olduğu için bu yazma onu da temizler. |
-| 30 `FORCED` | okunan değer | Set ise 1 yazılır → temizlenir |
-| 1 `VECTTBL` | okunan değer | Set ise 1 yazılır → temizlenir |
-| diğerleri | 0 | Ayrılmış alanlar |
+| 31 `DEBUGEVT` | **always 1** | Cortex-M33-specific write rule (below). W1C means this write also clears it. |
+| 30 `FORCED` | value read | If set, write 1 → clear |
+| 1 `VECTTBL` | value read | If set, write 1 → clear |
+| others | 0 | Reserved fields |
 
-**Neden `HFSR = HFSR` yetmiyor?** Bağımsız denetim, Cortex-M33 HFSR bit
-tablosunun şunu söylediğini bildirdi: HFSR yazılırken `DEBUGEVT`'ye **1**
-yazılmalıdır, aksi halde davranış **UNPREDICTABLE**. Okunan değeri geri yazmak,
-`DEBUGEVT` temizken bit 31'e **0** yazar ve bu kuralı ihlal eder. `CFSR`'de
-böyle bir kural yok; orada geri yazma güvenli.
+**Why is `HFSR = HFSR` insufficient?** The independent audit reported that the
+Cortex-M33 HFSR bit table requires writing **1** to `DEBUGEVT` when writing HFSR;
+otherwise behavior is **UNPREDICTABLE**. Writing back the read value writes **0**
+to bit 31 when `DEBUGEVT` is clear, violating the rule. `CFSR` has no such rule;
+writing back is safe there.
 
-> **Kaynak durumu (dürüstçe):** Cortex-M33 Generic User Guide'ın HFSR
-> bölümünden bu repoda doğrulanabilen kısım, HFSR'nin *"read, write to
-> clear"* olduğu, bitlerin sticky olduğu ve yalnızca 1 yazılarak veya reset'le
-> temizlendiğidir. `DEBUGEVT`'ye özgü "1 yaz" kuralının geçtiği bit tablosu
-> metni buradan yeniden okunamadı; kural denetimden alındı. Seçilen maske,
-> doğrulanan W1C anlamıyla da tutarlı: bit 31'e 1 yazmak yalnızca
-> `DEBUGEVT`'yi temizler.
+> **Source status (candidly):** What this repository could verify from the
+> Cortex-M33 Generic User Guide's HFSR section is that HFSR is *"read, write to
+> clear"*, its bits are sticky, and only writing 1 or reset clears them. The bit-table
+> text containing the `DEBUGEVT`-specific "write 1" rule could not be reread here;
+> the rule came from the audit. The chosen mask also agrees with verified W1C
+> semantics: writing 1 to bit 31 only clears `DEBUGEVT`.
 >
-> **Dikkat — ters yönde bir tuzak:** Cortex-M3/M4 kılavuzları `DEBUGEVT`
-> için tam tersini söyler (*"write 0"*). O kural bu çekirdek için geçerli
-> değildir; internetteki M3/M4 örneklerini buraya kopyalama.
+> **An opposite-direction pitfall:** Cortex-M3/M4 guides say the opposite for
+> `DEBUGEVT` (*"write 0"*). That rule does not apply to this core; do not copy
+> internet M3/M4 examples here.
 >
-> **ARCHITECTURE vs OBSERVATION:** QEMU v8.2.2 HFSR yazmasını düz W1C olarak
-> uygular (`hw/intc/armv7m_nvic.c`: `hfsr &= ~value`); yani **bu kuralı
-> doğrulamaz**, eski yazma da orada "çalışırdı". Gerçek Cortex-M33 donanımında
-> bu repo test **edilmedi**. Maske, emülatör kabul ettiği için değil, mimari
-> gereksinim için seçildi.
+> **ARCHITECTURE vs OBSERVATION:** QEMU v8.2.2 implements HFSR writes as plain W1C
+> (`hw/intc/armv7m_nvic.c`: `hfsr &= ~value`), so **it does not validate this rule**;
+> the old write also "worked" there. This repository was **not tested** on physical
+> Cortex-M33 hardware. The mask was chosen for the architectural requirement,
+> not because the emulator accepted it.
 
-Bu dersteki her hedef reset'ten başlar ve tek bir fault üretir; yani `main()`
-başındaki temizlikte önceki çalışmadan kalan bit yoktur. Aynı temizlik fonksiyonu
-fault raporunun sonunda — snapshot **alındıktan sonra** — bir kez daha
-çağrılıyor (`POST-CLEAR` bölümü). Kaçış (escalation) vakasında ölçülen:
+Each target starts from reset and produces one fault, so cleanup at the start
+of `main()` has no bits left from a previous run. The same cleanup function is
+called again at the end of the report — **after capturing the snapshot**
+(the `POST-CLEAR` section). Measured in the escalation case:
 
 ```text
-[  HFSR] 0x40000000             <- snapshot: FORCED temizlikten ONCE yakalandi
+[  HFSR] 0x40000000             <- snapshot: FORCED captured BEFORE clearing
 --- POST-CLEAR ---
 [  SNAPSHOT_HFSR] 0x40000000
 [  HFSR_AFTER_CLEAR] 0x00000000
 [  CFSR_AFTER_CLEAR] 0x00000000
 ```
 
-GDB'de bu vakada HFSR'ye yazılan değer ölçüldü: `0xC0000000` (`DEBUGEVT = 1`,
-`FORCED = 1`, ayrılmış alanlar 0).
+GDB measured the HFSR write value in this case: `0xC0000000` (`DEBUGEVT = 1`,
+`FORCED = 1`, reserved fields 0).
 
 ### Precise vs imprecise
 
-- **Precise:** işlemci fault'u belirli bir komut/bağlamla
-  ilişkilendirebilir. Yığılmış PC o komutu gösterebilir.
-- **Imprecise:** raporlama gecikebilir (örneğin yazma tamponlu bir yazma
-  sonradan hata verir). Yığılmış PC, hataya sebep olan erişimi
-  **göstermeyebilir**.
+- **Precise:** the processor can associate the fault with a specific instruction/context.
+  Stacked PC can point to that instruction.
+- **Imprecise:** reporting may be delayed (for example, a buffered write fails later).
+  Stacked PC **may not identify** the access that caused the error.
 
-Her BusFault imprecise değildir; her veri fault'u da precise değildir.
+Not every BusFault is imprecise; not every data fault is precise.
 
-> **OBSERVATION:** Bu ortamda ölçülen dört vakanın dördü de **precise**.
-> Precise/imprecise ayrımı genel Arm fault modeline ait bir kavram olarak
-> anlatılıyor; bu repoda ölçülmüş bir imprecise örneği yok. Genel
-> Armv8-M/CMSIS'teki `IMPRECISERR` durum biti ise Cortex-M33 için
-> doğrulanmış bir alan olarak **sunulmuyor** (yukarıdaki BFSR bit 2 notu).
+> **OBSERVATION:** All four cases measured here are **precise**. Precise/imprecise
+> is explained as a general Arm fault-model concept; this repository has no
+> measured imprecise example. The generic Armv8-M/CMSIS `IMPRECISERR` status bit
+> is **not presented** as a verified Cortex-M33 field (see BFSR bit 2 above).
 
 ---
 
 ## Mental Model
 
 ```text
-FAULT OLUSTU
+FAULT OCCURRED
     ↓
-Hangi exception onu isliyor?           IPSR / SHCSR
+Which exception is handling it?           IPSR / SHCSR
     ↓
-Yukseltilmis mi?                       HFSR.FORCED
+Escalated?                       HFSR.FORCED
     ↓
-CFSR ne diyor?                         MMFSR / BFSR / UFSR
+What does CFSR say?                         MMFSR / BFSR / UFSR
     ↓
-Adres register'i gecerli mi?           MMARVALID / BFARVALID
+Is the address register valid?           MMARVALID / BFARVALID
     ↓
-Yigma / geri yukleme basarili mi?      MSTKERR / STKERR / STKOF
+Did stacking / unstacking succeed?      MSTKERR / STKERR / STKOF
     ↓
-Exception frame'ine guvenilir mi?      EXC_RETURN + yigma bitleri
+Can the exception frame be trusted?      EXC_RETURN + stacking bits
     ↓
-Yigilmis durum + disassembly ne diyor? stacked PC, x/i
+What do stacked state + disassembly show? stacked PC, x/i
     ↓
-KOK SEBEP
+ROOT CAUSE
 ```
 
-Ham register'lar **gerçektir**; onlardan çıkarılan anlam **yorumdur**. Bu
-dersin fault raporu bu yüzden ikiye bölünmüş: `RAW` ve `DECODE`.
+Raw registers are **facts**; their inferred meaning is **interpretation**.
+That is why this lesson's report separates `RAW` and `DECODE`.
 
 ---
 
@@ -246,32 +240,32 @@ dersin fault raporu bu yüzden ikiye bölünmüş: `RAW` ve `DECODE`.
 
 ```mermaid
 flowchart TD
-    A["Fault oluştu"] --> B{"IPSR = 3?<br/>(HardFault)"}
-    B -- evet --> C{"HFSR.FORCED = 1?"}
-    C -- evet --> D["Yükseltilmiş:<br/>kanıt CFSR'de"]
-    C -- hayır --> E["Doğrudan HardFault:<br/>HFSR'nin diğer bitleri"]
-    B -- "hayır (4/5/6)" --> D
-    D --> F{"Yığma hatası?<br/>MSTKERR / STKERR / STKOF"}
-    F -- evet --> G["Frame'e GÜVENME<br/>çözme"]
-    F -- hayır --> H["EXC_RETURN → frame stack'i<br/>cm-frame adres EXC_RETURN"]
+    A["Fault occurred"] --> B{"IPSR = 3?<br/>(HardFault)"}
+    B -- yes --> C{"HFSR.FORCED = 1?"}
+    C -- yes --> D["Escalated:<br/>evidence in CFSR"]
+    C -- no --> E["Direct HardFault:<br/>other HFSR bits"]
+    B -- "no (4/5/6)" --> D
+    D --> F{"Stacking error?<br/>MSTKERR / STKERR / STKOF"}
+    F -- yes --> G["DO NOT TRUST the frame<br/>do not decode"]
+    F -- no --> H["EXC_RETURN → frame stack<br/>cm-frame address EXC_RETURN"]
     D --> I{"MMARVALID / BFARVALID?"}
-    I -- evet --> J["Adres = kanıt"]
-    I -- hayır --> K["Adres = anlamsız"]
-    H --> L["stacked PC + x/i<br/>(yorum fault türüne bağlı)"]
+    I -- yes --> J["Address = evidence"]
+    I -- no --> K["Address = meaningless"]
+    H --> L["stacked PC + x/i<br/>(interpretation depends on fault type)"]
 ```
 
 ---
 
 ## Tiny Example
 
-Tek kaynak, derleme zamanı seçilen dört senaryo:
+One source, four compile-time-selected scenarios:
 [`example/main.c`](example/main.c).
 
-### Kontrollü tetikleyiciler
+### Controlled triggers
 
-Her biri **tek komut** — hangi komutun hata verdiğini tam bilmek için
-assembly'de ([`example/fault_triggers.S`](example/fault_triggers.S)). C'de
-tanımsız davranışla fault "üretmek" derleyiciye bağlı olurdu.
+Each is **one instruction**, written in assembly to identify exactly which
+instruction faulted ([`example/fault_triggers.S`](example/fault_triggers.S)).
+"Generating" a fault through undefined C behavior would depend on the compiler.
 
 ```asm
 trigger_udf:      udf  #0x42        /* mimari olarak TANIMSIZ komut */
@@ -279,21 +273,20 @@ trigger_load:     ldr  r0, [r0]     /* eslenmemis adres -> BusFault  */
 mpu_store_word:   str  r1, [r0]     /* MPU izin vermezse -> MemManage */
 ```
 
-### BusFault hedefi nereden geldi?
+### Where did the BusFault target come from?
 
-Tahmin edilmedi. QEMU'nun bellek haritası `info mtree -f` ile okundu: Secure
-SRAM `0x30000000..0x30007FFF`, sonraki bölge `0x38000000`. Aradaki
-`0x30100000` **hiçbir bölgeye eşlenmemiş**. Bu bir **TARGET CONFIG**
-gerçeğidir — fiziksel bir kartta aynı adres farklı davranabilir.
+It was not guessed. QEMU's memory map was read with `info mtree -f`: Secure SRAM
+is `0x30000000..0x30007FFF`, the next region is `0x38000000`. In between,
+`0x30100000` is **unmapped**. This is a **TARGET CONFIG** fact — the same address
+can behave differently on a physical board.
 
-### Önce yakala, sonra yorumla
+### Capture first, interpret second
 
-Handler sarmalayıcıları ([`example/fault_handlers.S`](example/fault_handlers.S))
-dört handler için aynı işi yapar: `EXC_RETURN`, giriş `MSP`/`PSP` değerlerini
-kaydeder, frame adresini `EXC_RETURN` bit 2'den seçer ve C kaydediciye dallanır.
+The wrappers ([`example/fault_handlers.S`](example/fault_handlers.S)) do the same
+work for four handlers: save `EXC_RETURN` and entry `MSP`/`PSP`, select the frame
+address using `EXC_RETURN` bit 2, and branch to the C recorder.
 
-C kaydedicinin **ilk işi** durum register'larını sabitlemek — konsol işinden
-önce:
+The C recorder's **first task** is to capture status registers — before console work:
 
 ```c
 g_snap.ipsr   = __get_IPSR();
@@ -307,9 +300,8 @@ g_snap.bfar_raw  = SCB->BFAR;
 g_snap.frame_valid = !stacking_failed && basic_frame;
 ```
 
-Neden bu sıra? Handler'ın kendisi `SP`'yi, `LR`'yi ve register'ları
-değiştirir. Canlı handler `$sp`'sinden kesilen frame'i çıkarmak ders 04'teki
-debugger hatasıydı.
+Why this order? The handler itself changes `SP`, `LR`, and registers. Inferring
+the interrupted frame from live handler `$sp` was the Lesson 04 debugger bug.
 
 ---
 
@@ -328,12 +320,12 @@ cmake --build --preset debug
 
 ## Expected Output
 
-Gerçek çıktılar (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`).
-Her vaka için yalnızca karar veren satırlar; tam çıktı her firmware'de.
+Actual outputs (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`).
+Only decisive lines for each case; full output is available from each firmware.
 
-### Vaka 1 — MemManage (temiz referans vaka)
+### Case 1 — MemManage (clean reference case)
 
-Ayrıcalıksız Thread, korunan `g_service_counter`'a doğrudan yazıyor.
+Unprivileged Thread writes directly to protected `g_service_counter`.
 
 ```text
 --- RAW ---
@@ -360,10 +352,9 @@ Ayrıcalıksız Thread, korunan `g_service_counter`'a doğrudan yazıyor.
 [  STACKED_PC] 0x100000FC
 ```
 
-`MMFAR = 0x30000000` = `PROTECTED_ADDR`. `STACKED_R0`/`R1` = `mpu_store_word`
-argümanları.
+`MMFAR = 0x30000000` = `PROTECTED_ADDR`. `STACKED_R0`/`R1` are `mpu_store_word` arguments.
 
-### Vaka 2 — UsageFault
+### Case 2 — UsageFault
 
 ```text
 --- RAW ---
@@ -381,10 +372,9 @@ argümanları.
 [  STACKED_PC] 0x100000F4
 ```
 
-Adres register'ı yok — UsageFault komutla ilgilidir, bir bellek adresiyle
-değil.
+No address register — UsageFault concerns an instruction, not a memory address.
 
-### Vaka 3 — BusFault
+### Case 3 — BusFault
 
 ```text
 --- RAW ---
@@ -405,9 +395,9 @@ değil.
 [  STACKED_PC] 0x100000F8
 ```
 
-`BFAR = 0x30100000` = `TARGET_ADDR`. Deterministik, precise bir BusFault.
+`BFAR = 0x30100000` = `TARGET_ADDR`. A deterministic, precise BusFault.
 
-### Vaka 4 — Escalation (Break It'e bak)
+### Case 4 — Escalation (see Break It)
 
 ```text
 [  IPSR] 3
@@ -421,55 +411,54 @@ değil.
 [  STACKED_PC] 0x100000F4
 ```
 
-### Yığılmış PC ↔ disassembly
+### Stacked PC ↔ disassembly
 
 ```text
-100000f4 <trigger_udf>:     udf  #66        <- Vaka 2 ve 4: STACKED_PC 0x100000F4
-100000f8 <trigger_load>:    ldr  r0, [r0]   <- Vaka 3:      STACKED_PC 0x100000F8
-100000fc <mpu_store_word>:  str  r1, [r0]   <- Vaka 1:      STACKED_PC 0x100000FC
+100000f4 <trigger_udf>:     udf  #66        <- Cases 2 and 4: STACKED_PC 0x100000F4
+100000f8 <trigger_load>:    ldr  r0, [r0]   <- Case 3:      STACKED_PC 0x100000F8
+100000fc <mpu_store_word>:  str  r1, [r0]   <- Case 1:      STACKED_PC 0x100000FC
 ```
 
-Dört vakada da yığılmış PC **hata veren komutun kendisini** gösteriyor.
+In all four cases, stacked PC points to **the faulting instruction itself**.
 
-Şimdi ders 07 ile karşılaştır: orada `svc 7` `0x100000b8`'deydi ve yığılmış PC
-`0x100000ba` — **sonraki** komut.
+Compare Lesson 07: `svc 7` was at `0x100000b8`, and stacked PC was `0x100000ba` —
+the **next** instruction.
 
-| Exception | Yığılmış PC neyi gösteriyor | Sebep |
+| Exception | Stacked PC identifies | Reason |
 |---|---|---|
-| SVCall (ders 07) | `svc`'den **sonraki** komut | `SVC` tamamlandı; dönüş devam adresine |
-| Precise fault (bu ders) | Hata veren komutun **kendisi** | Komut tamamlanamadı |
-| Imprecise fault | Hataya sebep olan erişimi **göstermeyebilir** | Raporlama gecikti |
+| SVCall (Lesson 07) | Instruction **after** `svc` | `SVC` completed; return to continuation |
+| Precise fault (this lesson) | The faulting instruction **itself** | Instruction could not complete |
+| Imprecise fault | **May not identify** the causal access | Delayed reporting |
 
-> **"Yığılmış PC her zaman hatalı komuttur" YANLIŞTIR.** Anlamı exception
-> türüne bağlıdır. Bu tablonun ilk iki satırı bu repoda ölçüldü; üçüncüsü
-> mimari bir uyarıdır.
+> **"Stacked PC always identifies the faulty instruction" is WRONG.** Meaning
+> depends on exception type. The first two rows were measured in this repository;
+> the third is an architectural caution.
 
 ---
 
 ## Cortex-M Fault Triage
 
-Bu dersin asıl çıktısı. İleride `projects/fault-analyzer/` bu listeyi
-kullanacak.
+The main deliverable of this lesson. `projects/fault-analyzer/` will use this list later.
 
-| # | Soru | Nereye bak | Dikkat |
+| # | Question | Inspect | Caution |
 |---|---|---|---|
-| 1 | Hangi exception aktif? | `IPSR`, `SHCSR` active bitleri | |
-| 2 | HardFault ise, yükseltilmiş mi? | `HFSR.FORCED` | `FORCED = 1` → kanıt `CFSR`'de |
-| 3 | `CFSR`'nin hangi alt alanı dolu? | `MMFSR` / `BFSR` / `UFSR` | Aktif handler'dan **bağımsız** |
-| 4 | Tam olarak hangi bitler? | `cm-fault` `SET` satırı | `VALID` bitleri sebep değildir |
-| 5 | Adres register'ı geçerli mi? | `MMARVALID` / `BFARVALID` | Değilse adres **kanıt değil** |
-| 6 | Yığma başarılı mı? | `MSTKERR` / `STKERR` / `STKOF` | Başarısızsa **frame'e güvenme** |
-| 7 | Frame hangi stack'te? | Giriş anında kaydedilen `EXC_RETURN` bit 2 | Canlı `$lr`/`$sp` değil |
-| 8 | Frame geçerliyse: PC / LR / xPSR / argümanlar | `cm-frame <adres> <EXC_RETURN>` | |
-| 9 | Disassembly şüpheyi doğruluyor mu? | `x/i <stacked PC>` | Precise/imprecise'e göre yorumla |
-| 10 | Hangi mimari koşul fault'u doğurdu? | 1–9'un birleşimi | Kök sebep |
+| 1 | Which exception is active? | `IPSR`, `SHCSR` active bits | |
+| 2 | If HardFault, was it escalated? | `HFSR.FORCED` | `FORCED = 1` → evidence in `CFSR` |
+| 3 | Which `CFSR` subfield is populated? | `MMFSR` / `BFSR` / `UFSR` | **Independent** of active handler |
+| 4 | Exactly which bits? | `cm-fault` `SET` line | `VALID` bits are not causes |
+| 5 | Is the address register valid? | `MMARVALID` / `BFARVALID` | Otherwise address is **not evidence** |
+| 6 | Did stacking succeed? | `MSTKERR` / `STKERR` / `STKOF` | If not, **do not trust the frame** |
+| 7 | Which stack holds the frame? | Entry-saved `EXC_RETURN` bit 2 | Not live `$lr`/`$sp` |
+| 8 | If frame is valid: PC / LR / xPSR / arguments | `cm-frame <adres> <EXC_RETURN>` | |
+| 9 | Does disassembly confirm the suspicion? | `x/i <stacked PC>` | Interpret according to precise/imprecise |
+| 10 | Which architectural condition caused the fault? | Combine 1–9 | Root cause |
 
 ---
 
 ## Observe in GDB
 
-Örnek oturum: **BusFault** vakası (bu dersin yeni vakası). Diğer üç vaka
-aynı adımlarla incelenir.
+Example session: **BusFault**, the new case in this lesson. Inspect the other
+three using the same steps.
 
 ```bash
 cmake --build --preset debug --target debug-08-faults-bus
@@ -482,7 +471,7 @@ target remote :3333
 source scripts/gdb/cortex-m.gdb
 ```
 
-### A — Hata veren komuttan hemen önce
+### A — Immediately before the faulting instruction
 
 ```gdb
 (gdb) break trigger_load
@@ -500,10 +489,10 @@ Privilege : Privileged (CONTROL.nPRIV = 0)
 Stack     : PSP (0x300002f8)
 ```
 
-**Gözlem:** Thread Mode, PSP. Bir sonraki komut tek bir `ldr`, adres
-`r0`'da ve eşlenmemiş bölgede.
+**Observation:** Thread Mode, PSP. The next instruction is a single `ldr`; the
+address is in `r0` and lies in an unmapped region.
 
-### B / C — Handler'ın ilk komutu, EXC_RETURN
+### B / C — First handler instruction, EXC_RETURN
 
 ```gdb
 (gdb) break BusFault_Handler
@@ -520,13 +509,12 @@ Stack     : MSP (0x30007ff0)
 $lr = 0xfffffffd
 ```
 
-**Gözlem:** `IPSR = 5` → BusFault, **HardFault değil** (çünkü
-`BUSFAULTENA = 1`). `PSP` 32 byte indi → frame yığıldı. `LR` bir
-`EXC_RETURN`.
+**Observation:** `IPSR = 5` → BusFault, **not HardFault** (because `BUSFAULTENA = 1`).
+`PSP` moved down 32 bytes → frame stacked. `LR` holds `EXC_RETURN`.
 
-### D — Fault durum register'ları: ham + yardımcı
+### D — Fault status registers: raw + helper
 
-Yardımcıya körü körüne güvenme; en az bir kez ham register'ları oku:
+Do not trust the helper blindly; read raw registers at least once:
 
 ```gdb
 (gdb) x/1wx 0xE000ED28      # CFSR
@@ -548,14 +536,14 @@ BFAR  = 0x30100000  (BFARVALID=1 -> adres GECERLI)
 SET   : BFSR.PRECISERR BFSR.BFARVALID
 ```
 
-**Gözlem:** Ham değerler ile yardımcının çıktısı birebir aynı.
-`BFSR = 0x82` = bit 1 `PRECISERR` + bit 7 `BFARVALID`. `MMFAR = 0` ama
-`MMARVALID = 0` — anlamlı değil, kullanma.
+**Observation:** Raw values exactly match helper output. `BFSR = 0x82` = bit 1
+`PRECISERR` + bit 7 `BFARVALID`. `MMFAR = 0`, but `MMARVALID = 0` — meaningless;
+do not use it.
 
-### E / F — Frame geçerliliği kararı ve çözüm
+### E / F — Frame-validity decision and decoding
 
-Yığma hatası bitleri (`MSTKERR` / `STKERR` / `STKOF`) **temiz** → frame
-çözülebilir:
+Stacking-error bits (`MSTKERR` / `STKERR` / `STKOF`) are **clear** → the frame
+can be decoded:
 
 ```gdb
 (gdb) cm-frame $psp $lr
@@ -570,11 +558,11 @@ stacked PC = 0x100000f8
 xPSR       = 0x61000000
 ```
 
-Burada `$psp` ve `$lr` doğrudan kullanılabildi çünkü **handler'ın ilk
-komutundayız** — henüz hiçbir şey onları değiştirmedi. Handler içinde C
-çalıştıktan sonra bu artık doğru olmaz.
+Here `$psp` and `$lr` could be used directly because we are **at the first handler
+instruction** — nothing has changed them yet. This is no longer true after C runs
+inside the handler.
 
-### G — Yığılmış PC ↔ disassembly
+### G — Stacked PC ↔ disassembly
 
 ```gdb
 (gdb) x/1i *(unsigned int*)($psp+24)
@@ -584,115 +572,110 @@ komutundayız** — henüz hiçbir şey onları değiştirmedi. Handler içinde 
    0x100000f8 <trigger_load>:  ldr  r0, [r0, #0]
 ```
 
-**Gözlem:** Precise bir veri yolu hatasında iki farklı adres, iki farklı
-soruyu cevaplıyor:
+**Observation:** In a precise bus fault, two addresses answer different questions:
 
-| Register | Değer | Ne |
+| Register | Value | What |
 |---|---|---|
-| `BFAR` | `0x30100000` | Erişilmeye çalışılan **veri** adresi |
-| stacked PC | `0x100000F8` | Hata veren **komutun** adresi (`ldr r0, [r0]`) |
+| `BFAR` | `0x30100000` | The attempted **data** address |
+| stacked PC | `0x100000F8` | The faulting **instruction's** address (`ldr r0, [r0]`) |
 
-`BFAR`, `ldr`'nin kendi adresi **değildir**; `ldr`'nin okumaya çalıştığı
-adrestir. İkisi birlikte okununca hikâye tamamlanıyor: *şu komut, şu veri
-adresine erişmeye çalıştı ve bellek sistemi reddetti.*
+`BFAR` is **not** the address of `ldr` itself; it is the address `ldr` tried to
+read. Together they complete the story: *this instruction attempted this data
+address, and the memory system rejected it.*
 
-### `cm-fault` güncellemesi
+### `cm-fault` update
 
-Bu derste `cm-fault`'a **tek bir** ek yapıldı: set olan `CFSR` bitlerinin
-isimleriyle listelendiği `SET` satırı, ve bir unstacking notu (triage adımı 4).
-Bit konumları vendored CMSIS'ten alındı. Değişiklik, ders 02 (`STKERR`),
-ders 04 (`STKOF`), ders 06 (`DACCVIOL`) ve ders 07 (escalation) vakalarına
-karşı yeniden test edildi; hepsi doğru etiketlendi.
+This lesson made **one** addition to `cm-fault`: the `SET` line listing set
+`CFSR` bits by name, and an unstacking note (triage step 4). Bit positions came
+from vendored CMSIS. The change was retested against Lesson 02 (`STKERR`),
+Lesson 04 (`STKOF`), Lesson 06 (`DACCVIOL`), and Lesson 07 (escalation);
+all were labeled correctly.
 
-Denetim onarımında `cm-fault`'ta **tek** bir etiket değişti: BFSR bit 2 artık
-`BFSR.IMPRECISERR` olarak değil,
-`BFSR.bit2(generic-IMPRECISERR,M33:dogrulanmadi)` olarak basılıyor (bkz. BFSR
-bit 2 notu). Ham register çıktısı, `MMARVALID`/`BFARVALID`, yığma/geri yükleme
-uyarıları, `HFSR.FORCED` ve diğer bütün etiketler değişmedi; sekiz bilinen
-vaka yeniden test edildi.
+The audit repair changed **one** `cm-fault` label: BFSR bit 2 is now printed as
+`BFSR.bit2(generic-IMPRECISERR,M33:dogrulanmadi)` instead of `BFSR.IMPRECISERR`
+(see the BFSR bit 2 note). Raw registers, `MMARVALID`/`BFARVALID`, stacking/
+unstacking warnings, `HFSR.FORCED`, and all other labels remain unchanged;
+eight known cases were retested.
 
 ---
 
 ## Experiment
 
-**Deney 1 — Dört vakayı yan yana koy.**
+**Experiment 1 — Compare the four cases side by side.**
 
 | | MemManage | UsageFault | BusFault | Escalation |
 |---|---|---|---|---|
 | `IPSR` | 4 | 6 | 5 | **3** |
 | `CFSR` | `0x00000082` | `0x00010000` | `0x00008200` | `0x00010000` |
-| Asıl bit | `DACCVIOL` | `UNDEFINSTR` | `PRECISERR` | `UNDEFINSTR` |
-| Adres | `MMFAR` ✓ | yok | `BFAR` ✓ | yok |
+| Primary bit | `DACCVIOL` | `UNDEFINSTR` | `PRECISERR` | `UNDEFINSTR` |
+| Address | `MMFAR` ✓ | none | `BFAR` ✓ | none |
 | `HFSR` | 0 | 0 | 0 | `0x40000000` |
 | `SHCSR` | `0x00010001` | `0x00040008` | `0x00020002` | `0x00000004` |
-| Frame | geçerli | geçerli | geçerli | geçerli |
+| Frame | valid | valid | valid | valid |
 
-`SHCSR`'yi oku: her vakada **hem** ilgili `ENA` biti **hem** `ACT` biti set.
-Örneğin BusFault `0x00020002` = bit 17 `BUSFAULTENA` + bit 1 `BUSFAULTACT`.
-Escalation'da `ENA` yok, yalnızca bit 2 `HARDFAULTACT`.
+Read `SHCSR`: each case sets **both** the relevant `ENA` and `ACT` bits.
+For example, BusFault `0x00020002` = bit 17 `BUSFAULTENA` + bit 1 `BUSFAULTACT`.
+Escalation has no `ENA`, only bit 2 `HARDFAULTACT`.
 
-**Deney 2 — Hangi vakada hangi kanıt güvenilir?** (DEEP, dokümantasyon)
+**Experiment 2 — Which evidence is trustworthy in each case?** (DEEP, documentation)
 
-Aşağıdaki dört anlık görüntünün her biri için sor: *hangi kanıta
-güvenebilirim?*
+For each snapshot below, ask: *which evidence can I trust?*
 
-1. Temiz `DACCVIOL` (Vaka 1)
-2. Yükseltilmiş `UNDEFINSTR` (Vaka 4)
-3. `UsageFault` (Vaka 2)
-4. Yığma hatası (ders 02: `CFSR = 0x00009200`, `STKERR`)
+1. Clean `DACCVIOL` (Case 1)
+2. Escalated `UNDEFINSTR` (Case 4)
+3. `UsageFault` (Case 2)
+4. Stacking error (Lesson 02: `CFSR = 0x00009200`, `STKERR`)
 
-Cevaplar `answers/quick-check.md` sonunda.
+Answers are at the end of `answers/quick-check.md`.
 
-**Deney 3 — `DIV_0_TRP` / `UNALIGN_TRP` (opsiyonel).**
+**Experiment 3 — `DIV_0_TRP` / `UNALIGN_TRP` (optional).**
 
-`SCB->CCR` içindeki bu iki bit, sıfıra bölme ve hizasız erişimi UsageFault'a
-çevirir. Bu derste **ölçülmedi** — bir `sdiv` veya hizasız `ldr` tetikleyicisi
-yazıp kendin dene. Derleyicinin bölmeyi optimize etmediğinden emin ol
-(assembly tetikleyici kullan).
+These two `SCB->CCR` bits turn divide-by-zero and unaligned access into UsageFault.
+They were **not measured** here — write an `sdiv` or unaligned `ldr` trigger and
+try it. Ensure the compiler does not optimize away the division (use an assembly trigger).
 
 ---
 
 ## Break It
 
-Bu ders zaten fault'larla ilgili; bu yüzden Break It yeni bir çöküş
-üretmiyor, **teşhis durumunu** değiştiriyor.
+This lesson already concerns faults, so Break It changes the **diagnostic state**,
+rather than generating a new crash.
 
-Aynı `UDF`, tek fark `USGFAULTENA`:
+Same `UDF`, only `USGFAULTENA` differs:
 
 ```bash
 cmake --build --preset debug --target 08-faults-escalation
 ./scripts/run-qemu.sh build/debug/lessons/08-faults/08-faults-escalation.elf
 ```
 
-| | UsageFault ETKİN (Vaka 2) | UsageFault DEVRE DIŞI (Vaka 4) |
+| | UsageFault ENABLED (Case 2) | UsageFault DISABLED (Case 4) |
 |---|---|---|
-| Aktif handler | UsageFault (`IPSR = 6`) | **HardFault** (`IPSR = 3`) |
+| Active handler | UsageFault (`IPSR = 6`) | **HardFault** (`IPSR = 3`) |
 | `HFSR.FORCED` | 0 | **1** |
-| `CFSR` | `0x00010000` | `0x00010000` — **aynı** |
-| `UFSR.UNDEFINSTR` | 1 | 1 — **aynı** |
-| Frame | geçerli | geçerli — **aynı** |
-| Yığılmış PC | `0x100000F4` | `0x100000F4` — **aynı** |
+| `CFSR` | `0x00010000` | `0x00010000` — **same** |
+| `UFSR.UNDEFINSTR` | 1 | 1 — **same** |
+| Frame | valid | valid — **same** |
+| Stacked PC | `0x100000F4` | `0x100000F4` — **same** |
 
-Ders 07 bunu MemManage ile göstermişti; burada **farklı bir fault sınıfıyla**
-aynı ilke tekrarlanıyor. Kural sınıftan bağımsız.
+Lesson 07 demonstrated this with MemManage; here the same principle is repeated
+with **a different fault class**. The rule is class-independent.
 
-HardFault'a bakıp orada durmak, bu vakada teşhisi **tamamen kaçırmak** olurdu.
-Asıl sebep bir kat aşağıda, `UFSR`'de.
+Stopping the investigation at HardFault would **completely miss the diagnosis**.
+The underlying cause is one layer below, in `UFSR`.
 
-> **ARCHITECTURE:** Yapılandırılabilir bir fault devre dışıyken oluşursa
-> escalation meydana gelebilir. **OBSERVATION:** Bu ölçümde `HFSR = 0x40000000`
-> ve `CFSR` korundu. Her devre dışı fault'un **aynı** register değerlerini
-> üreteceği iddia edilmiyor.
+> **ARCHITECTURE:** A configurable fault occurring while disabled can escalate.
+> **OBSERVATION:** This measurement had `HFSR = 0x40000000` with `CFSR` preserved.
+> No claim is made that every disabled fault produces **identical** register values.
 
-`HFSR.FORCED`'ın anlamı: yapılandırılabilir öncelikli bir exception
-HardFault'a yükseltildi. "İşlemci rastgele bir çöküşü zorladı" değil.
+`HFSR.FORCED` means a configurable-priority exception was escalated to HardFault,
+not "the processor forced a random crash."
 
 ---
 
 ## Debug It
 
-İkinci bir Break It türü: **teşhis varsayımını** bozmak. Bilinen bir yığma
-hatası bağlamını geçerli bir frame'miş gibi çözmeye çalış.
+A second kind of Break It: break a **diagnostic assumption**. Try to decode a
+known stacking-error context as though it contained a valid frame.
 
 ```bash
 cmake --build --preset debug --target debug-02-programmer-model-broken
@@ -708,7 +691,7 @@ cm-fault
 cm-frame $psp 0xFFFFFFFD
 ```
 
-Ölçülen (ders 02 hedefi, değiştirilmeden yeniden çalıştırıldı):
+Measured (Lesson 02 target rerun unchanged):
 
 ```text
 CFSR  = 0x00009200  (MMFSR=0x00 BFSR=0x92 UFSR=0x0000)
@@ -720,22 +703,20 @@ UYARI: STACKING hatasi bildirilmis (STKOF/STKERR/MSTKERR).
 REDDEDILDI [STACKING HATASI]: CFSR = 0x00009200
 ```
 
-Araç frame çözümlemesini reddediyor. `STKERR` = donanım exception frame'ini
-yığarken hata aldı. Bellekte güvenilir bir frame yok; oradan okunan değerler
-kesilen bağlamın register değerleri olarak kullanılamaz.
+The tool rejects frame decoding. `STKERR` means hardware encountered an error
+while stacking the exception frame. No trustworthy frame exists in memory;
+values read there cannot be used as the interrupted context's register values.
 
-Ders 04'teki `STKOF` vakası da aynı şekilde reddedilir (`SET : UFSR.STKOF`).
+The Lesson 04 `STKOF` case is rejected the same way (`SET : UFSR.STKOF`).
 
-Cevaplaman gereken sorular:
+Questions to answer:
 
-1. Bu vakada `BFARVALID = 1` ama frame güvenilmez. İkisi çelişiyor mu?
-   `BFAR` neye ait?
-2. Eski `cm-frame` (aktif `$sp`'den 8 word okuyan) burada ne basardı?
-   Neden tehlikeli?
-3. `STKERR` ile `UNSTKERR` arasındaki fark ne? Hangisi frame'in **girişte**
-   yazılamadığını söyler?
-4. Temiz `DACCVIOL` (Vaka 1) ile bu vaka arasında, **hangi kanıtlar** her
-   ikisinde de güvenilir?
+1. This case has `BFARVALID = 1` but an untrustworthy frame. Is that contradictory?
+   What does `BFAR` refer to?
+2. What would the old `cm-frame` (reading 8 words from active `$sp`) print here?
+   Why is that dangerous?
+3. How do `STKERR` and `UNSTKERR` differ? Which says the frame could not be written **on entry**?
+4. Between clean `DACCVIOL` (Case 1) and this case, **which evidence** is reliable in both?
 
 ---
 
@@ -743,34 +724,35 @@ Cevaplaman gereken sorular:
 
 ### Exercise 01 — Complete the Fault Report
 
-Başlangıç firmware'i **tek** bir deterministik fault üretiyor: ayrıcalıksız
-Thread'in korunan veriye doğrudan yazması (Vaka 1). Ham snapshot hazır.
+The starter produces **one** deterministic fault: an unprivileged Thread directly
+writes protected data (Case 1). The raw snapshot is ready.
 
-Senin yazacağın: `decode_fault_snapshot()` — ham değerlerden **kararlar**.
+You will write `decode_fault_snapshot()` — **decisions** from raw values.
 
 ```text
 exercises/01-fault-report/decode.c
 ```
 
-| Alan | Karar |
+| Field | Decision |
 |---|---|
-| `active_exception` | Hangi handler çalışıyor? |
-| `escalated` | Yükseltilmiş mi? |
-| `fault_class` | `CFSR`'nin hangi alt alanı dolu? |
-| `primary_bit` | Asıl sebep biti (`VALID` bitleri sebep değildir) |
-| `address_valid` | `MMFAR`/`BFAR` kanıt mı? |
-| `fault_address` | Yalnızca geçerliyse |
-| `frame_safe` | Frame çözülebilir mi? |
-| `stacked_pc` | Yalnızca frame güvenliyse |
+| `active_exception` | Which handler is running? |
+| `escalated` | Was it escalated? |
+| `fault_class` | Which `CFSR` subfield is populated? |
+| `primary_bit` | Primary cause bit (`VALID` bits are not causes) |
+| `address_valid` | Is `MMFAR`/`BFAR` evidence? |
+| `fault_address` | Only if valid |
+| `frame_safe` | Can the frame be decoded? |
+| `stacked_pc` | Only if the frame is safe |
 
-**Kapsam:** her `CFSR` bitini çözmen istenmiyor; bu dersin üç fault türü yeter.
+**Scope:** you are not asked to decode every `CFSR` bit; the three fault types
+in this lesson suffice.
 
 ```bash
 cmake --build --preset debug --target 08-exercise-fault-report
 ./scripts/run-qemu.sh build/debug/lessons/08-faults/08-exercise-fault-report.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Actual starter output:
 
 ```text
 --- DECISION (decode_fault_snapshot) ---
@@ -787,22 +769,23 @@ Başlangıç çıktısı (gerçek):
 [  CHECK_D_FRAME] FAIL
 ```
 
-Bu **beklenen başlangıç durumudur**. Doğrulama ölçütü: altı `CHECK_D_*` PASS.
-Metin alanları **tam** karşılaştırılır (yalnızca ilk harf değil): aynı harfle
-başlayan yanlış bir cevap — örneğin `DACCVIOL` yerine `DIVBYZERO` — geçmez.
+This is the **expected starting state**. Verification criterion: six `CHECK_D_*`
+checks PASS. Text fields are compared **in full**, not just the first character:
+a wrong answer beginning with the same letter — for example, `DIVBYZERO` instead
+of `DACCVIOL` — does not pass.
 
-**Tuzak:** `fault_class` aktif handler'dan türetilmez — `CFSR`'den türetilir.
-Escalation vakasında ikisi farklıdır.
+**Pitfall:** `fault_class` is derived from `CFSR`, not the active handler.
+They differ in an escalation case.
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-fault-report/`](solutions/01-fault-report/) | `08-solution-fault-report` |
+| Exercise 01 solution | [`solutions/01-fault-report/`](solutions/01-fault-report/) | `08-solution-fault-report` |
 
-Gerçek çıktı:
+Actual output:
 
 ```text
 [  D_ACTIVE_EXCEPTION] MemManage
@@ -820,25 +803,25 @@ Gerçek çıktı:
 
 ## What I Learned
 
-> Bu bölüm senin.
+> This section is yours.
 
-**"Fault ≠ kök sebep" kendi cümlemle:**
-
-<!-- -->
-
-**Adres register'ına ne zaman güvenirim:**
+**"Fault ≠ root cause" in my own words:**
 
 <!-- -->
 
-**Yığılmış PC'nin anlamının exception türüne bağlı olması:**
+**When I trust an address register:**
 
 <!-- -->
 
-**Beni şaşırtan şey:**
+**How stacked PC meaning depends on exception type:**
 
 <!-- -->
 
-**Fault Analyzer projesine taşıdığım soru:**
+**What surprised me:**
+
+<!-- -->
+
+**My question for the Fault Analyzer project:**
 
 <!-- -->
 
@@ -846,43 +829,38 @@ Gerçek çıktı:
 
 ## Quick Check
 
-1. "HardFault oluştu" neden her zaman kök sebep değildir?
-2. `CFSR`'nin üç alt register'ı nelerdir ve hangi bit aralıklarındadır?
-3. `MMFAR`'a ne zaman güvenilebilir?
-4. `BFAR`'a ne zaman güvenilebilir?
-5. Bir frame'i çözmeden önce yığma hatası bitleri neden kontrol edilmelidir?
-6. Yığılmış PC her zaman hata veren komut mudur?
-7. `HFSR.FORCED` sana ne söyler?
-8. Yapılandırılabilir bir fault devre dışıyken oluşursa kavramsal olarak ne
-   olur?
-9. **(Reasoning)** Precise ve imprecise BusFault'lar teşhis açısından nasıl
-   farklıdır?
-10. **(Reasoning)** Durum register'ları neden handler'da kapsamlı iş
-    yapılmadan **önce** yakalanmalıdır?
-11. **(Reasoning)** Canlı handler `$sp`'si neden otomatik olarak kesilen
-    frame değildir?
-12. **(Reasoning)** HardFault'a girdikten sonra ilk bakacağın şey ne ve neden?
-13. **(Reasoning)** `CFSR`'yi temizlemek için ona `0` yazmak neden işe yaramaz?
+1. Why is "a HardFault occurred" not always the root cause?
+2. What are the three `CFSR` subregisters, and which bit ranges do they occupy?
+3. When can `MMFAR` be trusted?
+4. When can `BFAR` be trusted?
+5. Why must stacking-error bits be checked before decoding a frame?
+6. Is stacked PC always the faulting instruction?
+7. What does `HFSR.FORCED` tell you?
+8. Conceptually, what happens when a configurable fault occurs while disabled?
+9. **(Reasoning)** How do precise and imprecise BusFaults differ diagnostically?
+10. **(Reasoning)** Why capture status registers **before** substantial handler work?
+11. **(Reasoning)** Why is live handler `$sp` not automatically the interrupted frame?
+12. **(Reasoning)** What do you inspect first after entering HardFault, and why?
+13. **(Reasoning)** Why does writing `0` not clear `CFSR`?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
 
 ---
 
 ## Takeaway
 
-- **Bir fault'u tek register'dan teşhis etme.** `IPSR`, `HFSR`, `CFSR`,
-  geçerlilik bitleri, yığma bitleri, `EXC_RETURN`, frame ve disassembly
-  birlikte okunur.
-- **Fault ≠ kök sebep.** HardFault aktifken `HFSR.FORCED = 1` ise asıl kanıt
-  `CFSR`'dedir. Durum register'ları escalation'dan bağımsız doğru yazılır.
-- **Adres + geçerlilik biti = kanıt.** `MMARVALID`/`BFARVALID` olmadan
-  `MMFAR`/`BFAR` içeriği anlamsızdır.
-- **Yığma başarısızsa frame'e güvenme.** `MSTKERR`/`STKERR`/`STKOF` önce
-  kontrol edilir.
-- **Yığılmış PC'nin anlamı exception türüne bağlıdır.** Precise fault'ta hata
-  veren komut, SVC'de sonraki komut, imprecise'de ilgisiz olabilir.
-- **Önce yakala, sonra yorumla.** Durum register'ları sticky ve W1C'dir;
-  handler işi bağlamı değiştirir.
+- **Do not diagnose from a single register.** Read `IPSR`, `HFSR`, `CFSR`,
+  validity bits, stacking bits, `EXC_RETURN`, frame, and disassembly together.
+- **Fault ≠ root cause.** With HardFault active and `HFSR.FORCED = 1`, the
+  underlying evidence is in `CFSR`. Status registers are written correctly
+  independently of escalation.
+- **Address + validity bit = evidence.** Without `MMARVALID`/`BFARVALID`,
+  `MMFAR`/`BFAR` contents are meaningless.
+- **Do not trust the frame if stacking failed.** Check `MSTKERR`/`STKERR`/`STKOF` first.
+- **Stacked PC meaning depends on exception type.** Faulting instruction for a
+  precise fault, next instruction for SVC, possibly unrelated for an imprecise fault.
+- **Capture first, interpret second.** Status registers are sticky and W1C;
+  handler work changes the context.
 
 ---
 
@@ -890,47 +868,44 @@ Gerçek çıktı:
 
 - **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — `CFSR`
   (`MMFSR`/`BFSR`/`UFSR`), `HFSR` (`FORCED`, `VECTTBL`), `MMFAR`, `BFAR`,
-  `SHCSR` enable/active bitleri, W1C davranışı, escalation kuralları,
-  precise/imprecise, `UFSR.STKOF`.
+  `SHCSR` enable/active bits, W1C behavior, escalation rules, precise/imprecise,
+  `UFSR.STKOF`.
   <https://developer.arm.com/documentation/ddi0553/latest/>
-- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numaraları,
-  fault escalation.
+- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numbers, fault escalation.
   <https://developer.arm.com/documentation/107706/latest/>
-- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — System Control
-  Block fault register'ları: 4.2.11 CFSR, 4.2.12 HFSR (W1C / sticky;
-  `DEBUGEVT` yazma kuralı), 2.5.1 fault türleri tablosu. HFSR bit tablosunun
-  ve BFSR bit 2'nin durumu için yukarıdaki "Kaynak durumu" notlarına bak.
+- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — System Control Block
+  fault registers: 4.2.11 CFSR, 4.2.12 HFSR (W1C / sticky; `DEBUGEVT` write rule),
+  2.5.1 fault-types table. For the HFSR bit table and BFSR bit 2 source status,
+  see the "Source status" notes above.
   <https://developer.arm.com/documentation/100235/latest/>
 - **CMSIS-Core (M)** — `SCB_CFSR_*_Pos/_Msk`, `SCB_HFSR_*`, `SCB_SHCSR_*`
-  tanımları; bit konumları bu repoda vendored `core_cm33.h`'ten doğrulandı.
+  definitions; bit positions verified against vendored `core_cm33.h` here.
   <https://arm-software.github.io/CMSIS_6/latest/Core/index.html>
-- **QEMU v8.2.2** — yalnızca emülatöre özgü gözlem için: bellek haritası
-  (`info mtree -f`) ve eşlenmemiş adresin BusFault üretmesi.
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
+- **QEMU v8.2.2** — only for emulator-specific observations: memory map
+  (`info mtree -f`) and BusFault from an unmapped address.
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
   `mps2-an505 / cortex-m33`, `debug` preset.
 
 ---
 
 ## Known Boundaries
 
-- **QEMU ≠ fiziksel donanım.** BusFault hedefi (`0x30100000`) QEMU'nun
-  bellek haritasında eşlenmemiş bir adrestir; fiziksel bir kartta farklı
-  davranabilir. Bütün `CFSR`/`HFSR` değerleri **OBSERVATION**'dır.
-- **Yalnızca precise fault'lar ölçüldü.** Imprecise kavramı genel olarak
-  anlatıldı; ölçülmüş örnek yok. Genel `IMPRECISERR` biti Cortex-M33 için
-  doğrulanmış bir alan olarak sunulmuyor (kaynaklar tutarsız, bkz. BFSR bit 2
-  notu).
-- **HFSR yazma kuralı donanımda test edilmedi.** `DEBUGEVT = 1` maskesi
-  mimari gereksinim olarak uygulandı; QEMU bu kuralı doğrulamaz.
-- **Soft-float / basic frame.** `MLSPERR`/`LSPERR`/`NOCP` gibi FP'ye ilişkin
-  bitler kapsamda yok; FPU ders 13.
-- **Tek güvenlik durumu.** `SecureFault` (exception 7) ve TrustZone fault
-  varyantları ders 16.
-- **`DIV_0_TRP` / `UNALIGN_TRP` ölçülmedi** (Deney 3 olarak bırakıldı).
-- **Bu eğitim amaçlı bir fault triyajıdır, üretim çöküş kurtarması değildir.**
-  Handler'lar raporlayıp durur; fault'tan kurtulmaya, hatalı görevi
-  sonlandırmaya veya kalıcı log'a yazmaya çalışmaz. Onlar
-  `projects/fault-analyzer/`'ın konusu.
+- **QEMU ≠ physical hardware.** The BusFault target (`0x30100000`) is unmapped
+  in QEMU's memory map; it may behave differently on a board. All `CFSR`/`HFSR`
+  values are **OBSERVATION**.
+- **Only precise faults were measured.** Imprecise was explained generally;
+  no measured example exists. The generic `IMPRECISERR` bit is not presented as
+  a verified Cortex-M33 field (inconsistent sources; see BFSR bit 2 note).
+- **HFSR write rule not tested on hardware.** The `DEBUGEVT = 1` mask was applied
+  as an architectural requirement; QEMU does not validate that rule.
+- **Soft-float / basic frame.** FP-related bits such as `MLSPERR`/`LSPERR`/`NOCP`
+  are outside scope; FPU is in Lesson 13.
+- **One security state.** `SecureFault` (exception 7) and TrustZone fault variants
+  belong to Lesson 16.
+- **`DIV_0_TRP` / `UNALIGN_TRP` were not measured** (left as Experiment 3).
+- **This is educational fault triage, not production crash recovery.** Handlers
+  report and stop; they do not attempt fault recovery, task termination, or
+  persistent logging. Those belong to `projects/fault-analyzer/`.
 
 ---
 

@@ -1,34 +1,35 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Complete the Fault Report
 
-**Hedef:** Ham fault register'larından **kararlar** üretmek — triage listesinin
-kod hali.
+**Goal:** produce **decisions** from raw fault registers — the triage list in code.
 
-## Görev
+## Task
 
-`decode.c` içindeki `decode_fault_snapshot()` fonksiyonunu doldur. Firmware
-tek bir deterministik fault üretiyor: ayrıcalıksız Thread'in korunan veriye
-doğrudan yazması (ders 06'daki MemManage `DACCVIOL`). Ham snapshot hazır.
+Complete `decode_fault_snapshot()` in `decode.c`. The firmware produces one
+deterministic fault: an unprivileged Thread directly writes protected data
+(Lesson 06's MemManage `DACCVIOL`). The raw snapshot is ready.
 
-| Alan | Karar | İpucu |
+| Field | Decision | Hint |
 |---|---|---|
-| `active_exception` | Hangi handler çalışıyor? | `s->ipsr`: 3/4/5/6 |
-| `escalated` | Yükseltilmiş mi? | `HFSR.FORCED` |
-| `fault_class` | `CFSR`'nin hangi alt alanı dolu? | `MMFSR`/`BFSR`/`UFSR` |
-| `primary_bit` | Asıl sebep biti | `VALID` bitleri sebep **değildir** |
-| `address_valid` | Adres register'ı kanıt mı? | `MMARVALID` / `BFARVALID` |
-| `fault_address` | Yalnızca geçerliyse | |
-| `frame_safe` | Frame çözülebilir mi? | `s->frame_valid` |
-| `stacked_pc` | Yalnızca frame güvenliyse | |
+| `active_exception` | Which handler is running? | `s->ipsr`: 3/4/5/6 |
+| `escalated` | Was it escalated? | `HFSR.FORCED` |
+| `fault_class` | Which `CFSR` subfield is populated? | `MMFSR`/`BFSR`/`UFSR` |
+| `primary_bit` | Primary cause bit | `VALID` bits are **not** causes |
+| `address_valid` | Is the address register evidence? | `MMARVALID` / `BFARVALID` |
+| `fault_address` | Only if valid | |
+| `frame_safe` | Can the frame be decoded? | `s->frame_valid` |
+| `stacked_pc` | Only if the frame is safe | |
 
-**Kapsam:** her `CFSR` bitini çözmen istenmiyor. Bu dersin üç fault türü
-(MemManage, BusFault, UsageFault) yeter.
+**Scope:** you are not asked to decode every `CFSR` bit. This lesson's three fault
+types (MemManage, BusFault, UsageFault) suffice.
 
-## ⚠️ Tuzak
+## ⚠️ Pitfall
 
-`fault_class` **aktif handler'dan türetilmez**, `CFSR`'den türetilir.
-Escalation vakasında aktif handler HardFault'tur ama `fault_class` UsageFault
-(veya MemManage) olmalıdır. Kodunu yazarken bunu düşün — bu hedef escalation
-üretmiyor olsa bile.
+`fault_class` is **not derived from the active handler**; it comes from `CFSR`.
+In an escalation case, the active handler is HardFault but `fault_class` must be
+UsageFault (or MemManage). Consider this while writing your code, even though
+this target does not produce escalation.
 
 ## Build & Run
 
@@ -37,7 +38,7 @@ cmake --build --preset debug --target 08-exercise-fault-report
 ./scripts/run-qemu.sh build/debug/lessons/08-faults/08-exercise-fault-report.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Actual starter output:
 
 ```text
 [  D_ACTIVE_EXCEPTION] ?
@@ -52,29 +53,28 @@ Başlangıç çıktısı (gerçek):
 [  CHECK_D_FRAME] FAIL
 ```
 
-Bu **beklenen başlangıç durumudur**, bir bug değildir.
+This is the **expected starting state**, not a bug.
 
-## Doğrulama
+## Verification
 
-Altı `CHECK_D_*` satırı da `PASS` olmalı.
+All six `CHECK_D_*` lines must say `PASS`.
 
-Metin alanları **tam olarak** karşılaştırılır — yalnızca ilk harf değil.
-Beklenen değerlerin yazımı exercise yorumunda verildi (`"MemManage"`,
-`"BusFault"`, `"UsageFault"`, `"HardFault"`; sebep bitleri CMSIS'teki
-adlarıyla, örneğin `"DACCVIOL"`). `"DIVBYZERO"` gibi aynı harfle başlayan
-yanlış bir cevap `CHECK_D_BIT`'ten **geçmez**.
+Text fields are compared **in full**, not just their first character.
+Expected spellings are given in the exercise comment (`"MemManage"`,
+`"BusFault"`, `"UsageFault"`, `"HardFault"`; cause bits use CMSIS names such as
+`"DACCVIOL"`). A wrong answer starting with the same letter, such as
+`"DIVBYZERO"`, does **not pass** `CHECK_D_BIT`.
 
-## Kendi fonksiyonunu diğer vakalarda sına (opsiyonel)
+## Test your function on other cases (optional)
 
-`decode.c`'yi `08-faults-bus` veya `08-faults-escalation` hedefine de bağlayıp
-kararlarının doğru çıkıp çıkmadığına bak. Escalation vakasında
-`active_exception = HardFault`, `escalated = 1`, `fault_class = UsageFault`
-olmalı.
+Also link `decode.c` into `08-faults-bus` or `08-faults-escalation` and check
+your decisions. The escalation case must give `active_exception = HardFault`,
+`escalated = 1`, `fault_class = UsageFault`.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-fault-report/`](../../solutions/01-fault-report/)
+Reference solution: [`../../solutions/01-fault-report/`](../../solutions/01-fault-report/)
 
 ---
 
-[← Ders 08](../../README.md)
+[← Lesson 08](../../README.md)

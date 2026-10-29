@@ -1,9 +1,11 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Repair an ABI-Broken Assembly Function
 
-**Hedef:** Doğru sonuç üreten ama AAPCS sözleşmesini bozan bir assembly
-fonksiyonunu onarmak.
+**Goal:** Repair an assembly function that returns the right result but violates
+the AAPCS contract.
 
-## Görev
+## Task
 
 [`scale_and_sum.S`](scale_and_sum.S):
 
@@ -11,20 +13,20 @@ fonksiyonunu onarmak.
 uint32_t scale_and_sum(uint32_t a, uint32_t b);   /* helper_scale(a) + b */
 ```
 
-`helper_scale` bir C fonksiyonu (`example/helpers.c`). `scale_and_sum` onu
-çağırıyor, yani **yaprak değil**.
+`helper_scale` is a C function (`example/helpers.c`). `scale_and_sum` calls it,
+so it is **not a leaf**.
 
-Fonksiyon **doğru sonucu** döndürüyor. Ama harness iki ihlal buluyor:
+The function returns **the right result**, but the harness finds two violations:
 
-| Kontrol | Başlangıç |
+| Check | Initial state |
 |---|---|
 | `CHECK_RESULT` | PASS |
-| `CHECK_CALLEE_SAVED` | **FAIL** — harness bir register'ın bozulduğunu buldu |
-| `CHECK_SP_ALIGNED_AT_CALL` | **FAIL** — `BL` anında SP 8'in katı değil |
+| `CHECK_CALLEE_SAVED` | **FAIL** — the harness found a corrupted register |
+| `CHECK_SP_ALIGNED_AT_CALL` | **FAIL** — SP is not a multiple of 8 at `BL` |
 
-**Yalnızca `scale_and_sum.S`'i düzenle.** `main.c` ve harness'e dokunma.
-`BL`'den hemen önceki SP kaydını (`g_ex_sp_at_call`) silme; kontrol onu
-kullanıyor.
+**Edit only `scale_and_sum.S`.** Do not change `main.c` or the harness.
+Do not remove the SP recording immediately before `BL` (`g_ex_sp_at_call`);
+the check uses it.
 
 ## Build & Run
 
@@ -33,7 +35,7 @@ cmake --build --preset debug --target 09-exercise-callee-save
 ./scripts/run-qemu.sh build/debug/lessons/09-compiler-aapcs/09-exercise-callee-save.elf
 ```
 
-Başlangıç çıktısı (gerçek, `debug`):
+Initial output (actual, `debug`):
 
 ```text
 [  CHECK_HARNESS_POSITIVE_CONTROL] PASS
@@ -47,35 +49,34 @@ Başlangıç çıktısı (gerçek, `debug`):
 ===== END =====
 ```
 
-Bu **beklenen başlangıç durumudur**. `release` ve `minsize`'da adresler farklı
-ama kararlar aynı.
+This is the **expected initial state**. Addresses differ in `release` and
+`minsize`, but verdicts are identical.
 
-## Doğrulama
+## Verification
 
-Üç kontrolün üçü de `PASS`, `RESULT` hâlâ `36`.
+All three checks must be `PASS`, with `RESULT` still `36`.
 
-## Cevaplaman gereken sorular
+## Questions to answer
 
-1. `b` çağrı boyunca hangi register'da tutuluyor? AAPCS'e göre o register
-   kimin? Kim onu korumakla yükümlü?
-2. `SP_AT_BL` neden 8'in katı değil? Fonksiyonun girişinde SP 8'e hizalıydı
-   (harness bunu garanti ediyor). Girişten `BL`'ye kadar kaç byte yığıldı?
-3. Bir `push` listesine eklediğin her register 4 byte'tır. Toplam 8'in katı
-   olmalıysa ve korumak istediğin register sayısı tekse ne yaparsın?
-   (İpucu: harness'in kendi `push` listesine bak.)
-4. Fonksiyon neden LR'yi saklıyor? Saklamasaydı `helper_scale`'den sonra ne
-   olurdu?
-5. Dönüş neden `bx lr` değil de `pop {..., pc}` ile yapılıyor? İkisi de
-   doğru mu?
+1. Which register holds `b` across the call? Under AAPCS, who owns that
+   register? Who must preserve it?
+2. Why is `SP_AT_BL` not a multiple of 8? SP was aligned to 8 at function
+   entry (the harness guarantees this). How many bytes were stacked between
+   entry and `BL`?
+3. Each register added to a `push` list occupies 4 bytes. If the total must
+   be a multiple of 8 and you need to preserve an odd number of registers,
+   what do you do? (Hint: examine the harness's own `push` list.)
+4. Why does the function save LR? What would happen after `helper_scale`
+   if it did not?
+5. Why return with `pop {..., pc}` rather than `bx lr`? Are both correct?
 
-Sorular 4 ve 5 çalışma zamanında test edilmiyor — yanlış bir dönüş bir çökme
-veya sonsuz döngü üretirdi, kontrollü bir FAIL değil. Onları disassembly'ye
-bakarak cevapla.
+Questions 4 and 5 are not tested at runtime — an incorrect return would cause
+a crash or infinite loop, not a controlled FAIL. Answer them from disassembly.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-callee-save/`](../../solutions/01-callee-save/)
+Reference solution: [`../../solutions/01-callee-save/`](../../solutions/01-callee-save/)
 
 ---
 
-[← Ders 09](../../README.md)
+[← Lesson 09](../../README.md)

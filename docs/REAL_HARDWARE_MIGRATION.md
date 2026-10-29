@@ -1,60 +1,62 @@
+**Language:** English | [Türkçe](REAL_HARDWARE_MIGRATION.tr.md)
+
 # Real Hardware Migration
 
-Bir Cortex-M33 board'u (ornegin bir Armv8-M/TrustZone destekli MCU kartı)
-alindiginda neler degisir?
+What changes when you obtain a Cortex-M33 board (for example, an MCU board
+supporting Armv8-M/TrustZone)?
 
-## Degismeyenler (bu repodaki ogrenmenin buyuk kismi)
+## What stays the same (most of the learning in this repository)
 
-- Programmer model, register'lar, xPSR
+- Programmer model, registers, xPSR
 - MSP/PSP, Thread/Handler Mode, CONTROL, privilege
-- Exception modeli, EXC_RETURN, NVIC, fault status register'lari
-- MPU programlama mantigi
-- AAPCS, assembly, linker/ELF kavramlari
-- Context switching mantigi (SysTick + PendSV)
-- GDB komutlari ve teshis akisi
+- Exception model, EXC_RETURN, NVIC, fault status registers
+- MPU programming concepts
+- AAPCS, assembly, linker/ELF concepts
+- Context-switching concepts (SysTick + PendSV)
+- GDB commands and diagnostic flow
 
-Bunlar **mimariye** aittir, board'a degil.
+These belong to the **architecture**, not the board.
 
-## Degisenler
+## What changes
 
-### 1. Linker script ve bellek haritasi
+### 1. Linker script and memory map
 
-| Simdi (QEMU AN505) | Gercek MCU |
+| Now (QEMU AN505) | Real MCU |
 |---|---|
-| FLASH `0x10000000` (SRAM, yazilabilir) | Gercek flash, genelde `0x00000000`/`0x08000000` |
-| RAM `0x30000000`, 32 KB | Cihaza ozel adres ve boyut |
-| Flash yazma yok | Flash programlama adimi gerekir |
+| FLASH `0x10000000` (SRAM, writable) | Real flash, usually `0x00000000`/`0x08000000` |
+| RAM `0x30000000`, 32 KB | Device-specific address and size |
+| No flash programming | A flash-programming step is required |
 
-Degisecek dosya: `platform/<board>/linker/*.ld`
+File to change: `platform/<board>/linker/*.ld`
 
-### 2. Clock kurulumu
+### 2. Clock setup
 
-QEMU'da `SystemInit()` neredeyse bos. Gercek MCU'da:
-PLL konfigurasyonu, flash wait state, voltage scaling gerekir.
-Yanlis wait state = acikliyamadigin fault'lar.
+In QEMU, `SystemInit()` is almost empty. A real MCU requires PLL configuration,
+flash wait states, and voltage scaling.
+Wrong wait states = faults you cannot explain.
 
 ### 3. Console
 
-Simdi: CMSDK APB UART, `0x50200000`.
-Gercek: cihaza ozel UART + pin (GPIO alternate function) konfigurasyonu.
-Degisecek dosya: `platform/<board>/src/uart_*.c`
+Now: CMSDK APB UART, `0x50200000`.
+Real hardware: device-specific UART + pin (GPIO alternate function) configuration.
+File to change: `platform/<board>/src/uart_*.c`
 
-### 4. Yukleme ve debug baglantisi
+### 4. Loading and debug connection
 
-| Simdi | Gercek |
+| Now | Real hardware |
 |---|---|
-| `qemu-system-arm -kernel fw.elf` | `openocd` / `pyocd` / vendor araci + SWD probe |
-| `-gdb tcp::3333` | OpenOCD/pyOCD GDB server (genelde port 3333) |
+| `qemu-system-arm -kernel fw.elf` | `openocd` / `pyocd` / vendor tool + SWD probe |
+| `-gdb tcp::3333` | OpenOCD/pyOCD GDB server (usually port 3333) |
 
-GDB komutlari aynen calisir - sadece baglanilan sunucu degisir.
-Bu yuzden `scripts/gdb/cortex-m.gdb` tasinabilir.
+GDB commands work unchanged - only the connected server changes.
+This is why `scripts/gdb/cortex-m.gdb` is portable.
 
-### 5. Yeni platform eklemek
+### 5. Adding a new platform
 
 ```text
 platform/
-    mps2-an505/        <- mevcut
-    <new-board>/       <- yeni
+    mps2-an505/        <- existing
+    <new-board>/       <- new
         include/platform/board.h
         src/startup_<board>.c
         src/uart_<board>.c
@@ -62,28 +64,27 @@ platform/
         CMakeLists.txt
 ```
 
-`core/`, `common/`, `lessons/` degismez. Mimari katmanin board'dan
-ayrilmasinin sebebi tam olarak budur (`docs/ARCHITECTURE.md`).
+`core/`, `common/`, and `lessons/` do not change. This is precisely why the
+architectural layer is separated from the board (`docs/ARCHITECTURE.md`).
 
-## Yeni acilan kapilar
+## New possibilities
 
-| Konu | Simdi | Gercek donanimda |
+| Topic | Now | On real hardware |
 |---|---|---|
-| **DWT cycle counter** | Saymiyor | Calisir - gercek profiling mumkun |
-| **Timing olcumu** | Anlamsiz | Gercek; osiloskop/GPIO ile dogrulanabilir |
-| **Cache** | M33'te yok | M7/M55 sinifi cihazlarda gozlemlenebilir |
-| **Guc tuketimi** | Yok | WFI/sleep modlarinin etkisi olculebilir |
-| **Gercek cevre birimleri** | Cok sinirli | ADC/SPI/I2C/DMA |
-| **Elektriksel sorunlar** | Yok | Gurultu, brown-out, sinyal butunlugu |
+| **DWT cycle counter** | Does not count | Works - real profiling is possible |
+| **Timing measurement** | Meaningless | Real; can be verified with an oscilloscope/GPIO |
+| **Cache** | Absent in M33 | Observable on M7/M55-class devices |
+| **Power consumption** | None | Effects of WFI/sleep modes can be measured |
+| **Real peripherals** | Very limited | ADC/SPI/I2C/DMA |
+| **Electrical problems** | None | Noise, brown-out, signal integrity |
 
-## Gecis kontrol listesi
+## Migration checklist
 
-- [ ] Yeni `platform/<board>/` dizini olustur
-- [ ] Linker script'i cihazin flash/RAM adreslerine gore yaz
-- [ ] Startup'ta clock ve flash wait state kurulumunu ekle
-- [ ] UART surucusunu ve pin konfigurasyonunu yaz
-- [ ] OpenOCD/pyOCD config dosyasi ekle
-- [ ] `scripts/` icine flash yukleme scripti ekle
-- [ ] `capability-probe`'u calistir ve `TARGET_CAPABILITIES.md`'ye **olculmus**
-      bir sutun ekle
-- [ ] DWT'nin gercekten saydigini dogrula, profiling derslerini guncelle
+- [ ] Create a new `platform/<board>/` directory
+- [ ] Write the linker script for the device's flash/RAM addresses
+- [ ] Add clock and flash wait-state setup to startup
+- [ ] Write the UART driver and pin configuration
+- [ ] Add an OpenOCD/pyOCD config file
+- [ ] Add a flash-loading script under `scripts/`
+- [ ] Run `capability-probe` and add a **measured** column to `TARGET_CAPABILITIES.md`
+- [ ] Verify that DWT actually counts and update the profiling lessons

@@ -1,33 +1,36 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — Locate Your Data
 
 Exercise: [`../../exercises/01-locate-your-data/`](../../exercises/01-locate-your-data/)
 
-Kod: [`locate.c`](locate.c)
+Code: [`locate.c`](locate.c)
 
-## Gerçek çıktı
+## Actual output
 
-| Preset | `FLASH_USED_BYTES` | `RAM_STATIC_BYTES` | `G_INIT_LMA` | Kontroller |
+| Preset | `FLASH_USED_BYTES` | `RAM_STATIC_BYTES` | `G_INIT_LMA` | Checks |
 |---|---|---|---|---|
 | `debug` | 1424 | 8 | `0x1000058C` | 4/4 PASS |
 | `release` | 1584 | 8 | `0x1000062C` | 4/4 PASS |
 | `minsize` | 1184 | 8 | `0x1000049C` | 4/4 PASS |
 
-Üç preset'te üç farklı sayı, aynı kod. Sabit bir sayı yazan bir çözüm bunlardan
-en fazla birinde geçerdi.
+Three presets, three numbers, same code. A hard-coded solution would pass
+at most one of them.
 
-Aşağıdaki kod bloklarının tamamı, sırayla birleştirildiğinde derlenebilir bir
-`locate.c` oluşturur; üç preset'te bu tablodaki değerlerin aynısını üretir ve
-0 uyarı verir (`-Wall -Wextra`).
+Together, in order, all code blocks below form a compilable `locate.c`;
+it reproduces the table's values in all three presets with 0 warnings
+(`-Wall -Wextra`).
 
-## Önce: adres aritmetiği neden `A()` ile?
+## First: why use `A()` for address arithmetic?
 
-Linker sembolleri C'de `extern uint32_t __data_start;` olarak bildirili;
-`&__data_start` bir `uint32_t *`. İki `uint32_t *`'ı doğrudan çıkarmak
-(`&__data_end - &__data_start`) **byte değil eleman** (4 byte'lık word) sayısı
-verir — sonuç 4 kat küçük çıkar. `&__etext + n` de `n` **word** ilerler.
+Linker symbols are declared in C as `extern uint32_t __data_start;`, making
+`&__data_start` a `uint32_t *`. Direct subtraction of two `uint32_t *`
+values (`&__data_end - &__data_start`) counts **elements, not bytes**
+(4-byte words) — a result 4 times too small. `&__etext + n` likewise advances
+by `n` **words**.
 
-Bu yüzden her hesap adresleri önce tamsayıya çeviriyor; aşağıdaki kod
-[`locate.c`](locate.c) ile birebir aynı:
+Each calculation therefore converts addresses to integers first. The code
+below exactly matches [`locate.c`](locate.c):
 
 ```c
 #include "l10.h"
@@ -47,24 +50,25 @@ uint32_t flash_used_bytes(void)
 }
 ```
 
-FLASH yük görüntüsü:
+FLASH load image:
 
 ```text
 __vectors_start (0x10000000)
-    .vectors  .text  .rodata  (+ hizalama)
+    .vectors  .text  .rodata  (+ alignment)
 __etext = LOADADDR(.data)
-    .data'nin ilk degerleri
+    initial values of .data
 __flash_load_end
 ```
 
-- `__etext` adı "`.text`'in sonu" gibi okunur ama tanımı `LOADADDR(.data)` —
-  yani `.rodata` ve hizalama **dahil**, salt-okunur kısmın bittiği ve `.data`
-  kopyasının başladığı yer.
-- `.data` FLASH'ta **da** yer kaplar: ilk değerleri orada saklanır.
-- `.bss` FLASH'ta **yer kaplamaz**: ilk değeri sıfır, saklanacak bir şey yok.
+- `__etext` sounds like “end of `.text`,” but means `LOADADDR(.data)`:
+  the end of the read-only portion **including** `.rodata` and alignment,
+  where the `.data` copy begins.
+- `.data` **also** occupies FLASH, which stores its initial values.
+- `.bss` **occupies no FLASH**: its initial value is zero, with nothing to store.
 
-Sonuç linker'ın kendi hesabıyla aynı: `__flash_load_end − ORIGIN(FLASH)`.
-Linker script bu sembolü zaten bir `ASSERT` için tanımlıyor.
+The result matches the linker's own calculation:
+`__flash_load_end − ORIGIN(FLASH)`. The linker script already defines
+this symbol for an `ASSERT`.
 
 ## `ram_static_bytes()`
 
@@ -76,9 +80,9 @@ uint32_t ram_static_bytes(void)
 }
 ```
 
-`.data` RAM'de de yer kaplar (VMA). Stack **dahil değil**: bir section değil,
-linker script'te bir muhasebe (`__stack_size = 4K`, `__stack_top`,
-`__stack_limit`). `--print-memory-usage` da onu saymıyor.
+`.data` also occupies RAM (VMA). Stack is **excluded**: it is not a section,
+but linker-script accounting (`__stack_size = 4K`, `__stack_top`,
+`__stack_limit`). `--print-memory-usage` does not count it either.
 
 ## `data_lma_of(p)`
 
@@ -89,17 +93,16 @@ uint32_t data_lma_of(const void *p)
 }
 ```
 
-`p` bir `const void *`, `&__data_start` bir `uint32_t *`: ikisini doğrudan
-çıkarmak derlenmez bile. Byte ofseti ancak tamsayı adresleri üzerinden
-alınabilir.
+`p` is a `const void *`; `&__data_start` is a `uint32_t *`. Direct subtraction
+does not even compile. Obtain the byte offset using integer addresses.
 
-Linker `.data`'yı RAM'de (VMA) ve FLASH'ta (LMA) **aynı iç düzenle**
-yerleştirir: bir nesnenin `.data` başına göre ofseti iki yerde de aynıdır.
-Startup kodu tam da bu yüzden tek bir düz kopyalama döngüsüyle
-(`__etext` → `__data_start`, `__data_end`'e kadar) işini bitirebiliyor.
+The linker places `.data` in RAM (VMA) and FLASH (LMA) with **the same
+internal layout**: an object's offset from the `.data` start is identical
+in both places. That is exactly why startup needs only one linear copy loop
+(`__etext` → `__data_start`, through `__data_end`).
 
-Kontrol bu adresi **okuyup** orada `0xC0DEFACE` buluyor — hesabın bağımsız
-doğrulaması.
+The check **reads** this address and finds `0xC0DEFACE`, independently
+verifying the calculation.
 
 ## `in_region()`
 
@@ -111,11 +114,11 @@ int in_region(const void *p, uint32_t origin, uint32_t length)
 }
 ```
 
-`a < origin + length` yerine `(a − origin) < length` yazıldı:
-`origin + length` 32 bitte taşabilecek bir bölge için de doğru kalır
-(örneğin `0xF0000000` + `0x20000000`). Bu repo'nun bölgelerinde fark etmez,
-ama alışkanlık olarak doğrusu bu.
+`(a − origin) < length` replaces `a < origin + length`: it remains correct
+for a region whose `origin + length` could overflow 32 bits (for example,
+`0xF0000000` + `0x20000000`). It makes no difference for this repository's
+regions, but is the right habit.
 
 ---
 
-[← Ders 10](../../README.md)
+[← Lesson 10](../../README.md)

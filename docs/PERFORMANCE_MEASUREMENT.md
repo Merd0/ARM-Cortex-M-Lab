@@ -1,148 +1,149 @@
+**Language:** English | [Türkçe](PERFORMANCE_MEASUREMENT.tr.md)
+
 # Performance Measurement Methodology
 
-## Bu hedefteki sınır
+## Limit on this target
 
-Bu target'ta DWT cycle counter **saymiyor** (olculdu, bkz.
-`docs/TARGET_CAPABILITIES.md`). Yani en yaygin Cortex-M profiling yontemi
-burada kullanilamaz.
+The DWT cycle counter **does not count** on this target (measured; see
+`docs/TARGET_CAPABILITIES.md`). The most common Cortex-M profiling method
+therefore cannot be used here.
 
 ```text
 DWT CYCCNT PROFILING: NOT SUPPORTED ON CURRENT TARGET (QEMU mps2-an505)
 ```
 
-Bu nedenle aşağıdaki ölçüm yöntemlerini kullanıyoruz.
+We therefore use the following measurement methods.
 
-## QEMU'da gecerli olculer
+## Valid measurements in QEMU
 
-### 1. Kod boyutu (guvenilir)
+### 1. Code size (reliable)
 
 ```bash
 arm-none-eabi-size build/debug/.../firmware.elf
 arm-none-eabi-nm --size-sort -S build/debug/.../firmware.elf | tail -20
 ```
 
-`-O0` ve `-Os` arasindaki fark burada gercek ve tekrarlanabilirdir.
+The difference between `-O0` and `-Os` is real and reproducible here.
 
-### 2. Uretilen komut sayisi ve komut sekli (guvenilir)
+### 2. Generated instruction count and instruction form (reliable)
 
 ```bash
 arm-none-eabi-objdump -d -S firmware.elf > firmware.lst
 ```
 
-Bir fonksiyonun `-O0` ve `-O2` hallerindeki komut sayisini saymak,
-optimizasyonun ne yaptigini anlamak icin en dogrudan yoldur.
+Counting instructions in a function's `-O0` and `-O2` versions is the most direct
+way to understand what optimization does.
 
-### 3. Statik komut sayimi
+### 3. Static instruction counting
 
 ```bash
 arm-none-eabi-objdump -d firmware.elf | grep -c "^\s*1[0-9a-f]*:"
 ```
 
-### 4. QEMU `-d in_asm` — çevrilen blokların kaydı
+### 4. QEMU `-d in_asm` — recording translated blocks
 
 ```bash
 qemu-system-arm -M mps2-an505 -kernel firmware.elf -nographic \
                 -d in_asm -D trace.log
 ```
 
-`-d in_asm`, QEMU'nun **çevirdiği** temel blokların (translation
-block) disassembly'sini loglar; icra edilen komut sayısını vermez. QEMU bir
-bloğu bir kez çevirir, sonra onu kaç kez çalıştırırsa çalıştırsın **tekrar
-loglamaz**. Yani:
+`-d in_asm` logs disassembly of the basic blocks (translation blocks) QEMU
+**translates**; it does not give the executed instruction count. QEMU translates
+a block once and **does not log it again**, however many times it subsequently
+executes it. Therefore:
 
-- Bir dongu 1.000.000 kez donse bile log'da bir kez gorunur.
-- Log'daki satır sayısı, icra edilen komut sayısıyla orantılı değildir.
-- Hicbir kod yolu ceviriye girmezse hic gorunmez.
+- Even if a loop runs 1.000.000 times, it appears once in the log.
+- The number of log lines is not proportional to the executed instruction count.
+- A code path never translated never appears.
 
-`-d in_asm` su isin aracidir: **hangi kodun gercekten calistirildigini**
-gormek (kapsam, coverage). "Kac komut calisti" sorusunun cevabi degildir.
+`-d in_asm` is a tool for seeing **which code actually ran** (coverage).
+It does not answer "how many instructions executed?"
 
-Dinamik komut sayimi istiyorsan QEMU'nun bunun icin ayri mekanizmalari
-vardir (ornegin TCG plugin'leri). Bunlar bu reponun kapsamı dışındadır
-ve kurulmamıştır. Kullanılacaksa ölçümün amacı önceden belirlenmelidir.
-QEMU fonksiyonel bir emulatordur; komut sayisi cycle sayisi degildir.
+QEMU has separate mechanisms for dynamic instruction counting (such as TCG
+plugins). These are outside this repository's scope and are not installed.
+If used, the measurement's purpose must be defined beforehand. QEMU is a
+functional emulator; instruction count is not cycle count.
 
-### 5. SysTick — kullanım alanı ve sınırları
+### 5. SysTick — uses and limits
 
-SysTick QEMU'da calisir ve hedef uzerinde **yerel bir aralik/sayim deneyi**
-kurmak icin kullanilabilir: "su kadar tick icinde kac iterasyon donduk",
-"iki tick arasi bu islem tamamlandi mi". Bunun icin timer modelinin uygun
-olmasi ve neyi saydiginin bilinmesi gerekir.
+SysTick works in QEMU and can establish a **local interval/counting experiment**
+on the target: "how many iterations ran within this many ticks" or "did this
+operation finish between two ticks?" This requires a suitable timer model and
+knowing what is being counted.
 
-Bu ölçümden, bir algoritmanın fiziksel Cortex-M donanımında diğerinden
-daha hızlı olduğu sonucu çıkarılamaz:
+Such a measurement cannot establish that one algorithm is faster than another
+on physical Cortex-M hardware:
 
-- Fonksiyonel emülatör zamanı, donanım cycle zamanı değildir. QEMU komutlari
-  dogru yurutur, pipeline/bellek gecikmesi/cache modellemez.
-- Bu yuzden SysTick sonucu ne donanim performans siralamasi ne de WCET kurar.
-- Ayni firmware icinde iki kod yolunu karsilastirmak istiyorsan bile,
-  çıkan oranın donanımda korunacağı varsayılamaz; orada bellek gecikmesi
-  ve komut zamanlamalari tamamen farklidir.
+- Functional-emulator time is not hardware cycle time. QEMU executes instructions
+  correctly but does not model pipeline/memory latency/cache.
+- A SysTick result therefore establishes neither hardware performance ranking nor WCET.
+- Even when comparing two paths in the same firmware, the resulting ratio cannot
+  be assumed to hold on hardware; memory latency and instruction timings there
+  are completely different.
 
-Kisacasi SysTick burada bir **deney araci**dir, bir **kiyaslama (benchmark)
-araci** degil.
+SysTick here is an **experimental tool**, not a **benchmarking tool**.
 
-## Yedi ölçüm kavramı
+## Seven measurement concepts
 
-Asagidaki yedi kavram sik sik ayni cumlede kullanilir ve birbirinin yerine
-gecmez. Bir olcum paylasirken hangisini yaptigini acikca yaz.
+The seven concepts below often appear in the same sentence but are not
+interchangeable. State explicitly which you measured when sharing a result.
 
-| # | Ne | Ne verir | Bu repoda |
+| # | What | What it provides | In this repository |
 |---|---|---|---|
-| 1 | Statik komut/disassembly analizi | Kod boyutu, komut sayisi (statik) | ✅ kullaniliyor |
-| 2 | Cevrilmis blok loglama (`-d in_asm`) | Hangi kod cevrildi | ⚠️ sayac DEGIL |
-| 3 | Dinamik icra edilen komut sayimi | Kac komut calisti | ⬜ kurulmadi |
-| 4 | Fonksiyonel emulator zamani (duvar saati) | Hicbir sey (host'a bagli) | ❌ kullanilmaz |
-| 5 | Acikca zamanlama/cycle-approximate model | Yaklasik cycle | ⬜ yok |
-| 6 | Gercek donanimda cycle olcumu | Gercek cycle | ⬜ donanim yok |
-| 7 | En kotu durum yurutme analizi (WCET) | Kanitlanmis ust sinir | ⬜ kapsam disi |
+| 1 | Static instruction/disassembly analysis | Code size, instruction count (static) | ✅ used |
+| 2 | Translated-block logging (`-d in_asm`) | Which code was translated | ⚠️ NOT a counter |
+| 3 | Dynamic executed-instruction counting | How many instructions ran | ⬜ not set up |
+| 4 | Functional-emulator time (wall clock) | Nothing (host-dependent) | ❌ not used |
+| 5 | Explicit timing/cycle-approximate model | Approximate cycles | ⬜ absent |
+| 6 | Cycle measurement on real hardware | Actual cycles | ⬜ no hardware |
+| 7 | Worst-case execution-time analysis (WCET) | Proven upper bound | ⬜ outside scope |
 
-Iki siklikla yapilan hata:
+Two common mistakes:
 
-- **Gozlenen maksimum ≠ WCET.** Olcum yalnizca calistirdigin girdileri
-  kapsar. "Gozlenen maksimum X" yazilabilir; "WCET X'tir" yazilamaz. Gercek
-  WCET analizi statik analiz araclari ve genellikle sertifikasyon gerektirir.
-- **FVP otomatik olarak cycle-approximate degildir.** Siradan bir Fixed
-  Virtual Platform **fonksiyonel** bir modeldir ve cycle sayisi vermez.
-  Zamanlama bilgisi yalnizca acikca oyle belgelenmis modellerden gelir.
-  Hangi modelin ne sundugunu urun dokumantasyonundan dogrula.
+- **Observed maximum ≠ WCET.** Measurement covers only the inputs you ran.
+  You can write "observed maximum X," not "WCET is X." Real WCET analysis requires
+  static-analysis tools and usually certification.
+- **An FVP is not automatically cycle-approximate.** An ordinary Fixed Virtual
+  Platform is a **functional** model and does not provide cycle counts.
+  Timing information comes only from models explicitly documented to provide it.
+  Verify what each model offers in its product documentation.
 
-## Olcum yaparken kacinilmasi gerekenler
+## What to avoid when measuring
 
-1. **Olcum bolgesinde console I/O yapma.** UART bekleme dongusu her seyi golgeler.
-2. **Derleyici sonucu atmasin.** Sonucu `volatile` bir degiskene yaz, yoksa
-   `-O2` tum hesabi silebilir.
-3. **Isinma/tekrar.** Tek olcum yerine birkac tekrar.
-4. **Ayni flag'lerle karsilastir.** `-O0` bir firmware ile `-O2` digerini
-   kiyaslarken sadece optimizasyonun degistiginden emin ol.
-5. **Mutlak sayi verme.** QEMU sonucu "su kadar mikrosaniye" diye yazma.
+1. **Do not perform console I/O inside the measurement region.** The UART wait loop overwhelms everything.
+2. **Do not let the compiler discard the result.** Write it to a `volatile`
+   variable; otherwise `-O2` can eliminate the entire calculation.
+3. **Warm-up/repetition.** Repeat several times rather than measuring once.
+4. **Compare with the same flags.** When comparing one firmware at `-O0` with
+   another at `-O2`, ensure that only optimization changes.
+5. **Do not report absolute timing.** Do not describe a QEMU result as "this many microseconds."
 
-## Rapor formati
+## Report format
 
-Bir olcum paylasirken en az sunlari yaz:
+When sharing a measurement, include at least:
 
 ```text
 Target      : QEMU 8.2.2 mps2-an505 / cortex-m33
 Toolchain   : arm-none-eabi-gcc 13.2.1
 Optimization: -O0 / -O2
-Olcu        : kod boyutu (byte) + komut sayisi
-Gecersiz    : cycle / wall-clock (bu target'ta anlamsiz)
+Metric      : code size (bytes) + instruction count
+Invalid     : cycles / wall-clock (meaningless on this target)
 ```
 
-## Gercek donanimda ne degisir?
+## What changes on real hardware?
 
-Board üzerinde erişim izinleri, DWT/cycle-counter varlığı ve gerçekten
-ilerlediği ayrıca doğrulanırsa `DWT->CYCCNT` ile:
+If access permissions, the presence of DWT/a cycle counter, and actual counter
+progress are separately verified on the board, `DWT->CYCCNT` allows:
 
-- cycle bazli olcum mumkun olur
-- flash wait state, cache, branch prediction etkileri gorunur
-- ayni kod QEMU'dakinden farkli siralanabilir
+- cycle-based measurement
+- observation of flash wait-state, cache, and branch-prediction effects
+- different rankings of the same code than in QEMU
 
-Ayrintisi: `docs/REAL_HARDWARE_MIGRATION.md`
+Details: `docs/REAL_HARDWARE_MIGRATION.md`
 
-## Çalışan deney
+## Working experiment
 
-[Ders 12](../lessons/12-debug-dwt/) readback, çalışmayan cycle counter,
-SysTick yerel aralığı, I/O ile kirletilen ölçüm ve yalnızca iş yükünde O0/O2
-karşılaştırmasını çalıştırır. `tests/lesson12-check.py` disassembly ve gerçek
-GDB watchpoint kontrollerini üç preset üzerinde tekrarlar.
+[Lesson 12](../lessons/12-debug-dwt/) runs readback, the nonworking cycle counter,
+a SysTick local interval, I/O-contaminated measurement, and O0/O2 comparison of
+only the workload. `tests/lesson12-check.py` repeats disassembly and actual GDB
+watchpoint checks across three presets.

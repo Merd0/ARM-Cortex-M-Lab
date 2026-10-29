@@ -1,0 +1,102 @@
+{
+  "policy_en": "Do not translate identifiers, instruction names, register names, commands, paths, macros or CHECK labels. Security state and privilege level are separate concepts. This guide governs new translations, not rewrites of the protected Turkish source.",
+  "policy_tr": "Identifier, komut, register, instruction, yol, macro ve CHECK etiketleri çevrilmez. Güvenlik durumu ve ayrıcalık düzeyi ayrı kavramlardır. Kılavuz yeni çeviriler içindir; korunan Türkçe kaynağı yeniden yazmak için değildir.",
+  "terms": [
+    {
+      "english": "Thread Mode",
+      "turkish": "Thread Mode / iş parçacığı modu"
+    },
+    {
+      "english": "Handler Mode",
+      "turkish": "Handler Mode / exception işleyici modu"
+    },
+    {
+      "english": "Secure state",
+      "turkish": "Secure güvenlik durumu"
+    },
+    {
+      "english": "Non-secure state",
+      "turkish": "Non-secure güvenlik durumu"
+    },
+    {
+      "english": "privileged execution",
+      "turkish": "ayrıcalıklı yürütme"
+    },
+    {
+      "english": "unprivileged execution",
+      "turkish": "ayrıcalıksız yürütme"
+    },
+    {
+      "english": "exception entry",
+      "turkish": "exception girişi"
+    },
+    {
+      "english": "exception return",
+      "turkish": "exception dönüşü"
+    },
+    {
+      "english": "exception frame",
+      "turkish": "exception frame / exception yığını kaydı"
+    },
+    {
+      "english": "callee-saved registers",
+      "turkish": "çağrılan fonksiyonun koruması gereken register’lar"
+    },
+    {
+      "english": "caller-clobbered registers",
+      "turkish": "çağrıda bozulmasına izin verilen register’lar"
+    },
+    {
+      "english": "stack alignment",
+      "turkish": "stack hizalaması"
+    },
+    {
+      "english": "context switching",
+      "turkish": "context switching / bağlam değiştirme"
+    },
+    {
+      "english": "preemption",
+      "turkish": "preemption / çalışmakta olan bağlamın kesilmesi"
+    },
+    {
+      "english": "memory attribution",
+      "turkish": "bellek güvenlik niteliği"
+    },
+    {
+      "english": "memory permissions",
+      "turkish": "bellek erişim izinleri"
+    },
+    {
+      "english": "fault escalation",
+      "turkish": "fault yükselmesi"
+    },
+    {
+      "english": "lazy stacking",
+      "turkish": "lazy stacking / ertelenmiş FP context saklama"
+    },
+    {
+      "english": "load memory address (LMA)",
+      "turkish": "yükleme bellek adresi (LMA)"
+    },
+    {
+      "english": "virtual memory address (VMA)",
+      "turkish": "çalışma bellek adresi (VMA)"
+    },
+    {
+      "english": "observed",
+      "turkish": "gözlemlenen"
+    },
+    {
+      "english": "expected",
+      "turkish": "beklenen"
+    },
+    {
+      "english": "unsupported",
+      "turkish": "desteklenmeyen"
+    },
+    {
+      "english": "unmeasured",
+      "turkish": "ölçülmemiş"
+    }
+  ]
+}

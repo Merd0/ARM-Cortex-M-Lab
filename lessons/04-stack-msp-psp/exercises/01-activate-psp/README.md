@@ -1,10 +1,12 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Activate PSP Correctly
 
-**Hedef:** Thread Mode'u kendi stack'ine taşımak — RTOS'ların her gün yaptığı şey.
+**Goal:** move Thread Mode to its own stack — what RTOSes do every day.
 
-## Görev
+## Task
 
-Dolduracağın dosya **C değil, assembly**:
+The file you complete is **assembly, not C**:
 
 ```text
 exercises/01-activate-psp/psp_start.S
@@ -19,25 +21,24 @@ psp_start:                      @ r0 = psp_top, r1 = entry  — DONMEZ
     bx      r1
 ```
 
-`main.c` hazır: stack bloğunu ve guard word'lerini kurar, `psp_start()`
-çağırır ve dönmez. `thread_entry()` kontrolleri yapar. Sen yalnızca geçişin
-üç adımını yazacaksın.
+`main.c` is ready: it initializes the stack block and guard words, calls
+`psp_start()`, and does not return. `thread_entry()` performs the checks.
+You write only the three transition steps.
 
-### Neden C'de değil?
+### Why not C?
 
-Çünkü `CONTROL.SPSEL`'i sıradan bir C fonksiyonunun ortasında değiştirmek
-**geçersizdir**. Derleyici o fonksiyon için MSP üzerinde bir frame ayırmış
-ve yerel değişkenlere `[sp, #offset]` ile erişen komutlar üretmiştir; `SPSEL`
-değişince aynı offset'ler başka bir adrese denk gelir. Ayrıntı
-`psp_start.S`'in başındaki açıklamada.
+Because changing `CONTROL.SPSEL` midway through an ordinary C function is
+**invalid**. The compiler allocated its frame on MSP and emitted local accesses
+using `[sp, #offset]`; changing `SPSEL` makes those offsets refer to another
+address. See the explanation at the top of `psp_start.S`.
 
-### Cevaplaman gereken sorular
+### Questions to answer
 
-- Full-descending stack'te PSP'ye hangi adres yazılmalı — `&block[0]`,
-  `&block[127]`, `&block[128]`? Neden?
-- `CONTROL`'ü nasıl güncellersin ki `nPRIV` (bit 0) ezilmesin?
-- Değişiklikten sonra hangi komut gerekiyor ve **burada** neden gerekiyor?
-  (İpucu: C'den `__set_CONTROL()` çağırsaydın durum farklı olurdu.)
+- For a full-descending stack, which address belongs in PSP — `&block[0]`,
+  `&block[127]`, or `&block[128]`? Why?
+- How do you update `CONTROL` without overwriting `nPRIV` (bit 0)?
+- Which instruction is required afterwards, and why **here**?
+  (Hint: calling `__set_CONTROL()` from C would be different.)
 
 ## Build & Run
 
@@ -46,45 +47,44 @@ cmake --build --preset debug --target 04-exercise-psp
 ./scripts/run-qemu.sh build/debug/lessons/04-stack-msp-psp/04-exercise-psp.elf
 ```
 
-## Doğrulama
+## Verification
 
-| Kontrol | Ne bakıyor |
+| Check | What it examines |
 |---|---|
-| `CHECK_SPSEL` | Thread Mode'dayız ve `CONTROL.SPSEL` gerçekten 1 mi? |
-| `CHECK_REGION` | Yerel değişkenler artık `task_stack_block` içinde mi? |
-| `CHECK_STACK_GUARD` | Tahsis edilen alanın üstündeki nöbetçi word'ler bozulmamış mı? |
+| `CHECK_SPSEL` | Are we in Thread Mode, and is `CONTROL.SPSEL` really 1? |
+| `CHECK_REGION` | Are local variables now inside `task_stack_block`? |
+| `CHECK_STACK_GUARD` | Are the guard words above the allocated area intact? |
 
-Üçü de `PASS` olmalı. Başlangıçta ilk ikisi `FAIL` verir — bu **beklenen**
-başlangıç durumudur, bir bug değil.
+All three must say `PASS`. Initially, the first two report `FAIL` — the
+**expected** starter state, not a bug.
 
-`CHECK_STACK_GUARD` hakkında bir sınır: yalnızca **izlenen o iki konumun**
-üzerine yazılmadığını gösterir. Alt sınırdan taşmayı veya başka bir yere kaçak
-yazmayı yakalamaz. Stack pointer ayrıca GDB ile kontrol edilir:
+Limit of `CHECK_STACK_GUARD`: it establishes only that **those two monitored
+locations** were not overwritten. It does not catch overflow below the lower
+bound or stray writes elsewhere. Check the stack pointer separately with GDB:
 
 ```gdb
 p/x $sp     p/x $msp     p/x $psp     p/x $control
 p/x task_stack_block[128]
 ```
 
-`$sp` hangisiyle aynı çıkıyor? `$psp` hep `0x30000000 .. 0x30000200`
-aralığında mı kalıyor?
+Which value equals `$sp`? Does `$psp` always remain within
+`0x30000000 .. 0x30000200`?
 
-## Sık yapılan hata
+## Common mistake
 
-İki adımın sırasını ters çevirmek. Önce `SPSEL = 1` yapıp sonra PSP'yi
-ayarlarsan ne olur? Denemeden önce tahmin et — ipucu ders 02'nin Break It
-bölümünde.
+Reversing the two steps. What happens if you set `SPSEL = 1` before setting
+PSP? Predict before trying — the hint is in Lesson 02's Break It.
 
-## Opsiyonel (DEEP) — Exercise 02
+## Optional (DEEP) — Exercise 02
 
-PSP aktifken iç içe üç fonksiyon çağrısı yap ve her seviyede `PSP`'yi kaydet.
-Her seviye kaç byte tüketti? `release` preset'inde ne değişiyor?
-Bu ödevin referans çözümü yok — cevabın kendi ölçümün.
+With PSP active, make three nested function calls and record `PSP` at each
+level. How many bytes did each level consume? What changes in `release`?
+There is no reference solution — your measurement is the answer.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-activate-psp/`](../../solutions/01-activate-psp/)
+Reference solution: [`../../solutions/01-activate-psp/`](../../solutions/01-activate-psp/)
 
 ---
 
-[← Ders 04](../../README.md)
+[← Lesson 04](../../README.md)

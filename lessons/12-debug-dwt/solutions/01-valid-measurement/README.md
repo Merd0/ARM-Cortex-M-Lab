@@ -1,13 +1,15 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Reference Solution — Measurement Validity
 
-[`measurement.c`](measurement.c), [aynı sözleşmeyi](../../measurement.h)
-uygular. Starter'dan ayrı linklenir; onu tamamlanmış hale getirmez.
+[`measurement.c`](measurement.c) implements the [same contract](../../measurement.h).
+It is linked separately from the starter; it does not make the starter complete.
 
-Önce I/O kontrol edilir. Ardından cycle counter yokluğu, Secure durumda
-saymanın engellenmesi, enable bitleri ve uç değer eşitliği incelenir.
-Sadece uygun girdiye `L12_COUNTER_DELTA` verilir. `end - start` unsigned
-aritmetik nedeniyle modüler fark verir. Birden fazla tur sayısını iki uçtan
-geri kazanamazsın; örneğin aynı uçlar tam bir turu da gizleyebilir.
+I/O is checked first. Then the absence of a cycle counter, counting being disabled
+in Secure state, enable bits, and equal endpoints are examined. Only suitable input
+receives `L12_COUNTER_DELTA`. `end - start` gives a modular difference because of
+unsigned arithmetic. You cannot recover multiple wrap counts from two endpoints;
+for example, equal endpoints can also hide one complete wrap.
 
 ```bash
 cmake --preset debug
@@ -15,9 +17,9 @@ cmake --build --preset debug --target 12-solution-measurement
 ./scripts/run-qemu.sh build/debug/lessons/12-debug-dwt/12-solution-measurement.elf
 ```
 
-Debug/release/minsize üzerinde çalıştırıldı: **12/12 PASS**, END.
-Forward/wrap farkları 32; sıfırda ve sıfır dışında durmuş sayaç, kapalı
-TRCENA, kapalı CYCCNTENA, NOCYCCNT, CYCDISS ve I/O vakaları doğru ayrılıyor.
+Run on debug/release/minsize: **12/12 PASS**, END.
+Forward/wrap differences are 32; stopped counters at zero and nonzero values,
+disabled TRCENA, disabled CYCCNTENA, NOCYCCNT, CYCDISS, and I/O cases are correctly distinguished.
 
-Bu sonuçlar sentetik girdiler içindir. QEMU'da DWT çalıştığı anlamına gelmez.
-Gerçek firmware snapshot'ları [dersin ölçüm bölümünde](../../README.md).
+These results are for synthetic inputs. They do not mean DWT works in QEMU.
+Actual firmware snapshots are in the [lesson's measurement section](../../README.md).

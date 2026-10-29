@@ -1,110 +1,93 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 05 — Privilege & SVC
 
-`[STANDARD]` · Day 3 · Tahmini süre: 60–75 dk
+`[STANDARD]` · Day 3 · Estimated time: 60–75 min
 
 ---
 
 ## Why This Matters
 
-Ders 04'te Thread Mode'u kendi stack'ine (PSP) taşıdık. Bu, bir RTOS görevinin
-yarısı. Diğer yarısı şu: görev kodu **ayrıcalıksız** çalışır.
+In Lesson 04, we moved Thread Mode onto its own stack (PSP). That is half of an RTOS task. The other half is that task code runs **unprivileged**.
 
-Neden? Çünkü ayrıcalıklı kod her şeye dokunabilir — vektör tablosuna, MPU
-yapılandırmasına, `CONTROL`'e, başka görevlerin durumuna. Uygulama katmanında
-bir bug varsa (ve olacaktır), o bug'ın çekirdeği bozamaması gerekir.
+Why? Privileged code can access everything—the vector table, MPU configuration, `CONTROL`, and other tasks' state. If application code has a bug (and it will), that bug must not be able to corrupt the kernel.
 
-Ama o zaman bir soru doğar: **ayrıcalıksız kod bir şeye gerçekten ihtiyaç
-duyduğunda ne yapacak?** Cevap `SVC`: kontrollü bir kapı. İşletim sistemi
-çağrısı (system call) kavramının Cortex-M'deki karşılığı tam olarak budur.
+But this raises a question: **what does unprivileged code do when it genuinely needs something?** The answer is `SVC`: a controlled entry point. This is precisely the Cortex-M counterpart of a system call.
 
-Bu ders ne MPU dersidir (o ders 06) ne de RTOS dersi (14/15). Burada kurulan
-tek şey **ayrıcalık akışı**.
+This is neither the MPU lesson (that is Lesson 06) nor an RTOS lesson (14/15). The only mechanism established here is **privilege flow**.
 
 ---
 
 ## Core Idea
 
-### Dört durumun ikisi bağımsız
+### Two independent dimensions, four states
 
-| | Belirleyen | Değerleri |
+| | Determined by | Values |
 |---|---|---|
-| **Mod** | `IPSR` | Thread (`IPSR = 0`) / Handler (`IPSR > 0`) |
-| **Ayrıcalık** | Thread'de `CONTROL.nPRIV`; Handler'da **her zaman ayrıcalıklı** | Privileged / Unprivileged |
+| **Mode** | `IPSR` | Thread (`IPSR = 0`) / Handler (`IPSR > 0`) |
+| **Privilege** | `CONTROL.nPRIV` in Thread; **always privileged** in Handler | Privileged / Unprivileged |
 
-İki temel kural:
+Two fundamental rules:
 
-1. **Handler Mode her zaman ayrıcalıklıdır.** `CONTROL.nPRIV` handler'ın
-   ayrıcalığını tanımlamaz; **kesilen Thread bağlamının** ayrıcalığını
-   tanımlar. Handler içinde `nPRIV = 1` okumak "handler ayrıcalıksız" demek
-   değildir.
-2. **Ayrıcalıklı Thread gönüllü olarak ayrıcalığını bırakabilir**
-   (`nPRIV = 1` yazar). Ama **geri alamaz**: ayrıcalıksız Thread'in `CONTROL`
-   yazma denemesi yok sayılır.
+1. **Handler Mode is always privileged.** `CONTROL.nPRIV` does not describe the handler's privilege; it describes the privilege of the **interrupted Thread context**. Reading `nPRIV = 1` inside a handler does not mean “the handler is unprivileged.”
+2. **A privileged Thread can voluntarily drop its privilege** (by writing `nPRIV = 1`). But it **cannot regain it**: an unprivileged Thread's attempt to write `CONTROL` is ignored.
 
-### Tek yön kapısı
+### A one-way gate
 
 ```text
 Privileged Thread  --(nPRIV = 1)-->  Unprivileged Thread
-Unprivileged Thread --(nPRIV = 0)-->  YOK SAYILIR
+Unprivileged Thread --(nPRIV = 0)-->  IGNORED
 ```
 
-Geri dönüş yolu yalnızca **ayrıcalıklı bir yürütme yolundan** geçer. `SVC` o
-yolun kapısıdır: bir komut, bir exception, ve exception handler'ları Handler
-Mode'da — yani ayrıcalıklı — çalışır.
+The return path must pass through a **privileged execution path**. `SVC` is the gate to that path: one instruction, one exception, and exception handlers run in Handler Mode—which is privileged.
 
-Dikkat: `SVC` **kapıdır, politika değil**. SVC çalıştırmak Thread'i otomatik
-olarak ayrıcalıklı yapmaz. Ne olacağına **handler karar verir**. Bunu bu
-derste ölçeceğiz.
+Note: `SVC` is **a gate, not a policy**. Executing SVC does not automatically make the Thread privileged. The **handler decides** what happens. We will measure this in this lesson.
 
 ### `privilege != security state`
 
-Bu iki mekanizma birbirine karıştırılır. Ayrı şeylerdir:
+These two mechanisms are often confused. They are different:
 
-| | Ayrıcalık (privilege) | Güvenlik durumu (security state) |
+| | Privilege | Security state |
 |---|---|---|
-| Kontrol eden | `CONTROL.nPRIV` + mod | TrustZone / SAU |
-| Değerleri | Privileged / Unprivileged | Secure / Non-secure |
-| Var mı? | Her Cortex-M'de | Yalnızca Security Extension varsa |
-| Bu derste | Kapsam içinde | Kapsam dışı (ders 16) |
+| Controlled by | `CONTROL.nPRIV` + mode | TrustZone / SAU |
+| Values | Privileged / Unprivileged | Secure / Non-secure |
+| Available? | On every Cortex-M | Only with the Security Extension |
+| In this lesson | In scope | Out of scope (Lesson 16) |
 
-**"Unprivileged", "Non-secure" demek değildir.** İkisi dikeydir: Secure
-tarafın ayrıcalıksız kodu da olabilir, Non-secure tarafın ayrıcalıklı kodu
-da. Bu ders tek güvenlik durumunda (Secure) çalışır ve yalnızca ayrıcalık
-eksenini değiştirir.
+**“Unprivileged” does not mean “Non-secure.”** They are orthogonal: the Secure side can contain unprivileged code, and the Non-secure side can contain privileged code. This lesson runs in a single security state (Secure) and changes only the privilege dimension.
 
 ---
 
 ## Mental Model
 
-Ayrıcalığı **tek yönlü bir turnike** gibi düşün:
+Think of privilege as a **one-way turnstile**:
 
 ```text
 Thread Mode
 Privileged                 CONTROL.nPRIV = 0
       |
-      |  nPRIV = 1  (ayricalikli kod kendi karariyla geciyor)
+      |  nPRIV = 1  (privileged code chooses to transition)
       v
 Thread Mode
 Unprivileged               CONTROL.nPRIV = 1
       |
-      |  dogrudan CONTROL yazma denemesi  -->  YOK SAYILIR
+      |  attempt to write CONTROL directly  -->  IGNORED
       |
       |  SVC #imm
       v
-================= exception siniri =================
+================= exception boundary =================
 Handler Mode
-Privileged (her zaman)     IPSR = 11 (SVCall)
+Privileged (always)     IPSR = 11 (SVCall)
       |
-      |  ayricalikli servis calisir
-      |  handler POLITIKAYI belirler
+      |  privileged service runs
+      |  handler determines POLICY
       |  exception return
       v
 Thread Mode
-(ayricaligi handler'in karari belirler)
+(handler decision determines privilege)
 ```
 
-Turnikeden kendi başına geri dönemezsin. Geri dönmek için görevlinin
-(handler'ın) kapıyı açması gerekir — ve görevli açıp açmamakta serbesttir.
+You cannot go back through the turnstile by yourself. To return, the attendant (the handler) must open the gate—and the attendant is free to decide whether to do so.
 
 ---
 
@@ -114,41 +97,41 @@ Turnikeden kendi başına geri dönemezsin. Geri dönmek için görevlinin
 flowchart TD
     P["Thread Mode · Privileged<br/>CONTROL.nPRIV = 0<br/>SP = PSP"]
     U["Thread Mode · Unprivileged<br/>CONTROL.nPRIV = 1<br/>SP = PSP"]
-    F["Doğrudan nPRIV = 0 denemesi<br/>YOK SAYILIR"]
+    F["Direct attempt at nPRIV = 0<br/>IGNORED"]
     H["Handler Mode · Privileged<br/>IPSR = 11 (SVCall)<br/>SP = MSP"]
-    R["Thread Mode<br/>ayrıcalık = handler politikası"]
+    R["Thread Mode<br/>privilege = handler policy"]
 
     P -->|"__set_CONTROL(nPRIV=1)"| U
-    U -.->|başarısız| F
+    U -.->|unsuccessful| F
     F -.-> U
     U -->|"SVC #imm"| H
     H -->|"exception return<br/>EXC_RETURN = 0xFFFFFFFD"| R
 ```
 
-Stack tarafı, ders 04 ile birleşiyor:
+The stack side connects to Lesson 04:
 
 ```text
-Thread PSP uzerinde calisiyordu
+Thread was running on PSP
         |
         v  SVC
-donanim 8 word exception frame'i PSP'ye yazar
+hardware writes the 8-word exception frame to PSP
         |
         v
-Handler MSP uzerinde calisir (giriste SPSEL temizlenir)
+Handler runs on MSP (SPSEL cleared on entry)
         |
         v  exception return
-donanim frame'i PSP'den geri yukler, Thread devam eder
+hardware restores the frame from PSP; Thread resumes
 ```
 
 ---
 
 ## Tiny Example
 
-Kaynaklar: [`example/main.c`](example/main.c),
+Sources: [`example/main.c`](example/main.c),
 [`example/svc_handler.S`](example/svc_handler.S),
-[`example/psp_start.S`](example/psp_start.S) (ders 04'ten, değişmeden).
+[`example/psp_start.S`](example/psp_start.S) (unchanged from Lesson 04).
 
-### Handler sınırı
+### The handler boundary
 
 ```asm
 SVC_Handler:
@@ -160,33 +143,22 @@ SVC_Handler:
     b       svc_dispatch        /* lr KORUNUR -> donusu o yapar       */
 ```
 
-Neden assembly? İki sebep. Birincisi `lr`: donanım handler'a girerken oraya
-`EXC_RETURN` yazar ve bu, frame'in hangi stack'te olduğunu söyleyen **tek**
-kaynaktır; sıradan bir C prologu onu stack'e itip bozabilir. İkincisi frame
-adresi: C'den güvenilir biçimde elde edilemez.
+Why assembly? Two reasons. First, `lr`: hardware writes `EXC_RETURN` there on handler entry, and this is the **only** source that tells us which stack holds the frame; an ordinary C prologue can push it onto the stack and overwrite it. Second, the frame address cannot be obtained reliably from C.
 
-`bl` değil `b` kullanılması bilinçli: `lr`'ye dokunmadığımız için hâlâ
-`EXC_RETURN`'ü taşıyor. `svc_dispatch` normal bir C fonksiyonu gibi dönmeye
-çalıştığında (`pop {..., pc}`) o değer `pc`'ye yazılır ve exception return
-gerçekleşir.
+Using `b` rather than `bl` is deliberate: because we do not touch `lr`, it still carries `EXC_RETURN`. When `svc_dispatch` tries to return like an ordinary C function (`pop {..., pc}`), that value is written to `pc`, triggering exception return.
 
-**Desteklenen varsayımlar:** standart 8 word frame (soft-float build, FP
-bağlamı yok), tek güvenlik durumu, ek durum bağlamı yok (`DCRS = 1`). Bu
-genel bir exception çerçevesi **değildir**; her Armv8-M frame biçimini
-karşıladığını iddia etmiyoruz.
+**Supported assumptions:** a standard 8-word frame (soft-float build, no FP context), one security state, and no additional state context (`DCRS = 1`). This is **not** a general exception framework; we do not claim to support every Armv8-M frame format.
 
-### SVC numarası nasıl bulunuyor?
+### How is the SVC number found?
 
 ```c
 const uint8_t *svc_instr = (const uint8_t *)(frame->pc - 2u);
 uint32_t svc_number = (uint32_t)svc_instr[0];
 ```
 
-Yığılmış PC, `SVC` komutundan **sonraki** komutu gösterir. Thumb'da `SVC`'nin
-T1 kodlaması **16 bittir**: `0b11011111:imm8`. Yani komut `pc - 2`'dedir ve
-düşük byte `imm8`'dir.
+The stacked PC points to the instruction **after** `SVC`. In Thumb, the T1 encoding of `SVC` is **16 bits**: `0b11011111:imm8`. Therefore, the instruction is at `pc - 2`, and the low byte is `imm8`.
 
-Bu build'de ölçülen değerler:
+Values measured in this build:
 
 ```text
 10000194:  df01   svc  1
@@ -194,14 +166,11 @@ Bu build'de ölçülen değerler:
 100001a2:  df04   svc  4
 ```
 
-`df01` → `0xDF` üst byte, `0x01` `imm8`. Teknik doğrulandı.
+`df01` → `0xDF` upper byte, `0x01` `imm8`. The technique is verified.
 
-> **Bunu genelleme.** `pc - 2` yalnızca 16 bitlik `SVC` komutu için geçerli
-> bir hesaptır. "Her exception'da hatalı komut `pc - 2`'dedir" diye bir kural
-> **yoktur** — fault'larda yığılmış PC'nin anlamı exception türüne bağlıdır
-> (precise / imprecise). Ders 08 bunu açacak.
+> **Do not generalize this.** `pc - 2` is valid only for the 16-bit `SVC` instruction. There is **no** rule saying “the faulty instruction is at `pc - 2` for every exception”—for faults, the meaning of the stacked PC depends on the exception type (precise / imprecise). Lesson 08 will explore this.
 
-### Servisler
+### Services
 
 ```c
 #define SVC_INCREMENT      1u
@@ -209,9 +178,7 @@ Bu build'de ölçülen değerler:
 #define SVC_RESTORE_PRIV   4u
 ```
 
-Sonuç `frame->r0`'a yazılır. Exception return sırasında donanım o word'ü
-Thread'in `R0`'ına geri yükler; çağıran kod onu fonksiyon dönüş değeri gibi
-okur (AAPCS: `r0` = dönüş değeri).
+The result is written to `frame->r0`. During exception return, hardware restores that word into the Thread's `R0`; the calling code reads it like a function return value (AAPCS: `r0` = return value).
 
 ---
 
@@ -223,13 +190,13 @@ cmake --build --preset debug --target 05-privilege-svc
 ./scripts/run-qemu.sh build/debug/lessons/05-privilege-svc/05-privilege-svc.elf
 ```
 
-QEMU'dan çıkış: `Ctrl-A` sonra `X`.
+To exit QEMU: `Ctrl-A`, then `X`.
 
 ---
 
 ## Expected Output
 
-Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
+Actual output (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 
 ```text
 ===== LESSON 05: PRIVILEGE & SVC =====
@@ -275,45 +242,30 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 ===== END =====
 ```
 
-> Adresler build'e özeldir.
+> Addresses are build-specific.
 
-### Neden ayrıcalıksız bölüm sessiz?
+### Why is the unprivileged section silent?
 
-Bu tasarımın nedeni, aşağıda incelenen UART erişim davranışı.
+This design is explained by the UART access behavior examined below.
 
-İlk sürümde ayrıcalıksız kod doğrudan `console_line()` çağırıyordu ve
-**hiçbir şey basılmıyordu**. Program çalışmaya devam ediyor, ama çıktı yok.
-Bu yüzden ayrıcalıksız bölüm artık gözlemleri RAM'e kaydediyor ve ayrıcalık
-geri geldikten sonra basıyor.
+In the first version, unprivileged code called `console_line()` directly, and **nothing was printed**. The program kept running, but there was no output. The unprivileged section therefore now records observations in RAM and prints them after privilege has been restored.
 
-Sebep `[4]` satırlarında ölçülü: aynı UART register'ı ayrıcalıklıyken `173`,
-ayrıcalıksızken `0` okunuyor.
+The reason is measured in the `[4]` lines: the same UART register reads `173` when privileged and `0` when unprivileged.
 
-Bu **MPU değildir** — MPU bu derste hiç etkinleştirilmedi. Sebep SoC
-seviyesinde bir **Peripheral Protection Controller (PPC)**. QEMU v8.2.2
-`hw/misc/tz-ppc.c` içindeki `tz_ppc_check()`, erişim "usermode" ise ve o
-portun `cfg_ap` (access permission) biti sıfırsa işlemi **bloklar**; blok
-davranışı `cfg_sec_resp` sıfırken hata üretmek yerine okumaya `0` döndürmek
-(RAZ/WI) şeklindedir. Hiçbir yazılım bu izni açmadığı için varsayılan
-"yalnızca ayrıcalıklı".
+This is **not the MPU**—the MPU was never enabled in this lesson. The cause is a SoC-level **Peripheral Protection Controller (PPC)**. In QEMU v8.2.2, `tz_ppc_check()` in `hw/misc/tz-ppc.c` **blocks** an access if it is “usermode” and that port's `cfg_ap` (access permission) bit is zero; with `cfg_sec_resp` zero, blocking returns `0` on reads rather than raising an error (RAZ/WI). No software has enabled this permission, so the default is “privileged only.”
 
-Buradan çıkarılacak iki ders:
+Two lessons follow:
 
-1. **Ayrıcalık sınırı yalnızca çekirdekte değil, sistemde de uygulanır.**
-   MPU ve PPC farklı bloklardır.
-2. **Sessiz başarısızlık gerçek bir tehlikedir.** Fault yok, uyarı yok;
-   sadece yanlış veri (`0`). Ders 03'teki callee-saved ihlaliyle aynı sınıf.
+1. **The privilege boundary is enforced in the system as well as in the core.** MPU and PPC are separate blocks.
+2. **Silent failure is a real danger.** No fault, no warning; just incorrect data (`0`). This is the same class of problem as the callee-saved violation in Lesson 03.
 
-Bir ölçüm daha dikkat çekici: `PSP_UNPRIV = 0x00000000`. Ayrıcalıksız Thread,
-`MRS PSP` ile kendi stack pointer'ını **okuyamıyor** — dönen değer sıfır.
-Oysa `MRS CONTROL` çalışıyor (`0x3` okundu). Yani hangi özel register'ın
-ayrıcalıksız okunabildiği register'a göre değişir; varsayma, ölç.
+Another measurement is striking: `PSP_UNPRIV = 0x00000000`. An unprivileged Thread **cannot read** its own stack pointer with `MRS PSP`—the returned value is zero. Yet `MRS CONTROL` works (`0x3` was read). Which special registers can be read unprivileged therefore depends on the register; measure rather than assume.
 
 ---
 
 ## Observe in GDB
 
-Her durakta mod, ayrıcalık ve stack durumunu kontrol edeceğiz.
+At each stop, we will inspect the mode, privilege, and stack state.
 
 Terminal 1:
 
@@ -333,7 +285,7 @@ target remote :3333
 source scripts/gdb/cortex-m.gdb
 ```
 
-### A — Düşürmeden önce
+### A — Before dropping privilege
 
 ```gdb
 (gdb) break thread_entry
@@ -345,7 +297,7 @@ source scripts/gdb/cortex-m.gdb
 (gdb) p/x $psp
 ```
 
-Gerçek çıktı:
+Actual output:
 
 ```text
 Mode      : Thread Mode
@@ -355,10 +307,9 @@ $control = 0x2       $sp = 0x30000330
 $msp     = 0x30007ff0  $psp = 0x30000330
 ```
 
-**Gözlem:** Başlangıç durumu ders 04'ün bıraktığı yer — Thread Mode,
-ayrıcalıklı, PSP aktif (`CONTROL` bit 1 = 1). `$sp == $psp`, `$msp` ayrı.
+**Observation:** The initial state is where Lesson 04 left us—Thread Mode, privileged, PSP active (`CONTROL` bit 1 = 1). `$sp == $psp`, while `$msp` is separate.
 
-### B / C — Ayrıcalık düştükten ve self-promotion denemesinden sonra
+### B / C — After dropping privilege and attempting self-promotion
 
 ```gdb
 (gdb) break uart_bauddiv_probe
@@ -375,14 +326,11 @@ Stack     : PSP (0x30000328)
 $control = 0x3
 ```
 
-**Gözlem:** Mod hâlâ **Thread** — ayrıcalık düşmesi
-mod değiştirmez. Ve bu duruşa gelinmeden önce kod `nPRIV = 0` yazmayı
-denemişti; `$control` hâlâ `0x3`. **Yazma yok sayıldı.**
+**Observation:** The mode is still **Thread**—dropping privilege does not change modes. Before reaching this stop, the code tried to write `nPRIV = 0`; `$control` is still `0x3`. **The write was ignored.**
 
-`0x3` okuması ayrıca `CONTROL`'ün iki alanını bir arada gösteriyor:
-bit 0 `nPRIV = 1` (ayrıcalıksız) ve bit 1 `SPSEL = 1` (PSP).
+Reading `0x3` also shows both `CONTROL` fields together: bit 0 `nPRIV = 1` (unprivileged) and bit 1 `SPSEL = 1` (PSP).
 
-### D — SVC handler girişinde
+### D — At SVC handler entry
 
 ```gdb
 (gdb) delete
@@ -409,20 +357,14 @@ $sp = 0x30007ff0        $msp = 0x30007ff0     $psp = 0x30000308
 frame    = 0x30000308
 ```
 
-**GDB ile gözlemlenen durum:**
+**State observed with GDB:**
 
-1. `IPSR = 11` → **SVCall**. Vektör tablosunda 11. girdi (`cm-vectors` ile
-   doğrula).
-2. **Handler ayrıcalıklı.** `CONTROL = 0x1` yani `nPRIV` hâlâ 1 — ama bu
-   *kesilen Thread'in* durumu. Handler bundan bağımsız olarak ayrıcalıklıdır.
-   `cm-mode` bu ayrımı açıkça yazıyor.
-3. **Stack değişti.** `$sp == $msp`, oysa Thread PSP kullanıyordu. `CONTROL`
-   bit 1 de temizlendi (`0x3` → `0x1`): **donanım** exception girişinde
-   `SPSEL`'i sıfırladı.
-4. `frame == $psp` → sarmalayıcının `EXC_RETURN` bit 2'den bulduğu adres,
-   kesilen Thread'in stack'i.
+1. `IPSR = 11` → **SVCall**. Entry 11 in the vector table (verify with `cm-vectors`).
+2. **The handler is privileged.** `CONTROL = 0x1`, so `nPRIV` is still 1—but this is the state of the *interrupted Thread*. The handler is privileged independently of it. `cm-mode` states this distinction explicitly.
+3. **The stack changed.** `$sp == $msp`, although the Thread was using PSP. `CONTROL` bit 1 was also cleared (`0x3` → `0x1`): **hardware** cleared `SPSEL` on exception entry.
+4. `frame == $psp` → the address the wrapper found using `EXC_RETURN` bit 2 is the interrupted Thread's stack.
 
-### E / F — Kesilen frame
+### E / F — The interrupted frame
 
 ```gdb
 (gdb) cm-exc-return $lr
@@ -441,11 +383,9 @@ stacked PC = 0x10000196
 xPSR       = 0x61000000
 ```
 
-`cm-frame`'in ön koşulları burada sağlanıyor: standart frame, tek güvenlik
-durumu, stacking hatası yok. (Ön koşullar sağlanmasaydı komut reddederdi —
-bkz. `docs/DEBUGGING.md`.)
+The preconditions for `cm-frame` hold here: a standard frame, one security state, and no stacking error. (If they did not hold, the command would reject it—see `docs/DEBUGGING.md`.)
 
-SVC numarasının nasıl okunduğunu inceleyelim:
+Let us inspect how the SVC number is read:
 
 ```gdb
 (gdb) x/2i (*(unsigned int*)($psp+24))-2
@@ -456,11 +396,9 @@ SVC numarasının nasıl okunduğunu inceleyelim:
    0x10000196 <thread_entry+106>:  str  r0, [r4, #28]
 ```
 
-**Gözlem:** Yığılmış PC `0x10000196`, yani `SVC`'den **sonraki**
-komut. `pc - 2 = 0x10000194` ve o adreste `svc 1` var. Dispatcher'ın
-`frame->pc - 2` hesabı doğru.
+**Observation:** The stacked PC is `0x10000196`, the instruction **after** `SVC`. `pc - 2 = 0x10000194`, and that address contains `svc 1`. The dispatcher's `frame->pc - 2` calculation is correct.
 
-### G — Thread'e dönüş
+### G — Returning to Thread
 
 ```gdb
 (gdb) delete
@@ -479,36 +417,31 @@ $control = 0x3
 r0 = 0x1
 ```
 
-**GDB ile gözlemlenen durum:**
+**State observed with GDB:**
 
-1. **Thread hâlâ ayrıcalıksız.** `SVC` çalıştırmak Thread'i otomatik olarak
-   yükseltmedi. Kapıdan geçmek yetki kazandırmaz; handler ne yaptıysa o olur.
-2. **Servis sonucu geldi.** `r0 = 1` — dispatcher'ın `frame->r0`'a yazdığı
-   sayaç değeri, exception return sırasında donanım tarafından `R0`'a geri
-   yüklendi.
+1. **The Thread is still unprivileged.** Executing `SVC` did not automatically promote it. Passing through the gate does not grant privilege; the outcome depends on what the handler did.
+2. **The service result arrived.** `r0 = 1`—the counter value that the dispatcher wrote to `frame->r0` was restored to `R0` by hardware during exception return.
 
 ---
 
 ## Experiment
 
-**Deney 1 — Aynı exception, farklı servis.**
+**Experiment 1 — Same exception, different service.**
 
-Örnek firmware iki farklı immediate kullanıyor: `SVC #1` (increment) ve
-`SVC #4` (ayrıcalık geri verme). İkisi de **aynı** SVCall exception'ını
-tetikler (`IPSR = 11`); ayrımı dispatcher yapar.
+The example firmware uses two different immediates: `SVC #1` (increment) and `SVC #4` (restore privilege). Both trigger the **same** SVCall exception (`IPSR = 11`); the dispatcher distinguishes them.
 
-Doğrula: `break svc_dispatch`, sonra her duruşta
+Verify: `break svc_dispatch`, then at each stop:
 
 ```gdb
 p/x $psp
 p (*(unsigned char*)((*(unsigned int*)($psp+24))-2))
 ```
 
-İlk iki duruşta `1`, üçüncüde `4` görmelisin.
+You should see `1` at the first two stops and `4` at the third.
 
-**Deney 2 — Ayrıcalığı handler geri veriyor.**
+**Experiment 2 — The handler restores privilege.**
 
-`SVC #4` servisi şunu yapıyor:
+The `SVC #4` service does this:
 
 ```c
 case SVC_RESTORE_PRIV:
@@ -516,35 +449,28 @@ case SVC_RESTORE_PRIV:
     __ISB();
 ```
 
-Bu satırı **kim** çalıştırıyor? Handler — yani ayrıcalıklı kod. Thread kendini
-yükseltmiyor; ayrıcalıklı taraf, dönecek bağlam için politika kararı veriyor.
+**Who** executes this line? The handler—privileged code. The Thread is not promoting itself; the privileged side is making a policy decision for the context to which it will return.
 
-Aynı satır Thread'den çalıştırıldığında yok sayılıyordu (`[3]` bölümü). Aynı
-kod, farklı bağlam, farklı sonuç. **Ayrıcalığı belirleyen şey kodun kendisi
-değil, nereden çalıştığıdır.**
+The same line was ignored when executed from Thread (section `[3]`). Same code, different context, different result. **Privilege is determined by the context in which code runs, not by the code itself.**
 
-Gerçek bir RTOS'ta bu genellikle yapılmaz — görevler ayrıcalıksız kalır. Burada
-bilerek yapıyoruz ki mekanizma görünsün.
+In a real RTOS, this is usually not done—tasks remain unprivileged. We do it deliberately here to expose the mechanism.
 
-**Deney 3 — `MRS` ayrıcalıksızken ne okuyor?**
+**Experiment 3 — What does `MRS` read when unprivileged?**
 
-`PSP_UNPRIV = 0` ama `CONTROL_UNPRIV = 0x3` ölçüldü. Başka özel register'lar
-ne yapıyor? `MSP`, `PRIMASK`, `IPSR`'yi ayrıcalıksız bağlamda okuyup kaydet ve
-ayrıcalıklı okumalarla karşılaştır. Hangi kuralı buluyorsun?
+We measured `PSP_UNPRIV = 0` but `CONTROL_UNPRIV = 0x3`. What do other special registers do? Read and record `MSP`, `PRIMASK`, and `IPSR` in an unprivileged context, then compare them with privileged reads. What rule do you find?
 
 ---
 
 ## Break It
 
-Tanımsız bir servis numarası istendiğinde ne olmalı? **Kesinlikle rastgele bir
-iş yapılmamalı.** Bir syscall dispatcher'ının ilk güvenlik özelliği budur.
+What should happen when an undefined service number is requested? **It must never perform an arbitrary operation.** This is the first security property of a syscall dispatcher.
 
 ```bash
 cmake --build --preset debug --target 05-privilege-svc-broken
 ./scripts/run-qemu.sh build/debug/lessons/05-privilege-svc/05-privilege-svc-broken.elf
 ```
 
-Bozulmuş sürüm `SVC #99` çağırıyor. Gerçek çıktı:
+The broken version calls `SVC #99`. Actual output:
 
 ```text
 [  UNKNOWN_SVC] 99
@@ -557,19 +483,15 @@ Bozulmuş sürüm `SVC #99` çağırıyor. Gerçek çıktı:
 ===== END =====
 ```
 
-Bu Break It bilerek **fault üretmiyor**. Crash göstermek kolaydır; asıl
-öğretici olan, dispatcher'ın tanımadığı isteği reddedip sistemi sağlam
-bırakması. Thread normal şekilde devam ediyor ve tanımlı bir hata değeri
-alıyor.
+This Break It deliberately **does not produce a fault**. Demonstrating a crash is easy; the more instructive behavior is for the dispatcher to reject an unknown request and leave the system intact. The Thread continues normally and receives a defined error value.
 
-`UNKNOWN_SVC` satırının nereden basıldığına dikkat: **handler'dan**. Thread o
-sırada ayrıcalıksız olduğu için UART'a yazamıyordu.
+Notice where the `UNKNOWN_SVC` line is printed: **from the handler**. The Thread was unprivileged at that point and could not write to the UART.
 
 ---
 
 ## Debug It
 
-Cevapları vermiyorum; ölçümü ve soruları veriyorum.
+I am giving you the measurements and questions, not the answers.
 
 ```bash
 cmake --build --preset debug --target debug-05-privilege-svc-broken
@@ -588,18 +510,13 @@ cm-mode
 p/x $lr
 ```
 
-Cevaplaman gereken sorular:
+Questions to answer:
 
-1. `SVC #99` ile `SVC #1` arasında **exception numarası** farkı var mı?
-   `IPSR`'yi ikisinde de oku. Ne buldun, neden?
-2. Dispatcher `99` sayısını nereden okudu? Bu adres `SVC #1` durumundakinden
-   neden farklı?
-3. `frame->r0 = SVC_ERROR_UNKNOWN` satırı olmasaydı Thread ne okurdu?
-   (İpucu: `R0`'ın exception öncesi değeri neydi?)
-4. Dispatcher `default` dalında sessizce hiçbir şey yapmasaydı, bu bir
-   **güvenlik açığı** olur muydu? Hangi senaryoda?
-5. `UNKNOWN_SVC` satırı handler'dan basılıyor. Aynı `console_kv_u32()`
-   çağrısını Thread'den ayrıcalıksızken yapsaydın ne olurdu? Neden?
+1. Is there any difference in **exception number** between `SVC #99` and `SVC #1`? Read `IPSR` in both cases. What did you find, and why?
+2. Where did the dispatcher read the number `99`? Why is this address different from the one in the `SVC #1` case?
+3. What would the Thread read without the `frame->r0 = SVC_ERROR_UNKNOWN` line? (Hint: what was the value of `R0` before the exception?)
+4. If the dispatcher silently did nothing in its `default` branch, could that be a **security vulnerability**? In what scenario?
+5. The `UNKNOWN_SVC` line is printed from the handler. What would happen if you made the same `console_kv_u32()` call from an unprivileged Thread? Why?
 
 ---
 
@@ -607,29 +524,28 @@ Cevaplaman gereken sorular:
 
 ### Exercise 01 — Add an SVC Service
 
-Hazır gelenler: PSP Thread bağlamı, ayrıcalık düşürme, SVC dispatcher ve
-çalışan bir servis (`SVC #1`).
+Provided: a PSP Thread context, privilege drop, SVC dispatcher, and one working service (`SVC #1`).
 
-Senin ekleyeceğin: **`SVC #2` → `get_service_version()`**
+You will add: **`SVC #2` → `get_service_version()`**
 
 ```text
 exercises/01-add-svc-service/main.c
 ```
 
-Gereksinimler:
+Requirements:
 
-- istek **ayrıcalıksız** Thread Mode'dan gelsin (zaten öyle çağrılıyor)
-- dispatcher `SVC #2`'yi tanısın
-- servis **ayrıcalıklı** Handler Mode'da çalışsın
-- sonuç `0x00010002` olarak Thread'e dönsün
-- Thread normal şekilde devam etsin
+- the request must come from **unprivileged** Thread Mode (it is already called that way)
+- the dispatcher must recognize `SVC #2`
+- the service must run in **privileged** Handler Mode
+- the result must return to the Thread as `0x00010002`
+- the Thread must continue normally
 
 ```bash
 cmake --build --preset debug --target 05-exercise-svc2
 ./scripts/run-qemu.sh build/debug/lessons/05-privilege-svc/05-exercise-svc2.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [  UNKNOWN_SVC] 2
@@ -639,30 +555,26 @@ Başlangıç çıktısı (gerçek):
 [  CHECK_SVC2_VERSION] FAIL
 ```
 
-`SVC #2` şu an hiçbir `case`'e uymuyor, `default` dalına düşüyor. Bu
-**beklenen başlangıç durumudur**, bir bug değil.
+`SVC #2` currently matches no `case` and falls into `default`. This is the **expected starting state**, not a bug.
 
-**Doğrulama ölçütü:** `CHECK_SVC2_VERSION` `PASS` olmalı ve diğer bütün
-`CHECK_*` satırları `PASS` kalmalı.
+**Verification criterion:** `CHECK_SVC2_VERSION` must become `PASS`, and every other `CHECK_*` line must remain `PASS`.
 
-Cevaplaman gereken soru: sonucu Thread'e **nasıl** ulaştıracaksın? `return`
-yazamazsın — dispatcher'ın dönüş değeri exception return'e gider, Thread'e
-değil. `SVC_INCREMENT` servisine bak ve neden oraya yazdığını anla.
+The question you must answer: **how** will you deliver the result to the Thread? You cannot write `return`—the dispatcher's return value goes to exception return, not to the Thread. Look at the `SVC_INCREMENT` service and understand why it writes there.
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-add-svc-service/`](solutions/01-add-svc-service/) | `05-solution-svc2` |
+| Exercise 01 solution | [`solutions/01-add-svc-service/`](solutions/01-add-svc-service/) | `05-solution-svc2` |
 
 ```bash
 cmake --build --preset debug --target 05-solution-svc2
 ./scripts/run-qemu.sh build/debug/lessons/05-privilege-svc/05-solution-svc2.elf
 ```
 
-Gerçek çıktı (ilgili satırlar):
+Actual output (relevant lines):
 
 ```text
 [6] SVC #2 (get_service_version)
@@ -670,33 +582,31 @@ Gerçek çıktı (ilgili satırlar):
 [  CHECK_SVC2_VERSION] PASS
 ```
 
-Çözüm README'si `SVC` komutunun nasıl üretildiğini, immediate'in nasıl
-çözüldüğünü, argüman/sonucun nerede durduğunu ve exception return'ün Thread'i
-nasıl devam ettirdiğini anlatıyor.
+The solution README explains how the `SVC` instruction is emitted, how its immediate is decoded, where the argument/result resides, and how exception return resumes the Thread.
 
 ---
 
 ## What I Learned
 
-> Bu bölüm senin. Deneyleri yaptıktan sonra doldur.
+> This section is yours. Fill it in after completing the experiments.
 
-**Ayrıcalığın tek yönlü olmasını kendi cümlemle:**
-
-<!-- -->
-
-**Handler Mode'un ayrıcalığı ile `CONTROL.nPRIV` arasındaki ilişki:**
+**Privilege being one-way, in my own words:**
 
 <!-- -->
 
-**`SVC` kapıdır, politika değildir — bu ne demek:**
+**The relationship between Handler Mode privilege and `CONTROL.nPRIV`:**
 
 <!-- -->
 
-**Beni şaşırtan şey:**
+**`SVC` is a gate, not a policy—what this means:**
 
-<!-- örn: ayrıcalıksız kodun UART'a yazamaması, ya da MRS PSP'nin 0 dönmesi -->
+<!-- -->
 
-**Ders 06'ya taşıdığım soru:**
+**What surprised me:**
+
+<!-- e.g. unprivileged code being unable to write to the UART, or MRS PSP returning 0 -->
+
+**The question I am taking into Lesson 06:**
 
 <!-- -->
 
@@ -704,98 +614,72 @@ nasıl devam ettirdiğini anlatıyor.
 
 ## Quick Check
 
-1. `CONTROL.nPRIV` tam olarak neyi kontrol eder? Handler Mode'un ayrıcalığını
-   da kapsar mı?
+1. What exactly does `CONTROL.nPRIV` control? Does it also cover Handler Mode privilege?
 
-2. Ayrıcalıksız Thread Mode, `nPRIV`'i temizleyerek ayrıcalığını geri
-   alabilir mi? Denediğinde ne olur?
+2. Can unprivileged Thread Mode regain privilege by clearing `nPRIV`? What happens when it tries?
 
-3. `SVC_Handler` neden ayrıcalıklı iş yapabiliyor? Bunu sağlayan şey handler'ın
-   kodu mu, başka bir şey mi?
+3. Why can `SVC_Handler` perform privileged operations? Is this enabled by the handler's code, or by something else?
 
-4. "Unprivileged" ile "Non-secure" aynı şey mi? Farkı bir cümleyle söyle.
+4. Are “Unprivileged” and “Non-secure” the same thing? State the difference in one sentence.
 
-5. `SVC` oluştuğunda Thread Mode PSP kullanıyorsa, Thread'in exception frame'i
-   **hangi** stack'te saklanır?
+5. If Thread Mode uses PSP when `SVC` occurs, **which** stack holds the Thread's exception frame?
 
-6. Handler Mode hangi stack'i kullanır? Bunu yazılım mı ayarlar, donanım mı?
+6. Which stack does Handler Mode use? Is this selected by software or hardware?
 
-7. `SVC` çalıştırmak, dönen Thread'i otomatik olarak ayrıcalıklı yapar mı?
-   Cevabını bu dersin ölçümüyle gerekçelendir.
+7. Does executing `SVC` automatically make the returning Thread privileged? Justify your answer using this lesson's measurement.
 
-8. **(Reasoning)** Bu implementasyonda `SVC` immediate'i neden yığılmış
-   `PC - 2`'den okunabiliyor? Bu hesap her exception için geçerli mi?
+8. **(Reasoning)** Why can this implementation read the `SVC` immediate from the stacked `PC - 2`? Is this calculation valid for every exception?
 
-9. **(Reasoning)** Bu, gerçek bir izole syscall sınırı olmak için neyi
-   eksik? Ayrıcalıksız kod şu an `g_service_counter` değişkenine doğrudan
-   yazabilir mi? Nasıl kontrol edersin?
+9. **(Reasoning)** What is missing for this to be a genuinely isolated syscall boundary? Can unprivileged code currently write directly to `g_service_counter`? How would you check?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
-> — kendi cevabını yazdıktan sonra aç.
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
+> — open them after writing your own answers.
 
 ---
 
 ## Takeaway
 
-- **Mod ve ayrıcalık ayrı eksenlerdir.** Modu `IPSR` belirler; Thread'in
-  ayrıcalığını `CONTROL.nPRIV`. Handler Mode **her zaman** ayrıcalıklıdır.
-- **Ayrıcalık tek yönlü bırakılır.** Ayrıcalıklı Thread `nPRIV = 1` yazabilir;
-  ayrıcalıksız Thread'in `nPRIV = 0` yazma denemesi **yok sayılır**.
-- **`SVC` kapıdır, politika değildir.** Handler ayrıcalıklı çalışır, ama
-  Thread'e ayrıcalık verip vermeyeceğine handler karar verir.
-- Thread PSP'deyken exception olursa frame **PSP'ye** yazılır, handler **MSP**
-  üzerinde çalışır; `SPSEL`'i donanım temizler.
-- **`privilege != security state`** ve **`unprivileged != Non-secure`**.
-  Farklı mekanizmalar, dikey eksenler.
-- Bu aşamada servis sınırı **mimari ayrıcalık akışıdır, bellek izolasyonu
-  değil.** Ders 06 MPU ile gerçek korumayı ekler.
+- **Mode and privilege are separate dimensions.** `IPSR` determines the mode; `CONTROL.nPRIV` determines Thread privilege. Handler Mode is **always** privileged.
+- **Privilege can only be dropped in one direction.** A privileged Thread can write `nPRIV = 1`; an unprivileged Thread's attempt to write `nPRIV = 0` is **ignored**.
+- **`SVC` is a gate, not a policy.** The handler runs privileged, but decides whether to give the Thread privilege.
+- When an exception occurs while the Thread uses PSP, the frame is written to **PSP**, and the handler runs on **MSP**; hardware clears `SPSEL`.
+- **`privilege != security state`** and **`unprivileged != Non-secure`**. Different mechanisms, orthogonal dimensions.
+- At this stage, the service boundary is **architectural privilege flow, not memory isolation.** Lesson 06 adds actual protection with the MPU.
 
 ---
 
-## Known Boundaries — MPU'suz neyin korunmadığı
+## Known Boundaries — What is not protected without an MPU
 
-Bu ders bilerek eksik. Şu an **korunmayan** şeyler:
+This lesson is deliberately incomplete. What is **not protected** yet:
 
-| Şey | Durum |
+| Item | State |
 |---|---|
-| `g_service_counter` | Sıradan RAM. Ayrıcalıksız kod ona **doğrudan** yazabilir; SVC yolu bir sözleşmedir, donanım kısıtı değil |
-| Thread stack'i ↔ kernel verisi | Aynı adres uzayında, ayrım yok |
-| Kod bölgesi | Ayrıcalıksız koddan okunabilir |
-| Bir görevin diğerinin stack'ine yazması | Engellenmiyor |
+| `g_service_counter` | Ordinary RAM. Unprivileged code can write to it **directly**; the SVC route is a convention, not a hardware restriction |
+| Thread stack ↔ kernel data | Same address space, no separation |
+| Code region | Readable from unprivileged code |
+| One task writing to another task's stack | Not prevented |
 
-Ölçülen tek gerçek kısıt: **çevre birimi erişimi** (`UART_BAUDDIV_UNPRIV = 0`)
-— ve o da MPU'dan değil, SoC'nin PPC'sinden geliyor.
+The only actual restriction measured is **peripheral access** (`UART_BAUDDIV_UNPRIV = 0`)—and it comes from the SoC's PPC, not the MPU.
 
-Bu ders **ayrıcalık akışını** kurar; tek başına SVC kullanmak bellek
-izolasyonu sağlamaz. Ders 06 MPU ile
-`g_service_counter`'ı ayrıcalıksız koda kapatacak; o zaman doğrudan yazma
-denemesi bir MemManage fault üretecek.
+This lesson establishes **privilege flow**; using SVC alone does not provide memory isolation. Lesson 06 will use the MPU to deny unprivileged access to `g_service_counter`; a direct write attempt will then produce a MemManage fault.
 
 ---
 
 ## Official References
 
-- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — `CONTROL.nPRIV`,
-  Thread/Handler Mode, exception entry ve `SPSEL`'in temizlenmesi, exception
-  frame yerleşimi, `EXC_RETURN`, `SVC` komut kodlaması (T1, 16 bit).
+- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — `CONTROL.nPRIV`, Thread/Handler Mode, exception entry and clearing `SPSEL`, exception frame layout, `EXC_RETURN`, `SVC` instruction encoding (T1, 16 bit).
   <https://developer.arm.com/documentation/ddi0553/latest/>
-- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numaraları
-  (SVCall = 11), `EXC_RETURN` bit alanları.
+- **Armv8-M Exception Model User Guide (Arm 107706)** — exception numbers (SVCall = 11), `EXC_RETURN` bit fields.
   <https://developer.arm.com/documentation/107706/latest/>
-- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — `CONTROL`, MSP/PSP,
-  SVCall.
+- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — `CONTROL`, MSP/PSP, SVCall.
   <https://developer.arm.com/documentation/100235/latest/>
-- **AAPCS32** — `r0` argüman ve dönüş değeri; servis sonucunun `frame->r0`
-  üzerinden dönmesinin sebebi.
+- **AAPCS32** — `r0` argument and return value; why the service result is returned through `frame->r0`.
   <https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst>
-- **CMSIS-Core (M)** — `__get_CONTROL`, `__set_CONTROL` (içinde `ISB`
-  çalıştırır), `__get_IPSR`, `__get_PSP`, `__ISB`.
+- **CMSIS-Core (M)** — `__get_CONTROL`, `__set_CONTROL` (executes `ISB` internally), `__get_IPSR`, `__get_PSP`, `__ISB`.
   <https://arm-software.github.io/CMSIS_6/latest/Core/index.html>
-- **QEMU v8.2.2, `hw/misc/tz-ppc.c`** — ayrıcalıksız çevre birimi erişiminin
-  neden `0` döndürdüğü (`tz_ppc_check`, `cfg_ap`, `cfg_sec_resp`).
+- **QEMU v8.2.2, `hw/misc/tz-ppc.c`** — why unprivileged peripheral access returns `0` (`tz_ppc_check`, `cfg_ap`, `cfg_sec_resp`).
   <https://github.com/qemu/qemu/blob/v8.2.2/hw/misc/tz-ppc.c>
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
-  `mps2-an505 / cortex-m33`, `debug` preset.
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`, `mps2-an505 / cortex-m33`, `debug` preset.
 
 ---
 

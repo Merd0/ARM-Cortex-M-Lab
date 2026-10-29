@@ -1,119 +1,120 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 04 — Stack, MSP & PSP
 
-`[STANDARD]` · Day 2 · Tahmini süre: 50–70 dk
+`[STANDARD]` · Day 2 · Estimated time: 50–70 min
 
-> **Onarım notu (bağımsız denetim sonrası).** Bu dersin ilk sürümü
-> `CONTROL.SPSEL`'i sıradan bir C fonksiyonunun ortasında değiştiriyordu.
-> Bu geçersizdir ve `-O2`/`-Os` altında `task_stack`'in bir üstüne yazılmasına
-> yol açıyordu. Geçiş artık küçük bir assembly parçası + taze bir C giriş
-> noktası ile yapılıyor. Aşağıdaki bütün ölçümler onarımdan sonra yeniden
-> alınmıştır.
+> **Repair note (after independent audit).** The first version changed
+> `CONTROL.SPSEL` midway through an ordinary C function. This is invalid and
+> caused a write just beyond `task_stack` under `-O2`/`-Os`. The transition now
+> uses a small assembly fragment plus a fresh C entry point. All measurements
+> below were taken again after the repair.
 
 ---
 
 ## Why This Matters
 
-Stack, gömülü sistemlerde "değişkenlerin durduğu yer" değildir. Cortex-M'de
-**yürütme modelinin bir parçasıdır**: fonksiyon dönüş adresleri, kaydedilmiş
-register'lar ve exception geldiğinde donanımın otomatik ittiği durum — hepsi
-oraya gider.
+In embedded systems, the stack is not simply "where variables live." On Cortex-M,
+it is **part of the execution model**: function return addresses, saved registers,
+and the state automatically pushed by hardware on exceptions all go there.
 
-Bunun pratik sonucu şu: stack'i yanlış yapılandırmak "biraz yavaş çalışır"
-değil, **çalışma durumunun bozulması** demektir. Bir RTOS'ta her görevin ayrı
-stack'i vardır; bunu mümkün kılan şey Cortex-M'in iki ayrı stack pointer'a
-sahip olmasıdır. Ders 14 ve 15'teki context switch tamamen bu iki register'ın
-üzerine kurulu.
+The practical consequence: misconfiguring the stack means **corrupting execution
+state**, not "running a little slower." Every RTOS task has its own stack;
+Cortex-M's two separate stack pointers make this possible. The context switch in
+Lessons 14 and 15 is built entirely on these two registers.
 
-Bu ders exception stacking'in tamamını anlatmaz — orası ders 07/08. Burada
-zinciri kuruyoruz: `fonksiyon çağrısı → SP → PUSH/POP → MSP/PSP → SPSEL`.
+This lesson does not cover all exception stacking — that belongs to Lessons
+07/08. Here we build the chain:
+`fonksiyon çağrısı → SP → PUSH/POP → MSP/PSP → SPSEL`.
 
 ---
 
 ## Core Idea
 
-### Stack nedir, SP neyi gösterir?
+### What is a stack, and what does SP point to?
 
-Stack, **son giren ilk çıkar (LIFO)** disipliniyle kullanılan bir bellek
-bölgesidir. Cortex-M'de **full-descending** olarak tanımlıdır:
+A stack is a memory region used with **last-in, first-out (LIFO)** discipline.
+On Cortex-M, it is **full-descending**:
 
-| Terim | Anlamı |
+| Term | Meaning |
 |---|---|
-| **full** | Stack boş değilken `SP`, son itilen word'ü gösterir (bir sonraki boş slotu değil) |
-| **descending** | Stack yüksek adresten aşağı doğru büyür; `PUSH` `SP`'yi azaltır |
+| **full** | When the stack is not empty, `SP` points to the last word pushed, not the next empty slot |
+| **descending** | The stack grows downwards from high addresses; `PUSH` decreases `SP` |
 
-İki incelik:
+Two subtleties:
 
-- **Boş stack'te** `SP`, kullanılabilir alanın **bir ötesini** gösterir. O
-  adres stack'e ait değildir ve okunmamalıdır. Yani "`SP` her zaman anlamlı
-  bir veri gösterir" **yanlıştır**; yalnızca stack boş değilken doğrudur.
-- `SP`'nin **altındaki** alan tahsis edilmiştir ama içeriği tanımsızdır:
-  daha önce itilip çıkarılmış verilerin kalıntısıdır. Bu yüzden `POP`
-  edilmemiş bir word'ü okumak anlamlı bir değer vermez.
+- On an **empty stack**, `SP` points **one past** the usable area. That address
+  does not belong to the stack and must not be read. Thus "`SP` always points
+  to meaningful data" is **false**; it holds only when the stack is nonempty.
+- Memory **below** `SP` but within the reserved stack allocation is
+  **available capacity, not live stack data**. Its contents are undefined and
+  may contain remnants of earlier `PUSH`/`POP` operations. Do not read it
+  as active stack data until a valid push has moved `SP` down.
 
-### İki stack pointer
+### Two stack pointers
 
-`SP` (r13) tek bir fiziksel register değildir; ikisinden birinin **takma
-adıdır** (banked register):
+`SP` (r13) is not one physical register; it is an **alias** for one of two
+registers (banked register):
 
-| | Kim kullanır |
+| | Who uses it |
 |---|---|
-| **MSP** (Main Stack Pointer) | Reset sonrası her şey; Handler Mode |
-| **PSP** (Process Stack Pointer) | İsteğe bağlı olarak Thread Mode |
+| **MSP** (Main Stack Pointer) | Everything after reset; Handler Mode |
+| **PSP** (Process Stack Pointer) | Optionally Thread Mode |
 
-Seçimi **`CONTROL.SPSEL`** (bit 1) yapar:
+**`CONTROL.SPSEL`** (bit 1) selects between them:
 
 ```text
-Thread Mode,  SPSEL = 0  ->  SP, MSP'yi gösterir
-Thread Mode,  SPSEL = 1  ->  SP, PSP'yi gösterir
-Handler Mode              ->  SP, MSP'yi gösterir (SPSEL'in değeri ne olursa olsun)
+Thread Mode,  SPSEL = 0  ->  SP refers to MSP
+Thread Mode,  SPSEL = 1  ->  SP refers to PSP
+Handler Mode              ->  SP refers to MSP (regardless of SPSEL)
 ```
 
-Reset'ten sonra `CONTROL = 0`, yani MSP aktiftir. Exception'a girerken
-işlemci `SPSEL`'i temizler; bu yüzden handler'lar MSP üzerinde çalışır.
+After reset, `CONTROL = 0`, so MSP is active. On exception entry, the processor
+clears `SPSEL`; handlers therefore run on MSP.
 
-> **Deep Dive — TrustZone.** Security Extension varsa bu register'lar
-> ikiye katlanır (`MSP_S`/`MSP_NS`, `PSP_S`/`PSP_NS`) ve yukarıdaki tablo
-> *mevcut güvenlik durumunun* MSP/PSP'si olarak okunmalıdır. Bu ders tek
-> güvenlik durumu varsayar; ayrıntı ders 16'da.
+> **Deep Dive — TrustZone.** With the Security Extension, these registers double
+> (`MSP_S`/`MSP_NS`, `PSP_S`/`PSP_NS`); read the table above as the MSP/PSP of
+> *the current security state*. This lesson assumes one security state;
+> details are in Lesson 16.
 
-### Değer yazmak ≠ aktif etmek
+### Writing a value ≠ activating it
 
-Bu dersin tek cümlelik özeti:
+The lesson in one sentence:
 
-> **`__set_PSP(x)` PSP'nin içeriğini değiştirir. Hangi register'ın `SP`
-> olarak kullanıldığını değiştirmez. Onu `CONTROL.SPSEL` değiştirir.**
+> **`__set_PSP(x)` changes PSP's contents. It does not change which register
+> is used as `SP`. `CONTROL.SPSEL` changes that.**
 
-### Geçişin kendisi neden C'de yapılamaz?
+### Why can the transition itself not be done in C?
 
-Bu, onarımın getirdiği yeni ve önemli parça.
+This is the important new part introduced by the repair.
 
-Derleyici bir C fonksiyonu için MSP üzerinde bir frame ayırır ve yerel
-değişkenlere `[sp, #offset]` ile erişen komutlar üretir. `SPSEL` değişince
-`SP` başka bir bölgeyi gösterir — **aynı offset'ler artık başka bir adrese
-denk gelir.** `CONTROL` yazmak ne mevcut frame'i taşır ne de yenisini kurar.
+The compiler allocates a C function's frame on MSP and emits instructions that
+access locals through `[sp, #offset]`. When `SPSEL` changes, `SP` points to a
+different region — **the same offsets now refer to different addresses**.
+Writing `CONTROL` neither moves the existing frame nor creates a new one.
 
-Doğru sınır şudur:
+The correct boundary is:
 
 ```text
-MSP uzerinde C  ->  kucuk assembly gecisi  ->  PSP uzerinde TAZE bir C girisi
+C on MSP  ->  small assembly transition  ->  FRESH C entry on PSP
 ```
 
-Assembly parçası derleyicinin frame varsayımı olmayan bir yerdedir; yeni C
-fonksiyonu kendi prolog'unu yeni `SP` üzerinde kurar. MSP'de kalan frame
-terk edilir ve bir daha erişilmez.
+The assembly fragment operates without the compiler's frame assumptions;
+the new C function establishes its own prologue on the new `SP`. The frame
+left on MSP is abandoned and never accessed again.
 
 ---
 
 ## Mental Model
 
-Stack'i **tavandan aşağı dizilen tepsiler** gibi düşün. `SP` en son konan
-tepsiyi gösterir; yeni tepsi koymak (`PUSH`) elini bir kat aşağı indirmek,
-almak (`POP`) bir kat yukarı çıkarmak demek.
+Think of the stack as **trays stacked downwards from the ceiling**. `SP` points
+to the last tray placed; adding one (`PUSH`) moves your hand down one level,
+and removing one (`POP`) moves it up one level.
 
-İki stack pointer ise **iki ayrı tepsi yığını**: biri mutfağın (kernel /
-handler), biri masanın (uygulama görevi). `SPSEL` elinin hangi yığına
-uzandığını belirleyen şalter. Masadaki yığın devrilse bile mutfaktaki ayakta
-kalır — RTOS'ların PSP kullanmasının sebebi budur.
+Two stack pointers are **two separate tray stacks**: one for the kitchen
+(kernel/handler), one for the table (application task). `SPSEL` selects which
+stack your hand reaches for. Even if the table's stack falls over, the kitchen's
+remains standing — this is why RTOSes use PSP.
 
 ---
 
@@ -121,38 +122,37 @@ kalır — RTOS'ların PSP kullanmasının sebebi budur.
 
 ### 1. Full-descending stack
 
-Canlı veri `SP`'den **yukarı doğru** tepeye kadar uzanır; `SP`'nin altı
-kullanılabilir boş alandır.
+Live data extends **upwards** from `SP` to the top; below `SP` is available space.
 
 ```text
-  Yuksek adres
-  0x30000200  <-- TASK_STACK_TOP (kullanilabilir alanin BIR OTESI)
-              +---------------------+       stack'e ait DEGIL; yazilmaz
-  0x300001FC  | en eski itilen word |  ^
+  High address
+  0x30000200  <-- TASK_STACK_TOP (ONE PAST the usable area)
+              +---------------------+       NOT part of the stack; do not write
+  0x300001FC  | oldest pushed word  |  ^
               +---------------------+  |
-  0x300001F8  |        ...          |  |   CANLI VERI
-              +---------------------+  |   (itilmis, henuz cikarilmamis)
-  0x300001F4  | en son itilen word  |  v
+  0x300001F8  |        ...          |  |   LIVE DATA
+              +---------------------+  |   (pushed, not yet popped)
+  0x300001F4  | latest pushed word  |  v
               +=====================+  <-- SP
-  0x300001F0  |  bos / tanimsiz     |
-              +---------------------+      KULLANILABILIR ALAN
-  0x300001EC  |  bos / tanimsiz     |      (asagi dogru buyur)
+  0x300001F0  |  free / undefined   |
+              +---------------------+      AVAILABLE SPACE
+  0x300001EC  |  free / undefined   |      (grows downward)
               +---------------------+
                        ...
-  0x30000000  +---------------------+  <-- TASK_STACK_BASE (dip)
-  Dusuk adres
+  0x30000000  +---------------------+  <-- TASK_STACK_BASE (bottom)
+  Low address
 ```
 
-Boş stack'te `SP == TASK_STACK_TOP`'tur; yani `SP` o anda **hiçbir geçerli
-veriyi göstermez.**
+On an empty stack, `SP == TASK_STACK_TOP`; at that moment, `SP` points to
+**no valid data**.
 
-`PUSH {r4}` sonucu: `SP` 4 azalır ve `r4` yeni `SP` adresine yazılır.
-`POP {r4}` sonucu: `SP` adresindeki word `r4`'e okunur, `SP` 4 artar.
+Result of `PUSH {r4}`: `SP` decreases by 4, and `r4` is written at the new `SP`.
+Result of `POP {r4}`: the word at `SP` is read into `r4`, and `SP` increases by 4.
 
-> Mimari bunu *etkin adres* (effective address) üzerinden tanımlar; yani
-> "önce şu mikro-işlem, sonra bu" diye atomik bir sıra garanti edilmez.
-> Gözlemlenebilir sonuç yukarıdaki iki cümledir. Çok register'lı bir `PUSH`'ta
-> **en düşük numaralı register en düşük adrese** yazılır.
+> The architecture defines this through the *effective address*; it does not
+> guarantee an atomic micro-operation ordering of "first this, then that."
+> The observable result is stated above. In a multi-register `PUSH`, **the
+> lowest-numbered register is written to the lowest address**.
 
 ### 2. MSP vs PSP
 
@@ -160,32 +160,32 @@ veriyi göstermez.**
 flowchart TD
     subgraph T["Thread Mode"]
         S{"CONTROL.SPSEL"}
-        S -- "0 (reset degeri)" --> M1["SP = MSP"]
+        S -- "0 (reset value)" --> M1["SP = MSP"]
         S -- "1" --> P1["SP = PSP"]
     end
     subgraph H["Handler Mode"]
-        M2["SP = MSP<br/>(giriste SPSEL temizlenir)"]
+        M2["SP = MSP<br/>(SPSEL cleared on entry)"]
     end
     T -->|exception| H
     H -->|exception return| T
 ```
 
 ```text
-        PSP register'ina deger yazmak   !=   PSP'yi aktif SP yapmak
+        writing a value to PSP   !=   making PSP the active SP
         ------------------------------        ----------------------
         __set_PSP(0x30000200)                 CONTROL.SPSEL = 1
-        (icerik degisti)                      (hangi register SP oldu?)
+        (contents changed)                      (which register became SP?)
 ```
 
 ---
 
 ## Tiny Example
 
-Kaynaklar: [`example/main.c`](example/main.c),
+Sources: [`example/main.c`](example/main.c),
 [`example/psp_start.S`](example/psp_start.S),
 [`example/push_pop_probe.S`](example/push_pop_probe.S).
 
-Ayrı stack alanı ve taşma nöbetçileri:
+A separate stack area and overflow guards:
 
 ```c
 #define TASK_STACK_WORDS   128u          /* 128 * 4 = 512 byte */
@@ -199,33 +199,32 @@ static uint32_t task_stack_block[TASK_STACK_WORDS + GUARD_WORDS]
 #define TASK_STACK_TOP  ((uint32_t)&task_stack_block[TASK_STACK_WORDS])
 ```
 
-Bloğun sonundaki iki word stack'e ait değildir; bilinen bir desenle doldurulur.
-Normal çalışma sonunda hâlâ bozulmamış olmaları, **bu iki seçilmiş konumun
-üzerine yazılmadığını gösterir** — ilk sürümdeki hata tam olarak
-böyle yakalanmıştı.
+The two words at the end of the block do not belong to the stack; they are filled
+with a known pattern. Their remaining intact after normal execution shows
+**these two selected locations were not overwritten** — exactly how the
+original bug was caught.
 
-Guard word'leri şu durumları **göstermez**:
+Guard words **do not establish**:
 
-- alt sınırdan (tabandan) taşma olmadığını,
-- başka bir yere kaçak yazma olmadığını,
-- `SP`'nin hiçbir an aralık dışına çıkmadığını,
-- guard'a yazılıp aynı desenle geri yazılmadığını.
+- that no overflow occurred below the lower bound,
+- that no stray write occurred elsewhere,
+- that `SP` never left its valid range,
+- that the guard was not written and then restored to the same pattern.
 
-Bu kontrol yalnızca izlenen konumları kapsar. Stack kullanımını daha
-ayrıntılı incelemek için aşağıdaki GDB ölçümleri ve disassembly kullanılır.
+This check covers only the monitored locations. Use the GDB measurements and
+disassembly below for a more detailed examination of stack usage.
 
-`aligned(8)` neden? AAPCS32, bir **genel arayüz sınırında** — yani normal bir
-fonksiyon çağrısı anında — `SP`'nin 8 byte hizalı olmasını şart koşar. Diziyi
-8'e hizalayıp kullanılabilir boyutu 8'in katı tutunca tepe adresi de 8 byte
-hizalı çıkar.
+Why `aligned(8)`? AAPCS32 requires 8-byte alignment of `SP` at a **public
+interface boundary**, meaning an ordinary function call. Aligning the array
+to 8 and making its usable size a multiple of 8 also aligns its top to 8 bytes.
 
-> Bu **ABI** kuralıdır, komut hizalama kuralı değildir. Cortex-M33'te
-> `LDRD`/`STRD` word (4 byte) hizalama ister; 8 byte hizalama onların
-> gereksinimi değil, çağrı sözleşmesinin gereğidir. Dolayısıyla
-> `SP % 8 == 4` tek başına bir `LDRD`/`STRD` fault'u **üretmez** — bozulan
-> şey ABI varsayımıdır. İkisini karıştırmak yaygın bir hata.
+> This is an **ABI** rule, not an instruction-alignment rule. Cortex-M33
+> `LDRD`/`STRD` require word (4-byte) alignment; 8-byte alignment comes from
+> the calling contract, not those instructions. Therefore `SP % 8 == 4` alone
+> **does not cause** an `LDRD`/`STRD` fault — it violates an ABI assumption.
+> Confusing the two is common.
 
-Geçiş:
+The transition:
 
 ```c
 __set_PSP(TASK_STACK_TOP);
@@ -246,19 +245,19 @@ psp_start:
     bx      r1              /* taze C baglamina dallan    */
 ```
 
-Üç ayrıntı:
+Three details:
 
-- **Oku-değiştir-yaz.** `CONTROL`'e doğrudan `2` yazmak bit 0'ı (`nPRIV`)
-  sessizce sıfırlar. Dokunmadığın bitleri koru.
-- **`ISB` burada bize ait.** Çünkü `MSR CONTROL`'ü elle yazıyoruz. Dikkat:
-  CMSIS'in `__set_CONTROL()` sarmalayıcısı **kendi içinde zaten `ISB`
-  çalıştırır** (bu repodaki `core/cm33_teaching.h` de öyle). Yani C'den
-  `__set_CONTROL()` çağırdığında ayrıca `__ISB()` yazmak gerekli değildir —
-  gerekliliği ortadan kaldıran şey mimari değil, sarmalayıcının içeriğidir.
-  Mimari ilke geçerliliğini korur: `CONTROL` yazımından sonra bir komut
-  senkronizasyon bariyeri gerekir; soru yalnızca **onu kimin çalıştırdığıdır.**
-- **`lr` bir tuzağa ayarlanır.** `thread_entry` `noreturn`'dür; yine de
-  dönerse tanımsız bir adrese gitmek yerine bilinen bir sonsuz döngüye düşer.
+- **Read–modify–write.** Writing `2` directly to `CONTROL` silently clears
+  bit 0 (`nPRIV`). Preserve bits you are not changing.
+- **The `ISB` is our responsibility here**, because we write `MSR CONTROL`
+  manually. Note: the CMSIS `__set_CONTROL()` wrapper **already executes
+  `ISB` internally**, as does this repository's `core/cm33_teaching.h`.
+  Calling `__set_CONTROL()` from C therefore needs no additional `__ISB()` —
+  the wrapper's implementation, not the architecture, removes that need.
+  The architectural principle remains: a `CONTROL` write requires an instruction
+  synchronization barrier; the only question is **who executes it**.
+- **`lr` is set to a trap.** `thread_entry` is `noreturn`; if it returns anyway,
+  execution enters a known infinite loop instead of an undefined address.
 
 ---
 
@@ -270,13 +269,13 @@ cmake --build --preset debug --target 04-stack-msp-psp
 ./scripts/run-qemu.sh build/debug/lessons/04-stack-msp-psp/04-stack-msp-psp.elf
 ```
 
-QEMU'dan çıkış: `Ctrl-A` sonra `X`.
+Exit QEMU: `Ctrl-A`, then `X`.
 
 ---
 
 ## Expected Output
 
-Gerçek çıktı — **onarım sonrası yeniden ölçüldü**
+Actual output — **remeasured after the repair**
 (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug` preset):
 
 ```text
@@ -323,32 +322,30 @@ Gerçek çıktı — **onarım sonrası yeniden ölçüldü**
 ===== END =====
 ```
 
-> Adresler build'e özeldir; kodun herhangi bir yeri değişirse kayarlar.
-> Önemli olan sayılar değil, **ilişkiler**. Kendi çıktın farklı adresler
-> gösterebilir — aşağıdaki beş gözlemin hepsi yine de tutmalı.
+> Addresses are build-specific and shift when any code changes. What matters
+> is **relationships**, not the numbers. Your output may show different
+> addresses, but all five observations below must still hold.
 
-Beş gözlem:
+Five observations:
 
-1. **Aşama 1 ve 2'de `LOCAL_ADDR` aynı: `0x30007FC4`.** PSP'ye `0x30000200`
-   yazdık, `CONTROL` hâlâ 0, yerel değişkenler hâlâ MSP bölgesinde. PSP değerinin
-   yazılması tek başına aktif stack seçimini değiştirmedi.
-2. **Aşama 3'te `LOCAL_ADDR` `0x300001E4`'e atladı** — `task_stack_block`
-   bölgesine.
-3. **`PUSH_DELTA_BYTES = 16`**: dört register × 4 byte. `POP` sonrası `SP`
-   tam olarak eski değerine döndü.
-4. **`MSP_UNTOUCHED` = `0x30007FD0`.** MSP orada, dokunulmadan duruyor —
-   handler'lar ona ihtiyaç duyacak.
-5. **`CHECK_STACK_GUARD` = PASS.** Tahsis edilen alanın bir üstündeki word
-   hâlâ `0xDEADBEEF`. Bu, ilk sürümdeki somut hatanın tekrarlanmadığını
-   gösterir (`-O2`/`-Os` altında tam oraya yazılıyordu). Yine de bu tek
-   başına "hiçbir sınır ihlali yok" demek değildir — yalnızca **izlenen bu
-   konumların** bozulmadığını söyler. Ayrıca `$psp`'nin aralık
-   içinde kaldığını GDB'de ölçmek gerekir.
+1. **`LOCAL_ADDR` is identical in stages 1 and 2: `0x30007FC4`.** We wrote
+   `0x30000200` to PSP; `CONTROL` is still 0 and locals remain in the MSP region.
+   Writing PSP alone did not change the active-stack selection.
+2. **In stage 3, `LOCAL_ADDR` jumped to `0x300001E4`**, inside `task_stack_block`.
+3. **`PUSH_DELTA_BYTES = 16`**: four registers × 4 bytes. After `POP`, `SP`
+   returned exactly to its previous value.
+4. **`MSP_UNTOUCHED` = `0x30007FD0`.** MSP remains untouched there — handlers
+   will need it.
+5. **`CHECK_STACK_GUARD` = PASS.** The word just beyond the allocated area is
+   still `0xDEADBEEF`. This shows that the original concrete bug did not recur
+   (that exact location was written under `-O2`/`-Os`). It still does not prove
+   "no bounds violation anywhere" — only that **these monitored locations**
+   remained intact. Also measure in GDB that `$psp` stays within bounds.
 
-`LOCAL_ADDR` ile `PSP_NOW`'un farklı olması normal: biri derleyicinin
-frame'i içindeki bir yerel değişkenin adresi, diğeri o an `SP`'nin kendisi.
-Aradaki mesafe **derleyiciye ve optimizasyon seviyesine özeldir**, mimari bir
-sabit değildir.
+It is normal for `LOCAL_ADDR` and `PSP_NOW` to differ: one is a local variable's
+address within the compiler's frame; the other is `SP` itself at that moment.
+Their separation is **compiler- and optimization-specific**, not an architectural
+constant.
 
 ---
 
@@ -372,11 +369,11 @@ target remote :3333
 source scripts/gdb/cortex-m.gdb
 ```
 
-`set architecture armv8-m.main` şart: `$msp`, `$psp`, `$control`, `$psplim`
-gibi özel register'lar ancak o zaman görünür. (`set arm force-mode thumb`
-yalnızca disassembly modunu etkiler; mimari seçimi değildir.)
+`set architecture armv8-m.main` is required: only then do special registers such
+as `$msp`, `$psp`, `$control`, and `$psplim` appear. (`set arm force-mode thumb`
+affects only disassembly mode; it does not select the architecture.)
 
-### 1. `$sp` Cortex-M'de tam olarak ne gösteriyor?
+### 1. What exactly does `$sp` show on Cortex-M?
 
 ```gdb
 (gdb) break report_state
@@ -387,22 +384,22 @@ yalnızca disassembly modunu etkiler; mimari seçimi değildir.)
 (gdb) p/x $control
 ```
 
-Gerçek ölçüm, üç duruş (onarım sonrası):
+Actual measurements at three stops (after repair):
 
-| Duruş | `$sp` | `$msp` | `$psp` | `$control` |
+| Stop | `$sp` | `$msp` | `$psp` | `$control` |
 |---|---|---|---|---|
-| [1] reset sonrası | `0x30007fd0` | `0x30007fd0` | `0x0` | `0x0` |
-| [2] PSP yazıldı | `0x30007fd0` | `0x30007fd0` | `0x30000200` | `0x0` |
-| [3] `psp_start` sonrası | `0x300001f0` | `0x30007fd0` | `0x300001f0` | `0x2` |
+| [1] after reset | `0x30007fd0` | `0x30007fd0` | `0x0` | `0x0` |
+| [2] PSP written | `0x30007fd0` | `0x30007fd0` | `0x30000200` | `0x0` |
+| [3] after `psp_start` | `0x300001f0` | `0x30007fd0` | `0x300001f0` | `0x2` |
 
-**Neye bakıyoruz ve neden:**
+**What we inspect and why:**
 
-- **`$sp`, aktif stack pointer'ın takma adıdır.** GDB'nin ayrı bir yorumu yok.
-  Aşama 2'de `$sp == $msp`, aşama 3'te `$sp == $psp`.
-- Aşama 2'de `$psp` değeri değişti, `$sp` aynı kaldı.
-- Aşama 3'te `$msp` hiç değişmedi.
+- **`$sp` is an alias of the active stack pointer.** GDB does not invent a
+  separate interpretation. Stage 2: `$sp == $msp`; stage 3: `$sp == $psp`.
+- In stage 2, `$psp` changed while `$sp` stayed the same.
+- In stage 3, `$msp` did not change at all.
 
-### 2. Geçişin kendisi
+### 2. The transition itself
 
 ```gdb
 (gdb) disassemble psp_start
@@ -420,11 +417,11 @@ Gerçek ölçüm, üç duruş (onarım sonrası):
 10000070:  4708        bx    r1
 ```
 
-**Neye bakıyoruz:** Burada hiç `[sp, #offset]` erişimi yok. Fonksiyonun
-`SP`'ye bağlı hiçbir yerel durumu yok, dolayısıyla `SP`'nin anlamını
-değiştirmek güvenli. Bir C fonksiyonunda bu garanti edilemez.
+**What we inspect:** there is no `[sp, #offset]` access here. The function has
+no local state dependent on `SP`, so changing what `SP` means is safe. This
+cannot be guaranteed in a C function.
 
-Şimdi hedefin prolog'una bak:
+Now inspect the target's prologue:
 
 ```gdb
 (gdb) disassemble thread_entry
@@ -436,22 +433,21 @@ değiştirmek güvenli. Bir C fonksiyonunda bu garanti edilemez.
 10000172:  b083   sub   sp, #12
 ```
 
-**Neye bakıyoruz:** `thread_entry` kendi frame'ini **yeni** `SP` üzerinde
-kuruyor. `push {lr}` (4 byte) + `sub sp, #12` = 16 byte; çağrı sınırında 8
-byte hizalama korunuyor. Terk edilen MSP frame'ine hiç dokunulmuyor.
+**What we inspect:** `thread_entry` creates its own frame on the **new** `SP`.
+`push {lr}` (4 bytes) + `sub sp, #12` = 16 bytes; 8-byte alignment is preserved
+at the call boundary. The abandoned MSP frame is never touched.
 
-### 3. Tahsis sınırı gerçekten korunuyor mu?
+### 3. Is the allocation boundary really respected?
 
 ```gdb
 (gdb) p/x task_stack_block[128]
 (gdb) p/x $psp
 ```
 
-`task_stack_block[128]` `0xdeadbeef` kalmalı ve `$psp` her zaman
-`0x30000000 <= $psp <= 0x30000200` aralığında olmalı. Üç preset'te de
-böyle ölçüldü.
+`task_stack_block[128]` must remain `0xdeadbeef`, and `$psp` must always stay
+within `0x30000000 <= $psp <= 0x30000200`. This was measured in all three presets.
 
-### 4. PUSH/POP `SP`'yi ne kadar oynatıyor?
+### 4. How far do PUSH/POP move `SP`?
 
 ```gdb
 (gdb) break push_pop_probe
@@ -470,7 +466,7 @@ böyle ölçüldü.
 1000004a:  bcf0   pop   {r4, r5, r6, r7}
 ```
 
-`push` komutundan sonraki adrese breakpoint koy (adres build'e özel):
+Put a breakpoint at the address after `push` (build-specific):
 
 ```gdb
 (gdb) break *0x10000046
@@ -480,14 +476,14 @@ böyle ölçüldü.
 (gdb) info registers r4 r5 r6 r7
 ```
 
-Ölçülen: giriş `$sp = 0x30007fd0`, push sonrası `0x30007fc0` (16 byte aşağı),
-pop sonrası tekrar `0x30007fd0`.
+Measured: entry `$sp = 0x30007fd0`, after push `0x30007fc0` (16 bytes lower),
+after pop `0x30007fd0` again.
 
-Gözlem sorusu: bellekteki dört word'den hangisi hangi register?
-`PUSH` en düşük numaralı register'ı en düşük adrese yazar. `info registers`
-ile doğrula.
+Observation question: which of the four memory words belongs to which register?
+`PUSH` writes the lowest-numbered register to the lowest address. Verify with
+`info registers`.
 
-### 5. Fonksiyon çağrısı stack'i nasıl kullanıyor?
+### 5. How does a function call use the stack?
 
 ```gdb
 (gdb) disassemble frame_using_function
@@ -500,18 +496,18 @@ ile doğrula.
 100000f0:  9305   str   r3, [sp, #20]
 ```
 
-`push` **yok**; derleyici `sub sp, #24` ile alan açtı. Stack frame'in iki
-ayrı bileşeni var:
+There is **no** `push`; the compiler allocated space using `sub sp, #24`.
+A stack frame has two separate components:
 
-| Bileşen | Ne için | Nasıl görünür |
+| Component | Purpose | Appearance |
 |---|---|---|
-| Kaydedilmiş register'lar | callee-saved register'lar, `lr` | `push {...}` / `pop {...}` |
-| Yerel değişken alanı | register'a sığmayan (spill) değişkenler | `sub sp, #N` / `add sp, #N` |
+| Saved registers | callee-saved registers, `lr` | `push {...}` / `pop {...}` |
+| Local-variable area | variables that do not fit in registers (spills) | `sub sp, #N` / `add sp, #N` |
 
-`#24` bu derleyicinin, bu kaynağın, bu optimizasyon seviyesinin sonucudur —
-mimari bir değer değildir.
+`#24` is a result of this compiler, this source, and this optimization level —
+not an architectural value.
 
-### 6. Her C fonksiyonu stack kullanır mı? (Hayır.)
+### 6. Does every C function use the stack? (No.)
 
 ```gdb
 (gdb) disassemble active_stack_name
@@ -526,19 +522,19 @@ mimari bir değer değildir.
 100000d6:  4770        bx    lr
 ```
 
-**Tek bir stack işlemi yok.** Bir fonksiyon stack'e dokunur *eğer*: başka
-fonksiyon çağırıyorsa (`lr` saklanmalı), callee-saved register kullanıyorsa,
-veya yerel durumu register'lara sığmıyorsa. Hiçbiri yoksa dokunmaz.
+**Not a single stack operation.** A function touches the stack *if* it calls
+another function (`lr` must be saved), uses callee-saved registers, or has local
+state that does not fit in registers. If none applies, it does not touch it.
 
-Bu **bu build için** doğrudur; aynı kaynak başka bir derleyici veya
-optimizasyon seviyesinde farklı kod üretebilir. Doğru refleks kaynağa değil
-`objdump`'a bakmaktır.
+This is true **for this build**; the same source may produce different code
+with another compiler or optimization level. The right reflex is to inspect
+`objdump`, not infer from source.
 
 ---
 
 ## Experiment
 
-**Deney 1 — Optimizasyon stack kullanımını nasıl değiştiriyor?**
+**Experiment 1 — How does optimization change stack usage?**
 
 ```bash
 cmake --build --preset debug   --target 04-stack-msp-psp
@@ -550,42 +546,42 @@ arm-none-eabi-objdump -d build/release/lessons/04-stack-msp-psp/04-stack-msp-psp
     | grep -A6 "<frame_using_function>:"
 ```
 
-`sub sp, #N` değeri değişti mi? Kaynaktaki `volatile` kaldırılsa ne olurdu?
+Did the `sub sp, #N` value change? What would happen if source `volatile` were removed?
 
-**Deney 2 — Stack ne kadar hızlı tükeniyor?**
+**Experiment 2 — How quickly does the stack run out?**
 
-`task_stack_block` 512 byte kullanılabilir alan veriyor. `frame_using_function`
-her çağrıda kaç byte tüketiyor? Kaç seviye iç içe çağrı yapılabilir? Hesapla,
-sonra GDB'de `p/x $psp` ile doğrula.
+`task_stack_block` provides 512 usable bytes. How many bytes does each call to
+`frame_using_function` consume? How many nested levels fit? Calculate, then
+verify with `p/x $psp` in GDB.
 
-**Deney 3 — Hizalama gerçekten tutuyor mu?**
+**Experiment 3 — Does alignment really hold?**
 
 ```gdb
 (gdb) p $sp % 8
 ```
 
-Farklı noktalarda ölç: `main` içinde, bir fonksiyonun içinde, `push`'tan hemen
-sonra. Bir çağrı sınırında 0 olmalı. Bir fonksiyonun *ortasında* 4 olması ABI
-ihlali değildir — kural **genel arayüz sınırları** içindir.
+Measure at different points: inside `main`, inside a function, immediately after
+`push`. At a call boundary, the result must be 0. A result of 4 *mid-function*
+is not an ABI violation — the rule applies at **public interface boundaries**.
 
 ---
 
 ## Break It
 
-Armv8-M Main Extension'da stack limiti **mimari** bir özelliktir: `PSPLIM` /
-`MSPLIM`'e bir alt sınır yazılır ve bir **stack pointer güncellemesi** `SP`'yi
-o sınırın altına indirirse UsageFault (`UFSR.STKOF`) oluşur.
+Stack limits are an **architectural** feature of the Armv8-M Main Extension:
+a lower bound is written to `PSPLIM` / `MSPLIM`; if a **stack-pointer update**
+moves `SP` below that bound, UsageFault (`UFSR.STKOF`) occurs.
 
-Kapsamı dar tutmak önemli:
+Keeping the scope narrow matters:
 
-- Bu yalnızca **stack pointer güncellemelerini** denetler. Rastgele bir
-  pointer'la yapılan bellek erişimi kontrol edilmez — genel bellek koruması
-  değildir. O iş MPU'nundur (ders 06).
-- Armv7-M'de (M3/M4/M7) `PSPLIM`/`MSPLIM` yoktur. Bu, "taşma her zaman
-  sessizce belleği bozar" demek değildir: ne olacağı taşılan adrese ve varsa
-  MPU yapılandırmasına bağlıdır. Doğru ifade: **mimari otomatik bir yakalama
-  sunmaz.**
-- TrustZone varsa bu register'lar da güvenlik durumuna göre bankalanır.
+- This checks only **stack-pointer updates**. Memory access through an arbitrary
+  pointer is not checked — this is not general memory protection. That is the
+  MPU's job (Lesson 06).
+- Armv7-M (M3/M4/M7) has no `PSPLIM`/`MSPLIM`. This does not mean "overflow
+  always silently corrupts memory": the outcome depends on the destination
+  address and any MPU configuration. The correct statement is **the architecture
+  provides no automatic detection**.
+- With TrustZone, these registers are also banked by security state.
 
 ```c
 SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk;   /* UsageFault'u ayri gorebilmek icin */
@@ -599,7 +595,7 @@ cmake --build --preset debug --target 04-stack-msp-psp-broken
 ./scripts/run-qemu.sh build/debug/lessons/04-stack-msp-psp/04-stack-msp-psp-broken.elf
 ```
 
-Gerçek çıktı (son satırlar):
+Actual output (last lines):
 
 ```text
 --- BREAK IT: PSPLIM + derin recursion ---
@@ -608,7 +604,7 @@ Gerçek çıktı (son satırlar):
   recursion basliyor...
 ```
 
-Ve orada duruyor: `RESULT` de `===== END =====` de basılmıyor.
+Execution stops there: neither `RESULT` nor `===== END =====` is printed.
 
 ---
 
@@ -631,7 +627,7 @@ cm-exc-return $lr
 cm-frame $psp $lr
 ```
 
-Gerçek ölçüm (onarılmış yardımcılarla):
+Actual measurement (with repaired helpers):
 
 ```text
 Mode      : Handler Mode (exception 6)
@@ -653,56 +649,57 @@ EXC_RETURN = 0xfffffffd
   bit4 FType    = 1 -> standart (8 word) frame
 ```
 
-`cm-frame $psp $lr` denersen **reddedilir**, ve bu doğru davranıştır:
+Trying `cm-frame $psp $lr` is **rejected**, correctly:
 
 ```text
 REDDEDILDI [STACKING HATASI]: CFSR = 0x00100000
 ```
 
-> Bu reddin kendisi bir onarım sonucudur. Eski `cm-frame`, aktif `$sp`'den
-> sekiz word okuyup `PC = 0`, `xPSR = 0` gibi uydurma değerler basıyor ve
-> sıfırı "hatalı komut" diye etiketliyordu.
+> This rejection itself results from a repair. The old `cm-frame` read eight
+> words from active `$sp`, printed fabricated values such as `PC = 0` and
+> `xPSR = 0`, and labeled zero a "bad instruction."
 >
-> Yeni arayüz `cm-frame <adres> <EXC_RETURN>`. İkinci argüman frame **türünü**
-> söyler (standart mı, FP-genişletilmiş mi, hangi stack). Yine de bu bir
-> doğrulayıcı değil: bir adresin gerçek bir frame olduğunu kanıtlayamaz,
-> yalnızca desteklenmeyen türleri ve geçersiz değerleri eler. `EXC_RETURN` da
-> mimari kodlamaya göre sıkı doğrulanır: `0xFFFFFFxx` biçiminde olmak
-> yetmez (`0xFFFFFFFF` ve `0xFFFFFFF5` geçersizdir). Ayrıntı:
+> The new interface is `cm-frame <adres> <EXC_RETURN>`. The second argument
+> specifies the frame **type** (standard or FP-extended, which stack). It still
+> is not a validator: it cannot prove an address contains a real frame; it only
+> eliminates unsupported types and invalid values. `EXC_RETURN` is also checked
+> strictly against architectural encodings: looking like `0xFFFFFFxx` is not
+> sufficient (`0xFFFFFFFF` and `0xFFFFFFF5` are invalid). Details:
 > [`docs/DEBUGGING.md`](../../docs/DEBUGGING.md).
 
-Cevaplaman gereken sorular:
+Questions to answer:
 
-1. `IPSR = 6` hangi exception? `UFSR = 0x0010` hangi biti set ediyor, adı ne?
-2. `HFSR = 0` ne anlama geliyor? `FORCED = 1` gördüğün bir durumdan farkı ne?
-3. `$psp` neden tam olarak `$psplim` ile aynı?
-4. Fault anında `$control = 0` ve `Stack: MSP`. Ama hemen öncesinde
-   `SPSEL = 1` idi. Kim temizledi?
-5. `cm-frame` neden reddetti? Reddetmeseydi ne okurdun?
+1. Which exception is `IPSR = 6`? Which bit does `UFSR = 0x0010` set, and what is it called?
+2. What does `HFSR = 0` mean? How does it differ from a case with `FORCED = 1`?
+3. Why is `$psp` exactly equal to `$psplim`?
+4. At the fault, `$control = 0` and `Stack: MSP`, but just before it
+   `SPSEL = 1`. Who cleared it?
+5. Why did `cm-frame` reject it? What would you read if it had not?
 
 ### Exception preview
 
 ```text
-Thread Mode, PSP kullaniyor
+Thread Mode, using PSP
         |
         v  exception (UsageFault)
-donanim, kesilen kodun durumunu O AN AKTIF olan stack'e yazmaya calisir
+hardware tries to write interrupted state to the CURRENTLY ACTIVE stack
         |
         v
-Handler Mode: SPSEL temizlenir -> handler MSP uzerinde calisir
+Handler Mode: SPSEL cleared -> handler runs on MSP
         |
-        v  handler donuyor
-islemci hangi stack'e donecegini nereden biliyor?
+        v  handler returns
+how does the processor know which stack to return to?
 ```
 
-Son sorunun cevabı `EXC_RETURN`'dedir — **ders 07**'de açacağız.
+The last answer is in `EXC_RETURN` — we will unpack it in **Lesson 07**.
 
-İki uyarı:
+Two cautions:
 
-- "Frame PSP'ye yazılır" ile "frame **yazıldı**" aynı şey değildir. Bu
-  senaryoda `STKOF` tam olarak yazma girişiminin başarısız olduğunu söylüyor.
-- `0xFFFFFFFD` yorumu bu bağlam içindir (tek güvenlik durumu, standart frame).
-  TrustZone ve FP bağlamı devredeyken `EXC_RETURN` daha fazla bilgi taşır.
+- "The frame is written to PSP" and "the frame **was written**" are different.
+  In this scenario, `STKOF` says precisely that the write attempt failed.
+- The interpretation of `0xFFFFFFFD` applies to this context (one security
+  state, standard frame). With TrustZone and FP context, `EXC_RETURN` carries
+  additional information.
 
 ---
 
@@ -710,28 +707,28 @@ Son sorunun cevabı `EXC_RETURN`'dedir — **ders 07**'de açacağız.
 
 ### Exercise 01 — Activate PSP Correctly
 
-Senin dolduracağın dosya **C değil, assembly**:
+The file you complete is **assembly, not C**:
 
 ```text
 exercises/01-activate-psp/psp_start.S
 ```
 
-`main.c` hazır: stack bloğu, guard'lar, `thread_entry` ve üç kontrol yerinde.
-Geçişin üç adımını sen yazacaksın.
+`main.c` is ready: the stack block, guards, `thread_entry`, and three checks
+are in place. You write the three steps of the transition.
 
-Cevaplaman gereken sorular:
+Questions to answer:
 
-- Full-descending stack'te PSP'ye hangi adres yazılmalı — `&block[0]`,
-  `&block[127]`, `&block[128]`?
-- `CONTROL`'ü nasıl güncellersin ki bit 0'ı ezmeyesin?
-- Değişiklikten sonra hangi komut gerekiyor ve neden **burada** gerekiyor?
+- For a full-descending stack, which address should PSP receive — `&block[0]`,
+  `&block[127]`, or `&block[128]`?
+- How do you update `CONTROL` without overwriting bit 0?
+- Which instruction is required afterwards, and why is it required **here**?
 
 ```bash
 cmake --build --preset debug --target 04-exercise-psp
 ./scripts/run-qemu.sh build/debug/lessons/04-stack-msp-psp/04-exercise-psp.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [MSP] 0x30007FD0
@@ -744,37 +741,37 @@ Başlangıç çıktısı (gerçek):
 [CHECK_STACK_GUARD] PASS
 ```
 
-**Doğrulama ölçütü:** `CHECK_SPSEL` ve `CHECK_REGION` `PASS` olmalı ve
-`CHECK_STACK_GUARD` `PASS` kalmalı. Üçü birden gerekli: ilk ikisi geçişin
-olduğunu, üçüncüsü **doğru yerden** olduğunu gösterir.
+**Verification criterion:** `CHECK_SPSEL` and `CHECK_REGION` must become `PASS`,
+and `CHECK_STACK_GUARD` must remain `PASS`. All three are necessary: the first
+two show that a transition happened, the third that it used the **correct location**.
 
-GDB ile de doğrula:
+Also verify with GDB:
 
 ```gdb
 p/x $sp     p/x $msp     p/x $psp     p/x $control
 p/x task_stack_block[128]
 ```
 
-### Exercise 02 (opsiyonel, DEEP) — İç içe çağrılarda PSP tüketimi
+### Exercise 02 (optional, DEEP) — PSP consumption in nested calls
 
-PSP aktifken iç içe üç fonksiyon çağrısı yap ve her seviyede `PSP`'yi kaydet.
-Her seviye kaç byte tüketti? `release` preset'inde ne değişiyor? Ayrı referans
-çözümü yok — cevabın kendi ölçümün.
+With PSP active, make three nested function calls and record `PSP` at every
+level. How many bytes did each level consume? What changes in the `release`
+preset? There is no separate reference solution — your measurement is the answer.
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-activate-psp/`](solutions/01-activate-psp/) | `04-solution-psp` |
+| Exercise 01 solution | [`solutions/01-activate-psp/`](solutions/01-activate-psp/) | `04-solution-psp` |
 
 ```bash
 cmake --build --preset debug --target 04-solution-psp
 ./scripts/run-qemu.sh build/debug/lessons/04-stack-msp-psp/04-solution-psp.elf
 ```
 
-Gerçek çıktı (`debug`; `release` ve `minsize` ile de doğrulandı):
+Actual output (`debug`; also verified with `release` and `minsize`):
 
 ```text
 ===== LESSON 04 SOLUTION 01 =====
@@ -796,25 +793,25 @@ Gerçek çıktı (`debug`; `release` ve `minsize` ile de doğrulandı):
 
 ## What I Learned
 
-> Bu bölüm senin. Deneyleri yaptıktan sonra doldur.
+> This section is yours. Fill it after the experiments.
 
-**Full-descending stack'i kendi cümlemle:**
-
-<!-- -->
-
-**"Değer yazmak ≠ aktif etmek" ayrımını nerede unutabilirim:**
+**Full-descending stack in my own words:**
 
 <!-- -->
 
-**Stack değiştirmenin neden C'nin ortasında yapılamadığı:**
+**Where I might forget "writing a value ≠ activating it":**
 
 <!-- -->
 
-**GDB'de `$sp`, `$msp`, `$psp` arasında gördüğüm ilişki:**
+**Why the stack cannot be switched midway through C:**
 
 <!-- -->
 
-**Ders 07'ye taşıdığım soru:**
+**The relationship I saw between `$sp`, `$msp`, and `$psp` in GDB:**
+
+<!-- -->
+
+**The question I am taking into Lesson 07:**
 
 <!-- -->
 
@@ -822,72 +819,68 @@ Gerçek çıktı (`debug`; `release` ve `minsize` ile de doğrulandı):
 
 ## Quick Check
 
-1. Full-descending stack ne demek? İki kelimenin her biri neyi söylüyor?
-   Boş bir stack'te `SP` neyi gösterir?
+1. What does full-descending mean? What does each word say?
+   What does `SP` point to on an empty stack?
 
-2. `PUSH {r4, r5}` `SP`'yi ne kadar ve hangi yöne oynatır? `r4` ile `r5`'ten
-   hangisi daha düşük adrese yazılır?
+2. How far and in which direction does `PUSH {r4, r5}` move `SP`?
+   Which of `r4` and `r5` is written to the lower address?
 
-3. `PSP` register'ına değer yazmak onu neden aktif stack yapmaz? Aktif yapan
-   nedir?
+3. Why does writing `PSP` not make it the active stack? What activates it?
 
-4. Reset sonrası Thread Mode hangi stack'i kullanır? Bunu kod yazmadan nereden
-   bilebilirsin?
+4. Which stack does Thread Mode use after reset? How can you know without writing code?
 
-5. Thread Mode `PSP` kullanırken bir exception oluşuyor. Handler hangi `SP`
-   üzerinde çalışır ve donanım durumu **hangi** stack'e yazmaya çalışır?
-   (İkisi aynı cevap değil.) Yazmanın başarılı olduğunu varsayabilir misin?
+5. An exception occurs while Thread Mode uses `PSP`. On which `SP` does the
+   handler run, and to **which** stack does hardware attempt to write state?
+   (These are different answers.) Can you assume the write succeeded?
 
-6. **(Reasoning)** Her C fonksiyonu mutlaka stack kullanır mı? Cevabını bu
-   derste gördüğün bir disassembly ile gerekçelendir.
+6. **(Reasoning)** Must every C function use the stack? Justify your answer with
+   disassembly from this lesson.
 
-7. **(Reasoning)** 8 byte hizalama neden önemli olabilir? Bu bir komut
-   hizalama kuralı mı, yoksa çağrı sözleşmesi kuralı mı?
+7. **(Reasoning)** Why might 8-byte alignment matter? Is it an instruction-
+   alignment rule or a calling-contract rule?
 
-8. **(Reasoning)** `CONTROL.SPSEL`'i sıradan bir C fonksiyonunun ortasında
-   değiştirirsen ne bozulur? Neden `volatile` veya fazladan bir `ISB` bunu
-   düzeltmez?
+8. **(Reasoning)** What breaks if you change `CONTROL.SPSEL` midway through an
+   ordinary C function? Why do `volatile` or an extra `ISB` not fix it?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
-> — kendi cevabını yazdıktan sonra aç.
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
+> — open after writing your own answer.
 
 ---
 
 ## Takeaway
 
-- Stack **full-descending**'dir: `PUSH` `SP`'yi azaltır ve yeni `SP` adresine
-  yazar. Boş stack'te `SP` kullanılabilir alanın bir ötesindedir.
-- Cortex-M'de `SP` bir takma addır; arkasında **MSP** ve **PSP** vardır,
-  seçimi `CONTROL.SPSEL` yapar, Handler Mode her zaman MSP kullanır.
-- **`__set_PSP()` içerik yazar, `CONTROL.SPSEL` seçim yapar.** Sıra
-  zorunludur: önce geçerli adres, sonra geçiş.
-- **Stack'i C'nin ortasında değiştiremezsin.** Derleyici mevcut frame'i
-  taşımaz. Geçiş için frame varsayımı olmayan bir sınır + taze bir C girişi
-  gerekir.
-- **Her fonksiyon stack kullanmaz** — bu kaynak koddan değil, üretilen makine
-  kodundan görülür.
-- `PSPLIM`/`MSPLIM` **stack pointer güncellemelerini** denetler; genel bellek
-  koruması değildir.
+- The stack is **full-descending**: `PUSH` decreases `SP` and writes at the new
+  `SP`. On an empty stack, `SP` is one past the usable area.
+- Cortex-M `SP` is an alias backed by **MSP** and **PSP**; `CONTROL.SPSEL`
+  selects between them. Handler Mode always uses MSP.
+- **`__set_PSP()` writes contents; `CONTROL.SPSEL` selects.** The order is
+  mandatory: valid address first, then transition.
+- **You cannot switch the stack midway through C.** The compiler does not move
+  the existing frame. Transition requires a boundary without frame assumptions
+  and a fresh C entry.
+- **Not every function uses the stack** — inspect generated machine code, not source.
+- `PSPLIM`/`MSPLIM` check **stack-pointer updates**; they are not general
+  memory protection.
 
 ---
 
 ## Official References
 
-- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — stack pointer
-  banking (MSP/PSP), `CONTROL.SPSEL`, `MSPLIM`/`PSPLIM` ve `UFSR.STKOF`,
-  exception entry'de `SPSEL`'in temizlenmesi, `EXC_RETURN`.
+- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — stack-pointer
+  banking (MSP/PSP), `CONTROL.SPSEL`, `MSPLIM`/`PSPLIM` and `UFSR.STKOF`,
+  clearing `SPSEL` on exception entry, `EXC_RETURN`.
   <https://developer.arm.com/documentation/ddi0553/latest/>
-- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — çekirdek
-  register'ları, `CONTROL`, stack pointer kullanımı.
+- **Cortex-M33 Devices Generic User Guide (Arm 100235)** — core registers,
+  `CONTROL`, stack-pointer usage.
   <https://developer.arm.com/documentation/100235/latest/>
 - **Procedure Call Standard for the Arm Architecture (AAPCS32)** —
-  genel arayüz sınırında 8 byte stack hizalaması.
+  8-byte stack alignment at public interface boundaries.
   <https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst>
 - **CMSIS-Core (M)** — `__get_MSP`, `__get_PSP`, `__set_PSP`, `__get_CONTROL`,
-  `__set_CONTROL` (kendi içinde `ISB` çalıştırır), `__set_PSPLIM`, `__ISB`.
+  `__set_CONTROL` (executes `ISB` internally), `__set_PSPLIM`, `__ISB`.
   <https://arm-software.github.io/CMSIS_6/latest/Core/index.html>
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
-  `mps2-an505 / cortex-m33`, `debug` preset (aksi belirtilmedikçe).
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
+  `mps2-an505 / cortex-m33`, `debug` preset unless stated otherwise.
 
 ---
 

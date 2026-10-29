@@ -1,8 +1,10 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 09 — Compiler, AAPCS & Calling Conventions
 
-`[STANDARD]` · Day 5 · Tahmini süre: 75–90 dk
+`[STANDARD]` · Day 5 · Estimated time: 75–90 min
 
-> **Öğretim döngüsü:** TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
+> **Teaching cycle:** TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
 
 ---
 
@@ -10,18 +12,17 @@
 
 *(TEACH)*
 
-Ders 03'te bir C fonksiyonu bir assembly fonksiyonunu çağırdı ve **çalıştı**.
-Ders 04'te 8 byte hizalamaya, ders 07'de exception frame'in volatile
-register'larına değindik — hepsinde "ayrıntısı ders 09'da" dedik.
+In Lesson 03, a C function called an assembly function and **it worked**.
+Lesson 04 touched on 8-byte alignment, and Lesson 07 on the exception frame's
+volatile registers — each time, we said “details in Lesson 09.”
 
-Bu ders tek bir soruyu cevaplıyor:
+This lesson answers one question:
 
-> **Ayrı ayrı derlenmiş C ve assembly fonksiyonlarının birlikte çalışmasını
-> sağlayan sözleşme nedir?**
+> **What contract allows separately compiled C and assembly functions to work together?**
 
-Cevap **AAPCS32** (Procedure Call Standard for the Arm Architecture). Ders
-03 "çalışıyor" dedi; bu ders sözleşmeyi **ölçüyor** — ve sözleşme bozukken
-bile doğru sonuç üreten bir fonksiyon gösteriyor.
+The answer is **AAPCS32** (Procedure Call Standard for the Arm Architecture).
+Lesson 03 said “it works”; this lesson **measures** the contract — and shows a
+function that produces the right result even while violating it.
 
 ---
 
@@ -29,98 +30,99 @@ bile doğru sonuç üreten bir fonksiyon gösteriyor.
 
 *(TEACH)*
 
-### Dört etiket
+### Four labels
 
-Bu derste her iddia dört türden birine ait. Karıştırmamak dersin yarısı:
+Every claim in this lesson belongs to one of four categories. Keeping them
+separate is half the lesson:
 
-| Etiket | Anlamı | Örnek |
+| Label | Meaning | Example |
 |---|---|---|
-| **ABI** | AAPCS32 kuralı; birlikte çalışabilirlik için bağlayıcı | r4 korunmak zorunda |
-| **ARCHITECTURE** | Armv8-M işlemci davranışı | exception girişi frame'i hizalar |
-| **COMPILER** | GCC'nin bir seçeneği / davranışı | `-O2` tail call üretebilir |
-| **OBSERVATION** | *bu* GCC 13.2.1'in *bu* preset'te ürettiği | `-Og`'da `sq()` inline edilmedi |
+| **ABI** | An AAPCS32 rule; binding for interoperability | r4 must be preserved |
+| **ARCHITECTURE** | Armv8-M processor behavior | exception entry aligns the frame |
+| **COMPILER** | A GCC option / behavior | `-O2` can produce a tail call |
+| **OBSERVATION** | What *this* GCC 13.2.1 produced with *this* preset | `sq()` was not inlined at `-Og` |
 
-**Ölçülmüş derleyici çıktısı bir ABI kuralı değildir.**
+**Measured compiler output is not an ABI rule.**
 
-### Register rolleri (ABI)
+### Register roles (ABI)
 
-Kaynak: AAPCS32, *Core registers*.
+Source: AAPCS32, *Core registers*.
 
-| Register | AAPCS adı | Rol | Çağrı boyunca |
+| Register | AAPCS name | Role | Across a call |
 |---|---|---|---|
-| r0–r1 | a1–a2 | Argüman / **sonuç** / scratch | caller-clobbered |
-| r2–r3 | a3–a4 | Argüman / scratch | caller-clobbered |
-| r4–r8 | v1–v5 | Değişken register'ları | **callee-saved** |
-| r9 | v6 / SB / TR | **Platform register'ı** | platforma bağlı (aşağıda) |
-| r10–r11 | v7–v8 | Değişken register'ları | **callee-saved** |
-| r12 | IP | Çağrı içi scratch; linker veneer'ları kullanabilir | caller-clobbered |
-| r13 | SP | Stack pointer | geri getirilmek zorunda |
-| r14 | LR | Dönüş adresi | her `BL` onu ezer |
+| r0–r1 | a1–a2 | Argument / **result** / scratch | caller-clobbered |
+| r2–r3 | a3–a4 | Argument / scratch | caller-clobbered |
+| r4–r8 | v1–v5 | Variable registers | **callee-saved** |
+| r9 | v6 / SB / TR | **Platform register** | platform-dependent (below) |
+| r10–r11 | v7–v8 | Variable registers | **callee-saved** |
+| r12 | IP | Intra-call scratch; linker veneers may use it | caller-clobbered |
+| r13 | SP | Stack pointer | must be restored |
+| r14 | LR | Return address | every `BL` overwrites it |
 | r15 | PC | Program counter | — |
 
-AAPCS32'nin ifadesiyle: bir alt program **r4–r8, r10, r11 ve SP**'yi korumak
-zorundadır — *ve r9'u, yalnızca r9'u v6 olarak atayan PCS varyantlarında*.
+In AAPCS32's terms, a subroutine must preserve **r4–r8, r10, r11, and SP** —
+*and r9 only in PCS variants that designate r9 as v6*.
 
-**r9 hakkında dikkat.** AAPCS32'ye göre r9'un rolü **platforma özgüdür**: bir
-platform onu static base (SB) veya thread register (TR) olarak atayabilir;
-böyle bir ihtiyacı olmayan bir platform onu ek bir callee-saved register (v6)
-yapabilir. Yani **"r9 callee-saved'dir" evrensel bir kural değildir.** Bu
-repo/toolchain yapılandırmasında gözlenen davranış Deney 2'de.
+**Be careful with r9.** Under AAPCS32, r9's role is **platform-specific**: a
+platform may designate it as a static base (SB) or thread register (TR); a
+platform without such a need may make it an additional callee-saved register
+(v6). Thus, **“r9 is callee-saved” is not a universal rule.** Experiment 2 shows
+the behavior observed in this repository/toolchain configuration.
 
-### Argüman yerleştirme (ABI)
+### Argument allocation (ABI)
 
-Kaynak: AAPCS32, *Parameter Passing* — kurallar A.1–A.4, C.3–C.8.
+Source: AAPCS32, *Parameter Passing* — rules A.1–A.4, C.3–C.8.
 
-"İlk dört argüman r0–r3'e gider" **kısayoldur, kural değil**:
+“The first four arguments go into r0–r3” is **shorthand, not the rule**:
 
-- **C.3:** 8 byte hizalama isteyen bir argüman (örneğin `uint64_t`) NCRN'yi
-  bir sonraki **çift** register'a yuvarlar.
-- **C.4:** Kalan register'lara sığıyorsa register'lara gider.
-- **C.6 / C.7 / C.8:** Sığmıyorsa NCRN r4'e ayarlanır, NSAA gerekiyorsa 8
-  byte'a yuvarlanır ve argüman **stack'e** gider.
+- **C.3:** An argument requiring 8-byte alignment (for example, `uint64_t`)
+  rounds NCRN up to the next **even-numbered** register.
+- **C.4:** If it fits in the remaining registers, it goes into registers.
+- **C.6 / C.7 / C.8:** Otherwise, NCRN is set to r4, NSAA is rounded up to 8
+  bytes if necessary, and the argument goes onto the **stack**.
 
-Sonuç: bazı prototiplerde bir register **atlanır** ve argüman taşımaz.
+Result: some prototypes **skip** a register, which carries no argument.
 
-### Dönüş değeri (ABI)
+### Return value (ABI)
 
-Kaynak: AAPCS32, *Result Return*. 32 bit sonuç → `r0`. Double-word bir temel
-tür (`long long`, soft-float `double`) → **`r0` ve `r1`**.
+Source: AAPCS32, *Result Return*. A 32-bit result → `r0`. A double-word
+fundamental type (`long long`, soft-float `double`) → **`r0` and `r1`**.
 
-### Caller ve callee — kim neyden sorumlu?
+### Caller and callee — who is responsible for what?
 
 ```text
           CALLER                              |          CALLEE
                                               |
-  argumanlari r0-r3 (+ stack) koyar  -------> |  r0-r3, r12, flag'leri serbestce bozabilir
-  BL aninda SP 8'e hizali                     |  r4-r8, r10, r11 (ve v6 ise r9), SP'yi
-  BL, donus adresini LR'ye yazar     -------> |    kullanirsa SAKLAR ve GERI YUKLER
-                                              |  kendisi bir sey cagiracaksa ONCE LR'yi saklar
-  donuste:                           <------- |  sonuc r0 (veya r0:r1)
-  - r4-r11 ve SP ayni kalmistir               |
-  - r0-r3, r12, LR, flag'ler: "gitti" say     |
+  puts arguments in r0-r3 (+ stack)  -------> |  may freely clobber r0-r3, r12, flags
+  SP aligned to 8 at BL                     |  r4-r8, r10, r11 (and r9 if v6), SP:
+  BL writes return address to LR     -------> |    SAVE and RESTORE if used
+                                              |  save LR FIRST if making another call
+  on return:                           <------- |  result in r0 (or r0:r1)
+  - r4-r11 and SP are unchanged               |
+  - treat r0-r3, r12, LR, flags as clobbered     |
 ```
 
-| | Caller'ın görevi | Callee'nin görevi |
+| | Caller's responsibility | Callee's responsibility |
 |---|---|---|
-| **caller-clobbered** (r0–r3, r12) | Çağrıdan sonra lazımsa kendisi başka yerde tutar | Serbestçe kullanır |
-| **callee-saved** (r4–r8, r10, r11, v6 ise r9) | Hiçbir şey — değerleri geri gelecek | Kullanırsa saklar ve geri yükler |
+| **caller-clobbered** (r0–r3, r12) | Keep the value elsewhere if needed after the call | Use freely |
+| **callee-saved** (r4–r8, r10, r11, r9 if v6) | Nothing — the values will be restored | Save and restore if used |
 
-Ders 03'teki bilinçli ihlal (`[ACCUMULATE(7,5)] 5`, çökme yok) tam olarak bu
-tablonun sağ sütununu bozuyordu.
+Lesson 03's deliberate violation (`[ACCUMULATE(7,5)] 5`, no crash) broke
+exactly the right-hand column of this table.
 
-### Üç ayrı hizalama kuralı
+### Three separate alignment rules
 
-Ders 04'te karışan şey buydu. Üçü **farklı katmanlardır**:
+This was the source of confusion in Lesson 04. These are **different layers**:
 
-| Kural | Katman | Kaynak |
+| Rule | Layer | Source |
 |---|---|---|
-| **Public interface'te SP mod 8 = 0** | ABI | AAPCS32, *Stack constraints at a public interface* |
-| `LDRD`/`STRD` ve diğer erişimlerin hizalaması | ARCHITECTURE | Armv8-M ARM |
-| Exception girişinde frame hizalaması (xPSR bit 9) | ARCHITECTURE | Armv8-M ARM; ders 07 |
+| **SP mod 8 = 0 at a public interface** | ABI | AAPCS32, *Stack constraints at a public interface* |
+| Alignment of `LDRD`/`STRD` and other accesses | ARCHITECTURE | Armv8-M ARM |
+| Frame alignment on exception entry (xPSR bit 9) | ARCHITECTURE | Armv8-M ARM; Lesson 07 |
 
-AAPCS'in 8 byte kuralı **çağrı sınırında** geçerlidir. Hiçbir şey çağırmayan
-bir yaprak fonksiyonun **içinde** SP 8'e hizalı olmak zorunda değildir —
-Deney 1'de ölçülüyor (`asm_clobber_good`).
+AAPCS's 8-byte rule applies **at the call boundary**. SP need not be aligned
+to 8 **inside** a leaf function that calls nothing — measured in Experiment 1
+(`asm_clobber_good`).
 
 ---
 
@@ -128,16 +130,16 @@ Deney 1'de ölçülüyor (`asm_clobber_good`).
 
 *(TEACH)*
 
-**Çağrı sınırı, birbirinin kodunu hiç görmeyen iki taraf arasında bir
-sözleşmedir.** Derleme zamanında kimse karşı tarafı denetleyemez.
+**A call boundary is a contract between two parties that never see each other's
+code.** Neither can check the other at compile time.
 
-Sözleşme bozulduğunda program çoğu zaman **yine çalışır** — ta ki başka bir
-derleyici sürümü veya optimizasyon seviyesi register'ları farklı dağıtana
-kadar. Zarar, ihlali yapan fonksiyonda değil, **başkasının değişkeninde,
-daha sonra** ortaya çıkar.
+When the contract is broken, the program often **still works** — until another
+compiler version or optimization level allocates registers differently. The
+damage appears not in the offending function, but **later, in someone else's
+variable**.
 
-Bu yüzden bu derste sözleşmeyi, derleyicinin register tahsisine **bağlı
-olmayan** bir ölçüm aletiyle denetliyoruz.
+That is why this lesson checks the contract with a measurement instrument
+that **does not depend on** the compiler's register allocation.
 
 ---
 
@@ -148,8 +150,8 @@ olmayan** bir ölçüm aletiyle denetliyoruz.
 ```mermaid
 flowchart LR
     M["C main<br/>(GCC)"] -->|"r0 = x<br/>BL"| A["abi_chain<br/>(asm)<br/>push {r4, lr}<br/>r4 = x"]
-    A -->|"r0 = x<br/>BL · SP mod 8 = 0"| H["helper_scale<br/>(C, ayrı TU)"]
-    H -->|"r0 = 3x+1<br/>r4 hâlâ x"| A
+    A -->|"r0 = x<br/>BL · SP mod 8 = 0"| H["helper_scale<br/>(C, separate TU)"]
+    H -->|"r0 = 3x+1<br/>r4 still x"| A
     A -->|"r0 = 3x+1+x<br/>pop {r4, pc}"| M
 ```
 
@@ -159,24 +161,23 @@ flowchart LR
 
 *(SHOW)*
 
-Kaynaklar: [`example/`](example/).
+Sources: [`example/`](example/).
 
-| Dosya | Ne |
+| File | Purpose |
 |---|---|
-| [`abi.h`](example/abi.h) | Tüm prototipler — çağıranın argümanları doğru yerleştirmesi için **tam prototip** gerekir |
-| [`abi_probes.S`](example/abi_probes.S) | Argüman / dönüş probe'ları + `abi_chain` |
-| [`abi_harness.S`](example/abi_harness.S) | Callee-saved ölçüm aleti |
-| [`good_callee.S`](example/good_callee.S) | Pozitif kontrol |
+| [`abi.h`](example/abi.h) | All prototypes — the caller needs a **complete prototype** to allocate arguments correctly |
+| [`abi_probes.S`](example/abi_probes.S) | Argument / return probes + `abi_chain` |
+| [`abi_harness.S`](example/abi_harness.S) | Callee-saved measurement instrument |
+| [`good_callee.S`](example/good_callee.S) | Positive control |
 | [`bad_callee.S`](example/bad_callee.S) | Break It |
-| [`helpers.c`](example/helpers.c) | C yardımcıları — **ayrı derleme birimi** |
-| [`main.c`](example/main.c) | Sürücü |
-| [`optimization.c`](example/optimization.c) | Optimizasyon fikstürü |
+| [`helpers.c`](example/helpers.c) | C helpers — **separate translation unit** |
+| [`main.c`](example/main.c) | Driver |
+| [`optimization.c`](example/optimization.c) | Optimization fixture |
 
-### Probe'lar: girişteki durumu, hiçbir şeye dokunmadan önce yakala
+### Probes: capture entry state before touching anything
 
-Argümanları **GCC** yerleştiriyor; probe'lar yalnızca kaydediyor. İşaretçi
-olarak yalnızca `r12` kullanılıyor — AAPCS'e göre scratch ve argüman
-taşımıyor:
+**GCC** allocates the arguments; the probes only record them. Only `r12` is
+used as a pointer — it is scratch under AAPCS and carries no argument:
 
 ```asm
 .macro CAPTURE_ENTRY
@@ -194,10 +195,10 @@ taşımıyor:
 .endm
 ```
 
-Probe'lar yaprak fonksiyonlardır ve stack'e yazmaz; `[SP]` bu yüzden hâlâ
-çağıranın yığdığı ilk stack argümanını gösterir.
+The probes are leaf functions and do not write to the stack; `[SP]` therefore
+still points to the first stack argument placed there by the caller.
 
-### C → asm → C zinciri
+### C → asm → C chain
 
 ```asm
 abi_chain:                      @ uint32_t abi_chain(uint32_t x)
@@ -213,54 +214,55 @@ abi_chain:                      @ uint32_t abi_chain(uint32_t x)
     pop     {r4, pc}            /* r4'u geri ver, LR'den don             */
 ```
 
-`helper_scale` bilerek **ayrı bir derleme biriminde** (`helpers.c`). Aynı
-dosyada olsaydı, `-O2`/`-Os`'ta GCC hangi register'ları bozduğunu bildiği
-için (`-fipa-ra`, **COMPILER**) çağıranda AAPCS'in izin verdiğinden daha
-iyimser kod üretebilirdi. Ayrı TU'da derleyici yalnızca sözleşmeye
-güvenebilir.
+`helper_scale` deliberately lives in a **separate translation unit**
+(`helpers.c`). In the same file, GCC would know which registers it clobbers
+at `-O2`/`-Os` (`-fipa-ra`, **COMPILER**) and could generate more optimistic
+caller code than AAPCS alone permits. In a separate TU, the compiler can
+rely only on the contract.
 
-### Ölçüm aleti: callee-saved harness
+### Measurement instrument: the callee-saved harness
 
-C'de "r4'te bir değer tutup çağrıdan sonra bak" yazmak, GCC'nin register
-tahsisine bağlı kalırdı. Harness bunu assembly'de, kesin olarak yapıyor:
+Writing “keep a value in r4 and inspect it after the call” in C would depend
+on GCC's register allocation. The harness does this deterministically in assembly:
 
 ```text
 abi_check_callee(fn, a, b, *out_result):
-    push   {r3-r11, lr}          10 register = 40 byte
-                                 r3 = hizalama DOLGUSU ve out_result yuvasi
-    r4..r11 <- farkli nobetci degerler (0xA4A4A404 ... 0xABABAB0B)
-    SP'yi kaydet
-    out_result'i ve BLX anindaki SP'yi GLOBAL yuvalara yaz
+    push   {r3-r11, lr}          10 registers = 40 bytes
+                                 r3 = alignment PADDING and out_result slot
+    r4..r11 <- distinct sentinel values (0xA4A4A404 ... 0xABABAB0B)
+    save SP
+    write out_result and SP at BLX into GLOBAL slots
     blx    fn                    fn(a, b)
-    --- donus: SP guvenilmez; SP dogrulanana kadar [sp] erisimi YOK ---
-    *out_result = r0             (isaretci global yuvadan)
-    SP beklenenden farkli mi? -> bit 8; SP'yi bilinen iyi degere geri yukle
-    her biri icin: r4..r11 nobetciye esit mi? degilse maskeye bit
-    pop    {r3-r11, pc}          CAGIRANIN r4-r11'i geri; donus
+    --- return: SP untrusted; NO [sp] access until SP is validated ---
+    *out_result = r0             (pointer from global slot)
+    SP differs from expected? -> bit 8; restore SP to known-good value
+    for each: r4..r11 equals sentinel? if not, set bit in mask
+    pop    {r3-r11, pc}          CALLER'S r4-r11 restored; return
 ```
 
-Harness **bir ölçüm aletidir**, yani kendisi de AAPCS'e uymak zorunda:
+The harness is **a measurement instrument**, so it must itself obey AAPCS:
 
-| Kontrol | Nasıl sağlanıyor |
+| Check | How it is provided |
 |---|---|
-| Çağıranın r4–r11'i korunuyor | `push {r3-r11, lr}` … `pop {r3-r11, pc}` |
-| LR | Girişte saklanıyor, `pc`'ye pop'lanıyor |
-| `BLX` anında SP mod 8 = 0 | 40 byte yığılıyor; ölçülüyor (`CHECK_HARNESS_SP_ALIGNED`) |
-| Sonuç | Maske `r0`'da, callee sonucu `*out_result`'ta |
-| Bozuk callee'den sağ çıkması | Kendi r4–r11'ini callee'ye güvenmeden geri yüklüyor |
-| SP'yi bozan callee'den sağ çıkması | Dönüşte, SP doğrulanıp geri yüklenene kadar hiçbir `[sp]` erişimi yok; gereken her şey `BLX`'ten önce global yuvalara yazılıyor |
+| Caller's r4–r11 preserved | `push {r3-r11, lr}` … `pop {r3-r11, pc}` |
+| LR | Saved on entry, popped into `pc` |
+| SP mod 8 = 0 at `BLX` | 40 bytes stacked; measured (`CHECK_HARNESS_SP_ALIGNED`) |
+| Result | Mask in `r0`, callee result in `*out_result` |
+| Surviving a broken callee | Restores its own r4–r11 without trusting the callee |
+| Surviving a callee that corrupts SP | No `[sp]` access after return until SP is checked and restored; everything needed is written to global slots before `BLX` |
 
-Ve **önce pozitif kontrol**: harness doğru bir callee'de (`good_callee`)
-maske = 0 vermiyorsa, bozuk callee üzerindeki ölçümüne güvenilmez.
+And **the positive control comes first**: if the harness does not produce
+mask = 0 for a correct callee (`good_callee`), its measurement of the broken
+callee cannot be trusted.
 
-> **Ölçüm aletinin kendi regresyonu.** Bağımsız denetim, harness'in ilk
-> sürümünün SP'yi bozan bir callee'den sonra `[sp]`'den okuduğu için
-> kendi çağıranının r4'ünü işaretçi sanıp yazdığını buldu (BusFault,
-> `BFAR = 0xDEAD0000`). Onarılmış harness'i bu duruma karşı sınayan ayrı,
-> öğrenciye yönelik olmayan bir hedef var: `09-harness-sp-regression`
-> ([`regression/`](regression/)). SP'yi +4 ve −8 kaydıran callee'lerde maske
-> `0x100`, r4 + SP bozan callee'de `0x101`; her durumda sonuç, çağıranın
-> r4–r11'i ve SP'si geri geliyor.
+> **The measurement instrument's own regression.** An independent audit found
+> that the first harness version read from `[sp]` after a callee corrupted SP,
+> mistaking its own caller's r4 for a pointer and writing through it (BusFault,
+> `BFAR = 0xDEAD0000`). A separate, non-student-facing target tests the repaired
+> harness against this case: `09-harness-sp-regression` ([`regression/`](regression/)).
+> Callees that shift SP by +4 and −8 produce mask `0x100`; a callee corrupting
+> r4 + SP produces `0x101`. In every case, the result, the caller's r4–r11,
+> and SP are recovered.
 
 ---
 
@@ -274,13 +276,13 @@ cmake --build --preset debug --target 09-compiler-aapcs
 ./scripts/run-qemu.sh build/debug/lessons/09-compiler-aapcs/09-compiler-aapcs.elf
 ```
 
-| Hedef | Amaç |
+| Target | Purpose |
 |---|---|
-| `09-compiler-aapcs` | Sözleşmeyi **ölç** |
-| `09-compiler-aapcs-broken` | Doğru sonuç, **bozuk** sözleşme |
-| `09-compiler-optimization` | Aynı C, üç preset, farklı makine kodu |
-| `09-exercise-callee-save` | Onarılacak fonksiyon |
-| `09-solution-callee-save` | Referans çözüm |
+| `09-compiler-aapcs` | **Measure** the contract |
+| `09-compiler-aapcs-broken` | Correct result, **broken** contract |
+| `09-compiler-optimization` | Same C, three presets, different machine code |
+| `09-exercise-callee-save` | Function to repair |
+| `09-solution-callee-save` | Reference solution |
 
 ---
 
@@ -288,7 +290,7 @@ cmake --build --preset debug --target 09-compiler-aapcs
 
 *(RUN)*
 
-Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
+Actual output (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 
 ```text
 ===== LESSON 09: AAPCS =====
@@ -338,34 +340,35 @@ Gerçek çıktı (arm-none-eabi-gcc 13.2.1, QEMU 8.2.2, mps2-an505, `debug`):
 ===== END =====
 ```
 
-On iki `CHECK_*` satırının hepsi `release` ve `minsize` preset'lerinde de
-`PASS`. Adresler build'e özeldir.
+All twelve `CHECK_*` lines also report `PASS` with the `release` and `minsize`
+presets. Addresses are build-specific.
 
-### Argüman eşlemesi — ölçülen (OBSERVATION, üç preset'te aynı)
+### Argument mapping — measured (OBSERVATION, identical across three presets)
 
-| Fikstür | Prototip | r0 | r1 | r2 | r3 | Stack |
+| Fixture | Prototype | r0 | r1 | r2 | r3 | Stack |
 |---|---|---|---|---|---|---|
 | F1 | `f(u32 a, b, c, d)` | a | b | c | d | — |
 | F2 | `f(u32 a, b, c, d, e)` | a | b | c | d | `[SP+0]` = e |
-| F3 | `f(u32 a, u64 b)` | a | *atlandı* | b.lo | b.hi | — |
-| F4 | `f(u32 a, b, c, u64 d)` | a | b | c | *atlandı* | `[SP+0]` = d.lo, `[SP+4]` = d.hi |
+| F3 | `f(u32 a, u64 b)` | a | *skipped* | b.lo | b.hi | — |
+| F4 | `f(u32 a, b, c, u64 d)` | a | b | c | *skipped* | `[SP+0]` = d.lo, `[SP+4]` = d.hi |
 
-- **F3:** `b`, çift numaralı register çifti **r2:r3**'e gitti (kural C.3);
-  düşük word düşük numaralı register'da. r1 argüman taşımıyor.
-- **F4:** `d` tek başına r3'e **sığmadı**; r3 atlandı ve `d` stack'e gitti
-  (C.6–C.8). Düşük word düşük adreste. Probe girişinde `SP = 0x30007FD8` →
-  mod 8 = 0.
-- **F5:** `make_u64()` `0x0123456789ABCDEF` döndürdü; `BL`'den hemen sonra
-  `r0 = 0x89ABCDEF` (düşük), `r1 = 0x01234567` (yüksek).
+- **F3:** `b` went into the even-numbered register pair **r2:r3** (rule C.3);
+  the low word is in the lower-numbered register. r1 carries no argument.
+- **F4:** `d` **did not fit** in r3 alone; r3 was skipped and `d` went onto
+  the stack (C.6–C.8). The low word is at the lower address. At probe entry,
+  `SP = 0x30007FD8` → mod 8 = 0.
+- **F5:** `make_u64()` returned `0x0123456789ABCDEF`; immediately after `BL`,
+  `r0 = 0x89ABCDEF` (low), `r1 = 0x01234567` (high).
 
-### "Atlanan register" neden kontrol edilmiyor?
+### Why is the “skipped register” not checked?
 
-F3'te r1, F4'te r3 argümanı **taşımıyor**; içerikleri sözleşmenin parçası
-değil. Bu yüzden `(unspecified)` olarak basılıyor ve **hiçbir PASS/FAIL
-kararına girmiyor**. Kontroller yalnızca **pozitif**: `b` r2:r3'te mi, `d`
-doğru stack adreslerinde mi, word sırası doğru mu, SP hizalı mı.
+In F3, r1 **does not carry** the argument; in F4, neither does r3. Their contents
+are not part of the contract. They are therefore printed as `(unspecified)`
+and **never affect a PASS/FAIL decision**. Checks are strictly **positive**:
+is `b` in r2:r3, is `d` at the right stack addresses, is word order correct,
+is SP aligned?
 
-Bunun neden önemli olduğunu ölçüm gösterdi:
+Measurements showed why this matters:
 
 | Preset | F3 r1 | F4 r3 |
 |---|---|---|
@@ -373,11 +376,11 @@ Bunun neden önemli olduğunu ölçüm gösterdi:
 | `release` | `0x100009D8` | `0x00000000` |
 | `minsize` | `0x1000081C` | **`0x99AABBCC`** |
 
-`debug` ve `minsize`'da r3, **tesadüfen** `d`'nin yüksek word'ünü içeriyor —
-GCC onu stack'e yazarken r3'ü geçici register olarak kullanmış. "r3, `d`'nin
-hiçbir yarısını içermemeli" gibi bir negatif kontrol, ABI'ye **uyulmuşken**
-FAIL verirdi. Atlanan bir register hakkında söylenebilecek tek doğru şey:
-**içeriği tanımsız**.
+In `debug` and `minsize`, r3 **happens** to contain the high word of `d` — GCC
+used r3 as a temporary while writing it to the stack. A negative check such
+as “r3 must contain neither half of `d`” would report FAIL **despite ABI
+compliance**. The only correct statement about a skipped register is:
+**its contents are unspecified**.
 
 ---
 
@@ -385,7 +388,7 @@ FAIL verirdi. Atlanan bir register hakkında söylenebilecek tek doğru şey:
 
 *(OBSERVE)*
 
-Hedef: `09-compiler-aapcs`, `debug`. Beş durak, hepsi `abi_chain` etrafında.
+Target: `09-compiler-aapcs`, `debug`. Five stops, all around `abi_chain`.
 
 ```bash
 cmake --build --preset debug --target debug-09-compiler-aapcs
@@ -397,10 +400,10 @@ set architecture armv8-m.main
 target remote :3333
 ```
 
-Adresleri kendi build'inden al: `disassemble fixture_chain` ve
-`disassemble abi_chain`. Aşağıdakiler bu build'in adresleri.
+Obtain addresses from your own build: `disassemble fixture_chain` and
+`disassemble abi_chain`. The addresses below belong to this build.
 
-### A — `main` tarafında, `bl abi_chain` üzerinde
+### A — In `main`, at `bl abi_chain`
 
 ```gdb
 (gdb) break *0x100004e6
@@ -416,9 +419,9 @@ r4  0x0
 sp  0x30007fe0
 ```
 
-**Gözlem:** argüman `r0`'da. Çağıranın r4'ü ve SP'si not edildi.
+**Observation:** argument in `r0`. The caller's r4 and SP were recorded.
 
-### B — `abi_chain`'in ilk komutu
+### B — First instruction of `abi_chain`
 
 ```gdb
 (gdb) break *0x100000f4
@@ -432,10 +435,10 @@ $lr = 0x100004eb
 $sp = 0x30007fe0
 ```
 
-**Gözlem:** `BL` yalnızca `LR`'yi değiştirdi: `0x100004e6 + 4 = 0x100004ea`,
-bit 0 = 1 → `0x100004eb` (Thumb). SP değişmedi.
+**Observation:** `BL` changed only `LR`: `0x100004e6 + 4 = 0x100004ea`,
+bit 0 = 1 → `0x100004eb` (Thumb). SP did not change.
 
-### C — `bl helper_scale` üzerinde
+### C — At `bl helper_scale`
 
 ```gdb
 (gdb) break *0x10000100
@@ -453,13 +456,13 @@ $sp = 0x30007fd8
 $r4 = 0xa
 ```
 
-**Gözlem:** `push {r4, lr}` 8 byte yığdı → SP hâlâ 8'e hizalı. Stack'te en
-düşük adreste **r4** (çağıranın değeri `0`), üstünde **LR**. `r4` artık `x`'i
-taşıyor.
+**Observation:** `push {r4, lr}` stacked 8 bytes → SP remains aligned to 8.
+On the stack, **r4** (the caller's value, `0`) is at the lowest address, with
+**LR** above it. `r4` now carries `x`.
 
-### D — `helper_scale` döndükten hemen sonra
+### D — Immediately after `helper_scale` returns
 
-Durak C'de `bl`'den hemen önce `info registers r1 r2 r3` de al, sonra:
+At stop C, also run `info registers r1 r2 r3` just before `bl`, then:
 
 ```gdb
 (gdb) break *0x10000104
@@ -468,29 +471,29 @@ Durak C'de `bl`'den hemen önce `info registers r1 r2 r3` de al, sonra:
 ```
 
 ```text
-            BL'den once    BL'den sonra
-r0          0xa            0x1f         <- helper sonucu: 3*10+1
+            before BL    after BL
+r0          0xa            0x1f         <- helper result: 3*10+1
 r1          0x30000008     0x30000008
 r2          0x30007fd8     0x30007fd8
 r3          0x1234567      0x1234567
-r4          0xa            0xa          <- degismedi
+r4          0xa            0xa          <- unchanged
 ```
 
-**Gözlem:** `r4` sağlam — `helper_scale` sözleşmeye uydu. Bu çağrıda
-`helper_scale` **yalnızca `r0`'ı** değiştirdi; `r1`–`r3` üç preset'te de
-aynı kaldı.
+**Observation:** `r4` survived — `helper_scale` obeyed the contract. In this
+call, `helper_scale` changed **only `r0`**; `r1`–`r3` remained unchanged
+across all three presets.
 
-Bu iki şeyi ayır:
+Distinguish these two things:
 
-- **ABI:** `r1`–`r3` caller-clobbered. Çağıran onların çağrıdan sağ çıkmasına
-  **güvenemez**; callee onları değiştirmeye **yetkilidir**.
-- **OBSERVATION:** bu `helper_scale` onları değiştirmedi.
+- **ABI:** `r1`–`r3` are caller-clobbered. The caller **cannot rely on** them
+  surviving a call; the callee is **allowed** to change them.
+- **OBSERVATION:** this `helper_scale` did not change them.
 
-"Değiştirilebilir" ile "değiştirildi" aynı şey değildir. Bir register'ın bir
-ölçümde aynı kalması, ona güvenmeyi doğru yapmaz — bir sonraki derleyici
-sürümü veya başka bir callee onu bozabilir.
+“May be changed” and “was changed” are different. A register staying unchanged
+in one measurement does not justify relying on it — the next compiler version
+or another callee may clobber it.
 
-### E — `main`'e dönüş
+### E — Return to `main`
 
 ```gdb
 (gdb) break *0x100004ea
@@ -500,15 +503,15 @@ sürümü veya başka bir callee onu bozabilir.
 
 ```text
 r0  0x29        <- 41
-r4  0x0         <- durak A ile ayni
-sp  0x30007fe0  <- durak A ile ayni
+r4  0x0         <- same as stop A
+sp  0x30007fe0  <- same as stop A
 ```
 
-**Gözlem:** sözleşme çağıranın tarafından tamamlandı: sonuç `r0`'da, `r4` ve
-SP dokunulmamış gibi.
+**Observation:** the contract is fulfilled from the caller's perspective:
+result in `r0`, with `r4` and SP as though untouched.
 
-> GDB'nin kaynak satırı göstergesi assembly dosyalarında bazen komşu bir
-> fonksiyonun satırını gösterebiliyor. Güvenilir olan `x/1i $pc` çıktısıdır.
+> GDB's source-line indicator sometimes points to a neighboring function's
+> line in assembly files. The reliable evidence is `x/1i $pc`.
 
 ---
 
@@ -516,7 +519,7 @@ SP dokunulmamış gibi.
 
 *(OBSERVE / MODIFY)*
 
-### Deney 1 — Aynı C, üç preset
+### Experiment 1 — Same C, three presets
 
 ```bash
 for p in debug release minsize; do
@@ -525,78 +528,79 @@ done
 # build/<preset>/lessons/09-compiler-aapcs/09-compiler-optimization.lst
 ```
 
-Çalışma zamanı üç preset'te de **aynı**: `OPT_CHECKSUM = 0x79DC404C`,
-`CHECK_OPT_CHECKSUM PASS`. Makine kodu değişiyor; anlam değişmiyor.
+Runtime behavior is **identical** across three presets: `OPT_CHECKSUM = 0x79DC404C`,
+`CHECK_OPT_CHECKSUM PASS`. Machine code changes; meaning does not.
 
-Aşağıdaki tablonun tamamı **OBSERVATION**'dır — GCC 13.2.1, bu repo'nun
-bayraklarıyla. Başka bir derleyici veya sürüm farklı kod üretebilir.
+Everything in the following table is an **OBSERVATION** — GCC 13.2.1 with this
+repository's flags. Another compiler or version may produce different code.
 
-| Fonksiyon | `-Og` (debug) | `-O2` (release) | `-Os` (minsize) | Gösterdiği |
+| Function | `-Og` (debug) | `-O2` (release) | `-Os` (minsize) | Demonstrates |
 |---|---|---|---|---|
-| `leaf_regs` | `eors`, `add.w`, `bx lr` | aynı | aynı | Register'la yetinen yaprak: push yok |
-| `leaf_with_stack` | `sub sp, #16` … `add sp, #16`, `bx lr` | `push {r4}`, `sub sp, #20` … `pop {r4}`, `bx lr` | `sub sp, #16` … `bx lr` | **Stack kullanan yaprak** |
+| `leaf_regs` | `eors`, `add.w`, `bx lr` | same | same | Register-only leaf: no push |
+| `leaf_with_stack` | `sub sp, #16` … `add sp, #16`, `bx lr` | `push {r4}`, `sub sp, #20` … `pop {r4}`, `bx lr` | `sub sp, #16` … `bx lr` | **Leaf using the stack** |
 | `tail_call` | `push {r3, lr}`, `bl helper_ext`, `pop {r3, pc}` | `adds`, **`b.w helper_ext`** | `adds`, **`b.w helper_ext`** | Tail call |
-| `use_sq_twice` | iki kez `bl sq` | `mul.w` + `mla` | `muls` + `mla` | Inlining |
-| `dead_store` | **iki** `str` (1, sonra 2) | **tek** `str` (2) | **tek** `str` (2) | Ölü yazma eleme |
-| `vol_store_twice` | iki `str` | iki `str` | iki `str` | `volatile` erişimleri korur |
-| `poll_plain` | `ldr` döngü **içinde** | `ldr` **bir kez**, sonra kendine `b.n` | `-O2` ile aynı | Yükün döngü dışına alınması |
-| `poll_vol` | `ldr` döngü içinde | `ldr` döngü içinde | `ldr` döngü içinde | `volatile` her okumayı korur |
-| `signed_gt` | **`movs r0, #1`** | **`movs r0, #1`** | **`movs r0, #1`** | İşaretli taşma UB → sabite katlandı |
-| `unsigned_gt` | `adds`, `it ne`, `movne` | aynı | aynı | İşaretsiz sarma tanımlı → gerçek hesap |
-| `asm_clobber_bad` | `mov r4, r0`, `bx lr` | aynı | aynı | Clobber yok → r4 **saklanmadı** |
-| `asm_clobber_good` | `push {r4}` … `pop {r4}` | aynı | `push {r4, lr}` … `pop {r4, pc}` | Clobber var → r4 saklandı |
-| `clobber_r9` | `str.w r9, [sp, #-4]!` … | aynı | `stmdb sp!, {r9, lr}` … | r9 bu yapılandırmada saklanıyor |
+| `use_sq_twice` | two `bl sq` calls | `mul.w` + `mla` | `muls` + `mla` | Inlining |
+| `dead_store` | **two** `str` (1, then 2) | **one** `str` (2) | **one** `str` (2) | Dead-store elimination |
+| `vol_store_twice` | two `str` | two `str` | two `str` | `volatile` preserves accesses |
+| `poll_plain` | `ldr` **inside** loop | `ldr` **once**, then `b.n` to itself | same as `-O2` | Load hoisting |
+| `poll_vol` | `ldr` inside loop | `ldr` inside loop | `ldr` inside loop | `volatile` preserves each read |
+| `signed_gt` | **`movs r0, #1`** | **`movs r0, #1`** | **`movs r0, #1`** | Signed overflow UB → folded to constant |
+| `unsigned_gt` | `adds`, `it ne`, `movne` | same | same | Unsigned wraparound defined → actual computation |
+| `asm_clobber_bad` | `mov r4, r0`, `bx lr` | same | same | No clobber → r4 **not saved** |
+| `asm_clobber_good` | `push {r4}` … `pop {r4}` | same | `push {r4, lr}` … `pop {r4, pc}` | Clobber → r4 saved |
+| `clobber_r9` | `str.w r9, [sp, #-4]!` … | same | `stmdb sp!, {r9, lr}` … | r9 saved in this configuration |
 
-**Yalnızca disassembly için** olan ve **asla çalıştırılmayan** fonksiyonlar:
-`poll_plain`/`poll_vol` (sonsuz döngü olabilir), `signed_gt` (taşmada UB),
-`asm_clobber_bad` (bilerek AAPCS ihlali). `--gc-sections`'tan kurtulmaları
-için adresleri alınıyor ama çağrılmıyorlar.
+Functions used **only for disassembly**, **never executed**:
+`poll_plain`/`poll_vol` (may loop forever), `signed_gt` (UB on overflow),
+`asm_clobber_bad` (deliberate AAPCS violation). Their addresses are taken to
+keep them alive through `--gc-sections`, but they are not called.
 
-Tablodan çıkan dersler:
+Lessons from the table:
 
-- **Yaprak ≠ stack'siz.** `leaf_with_stack` hiçbir fonksiyon çağırmıyor (üç
-  preset'te de `bl` yok), yine de `sub sp` ile stack ayırıyor. Diziyi
-  bellekte tutmaya zorlayan şey bir çağrı değil, dizinin adresini alan boş
-  bir inline asm (`"r"(buf)` + `"memory"` clobber'ı). *Yaprak fonksiyon =
-  hiçbir çağrı yapmayan fonksiyon*; stack kullanıp kullanmaması ayrı bir soru.
-- **Yaprak içinde SP 8'e hizalı olmak zorunda değil.** `asm_clobber_good`
-  `-Og`/`-O2`'de yalnızca `push {r4}` yapıyor: 4 byte, yani fonksiyonun içinde
-  SP mod 8 = 4. Bu **yasal**, çünkü fonksiyon hiçbir şey çağırmıyor —
-  AAPCS'in 8 byte kuralı çağrı sınırı içindir.
-- **`b` görmek bozuk sözleşme demek değildir.** `-O2`'de `tail_call`
-  `helper_ext`'e `bl` yerine `b.w` ile gidiyor ve LR'yi hiç saklamıyor:
-  `helper_ext` doğrudan `tail_call`'ın **çağıranına** dönecek. Bu bir
-  **derleyici optimizasyonu** (`-foptimize-sibling-calls`); garanti değil.
-  `-Og`'da aynı fonksiyon `bl` kullanıyor.
-- **`-Og`'daki `push {r3, lr}`:** `tail_call` yalnızca LR'yi saklaması
-  gerekirken r3'ü de yığıyor. Sebep hizalama: `{lr}` tek başına 4 byte olurdu
-  ve `bl` anında SP mod 8 = 4 olurdu. r3 bir **dolgu**. Harness'teki
-  `push {r3-r11, lr}` ile aynı fikir.
-- **`signed_gt` `-Og`'da bile katlandı.** `(x + 1) > x` işaretli `int` için
-  her zaman doğru kabul ediliyor, çünkü taşma C'de tanımsız davranış (ISO C11
-  §6.5 ¶5). Ders 03'teki düzeltmeyi tekrar ediyoruz: assembly'nin sarmalayan
-  `ADDS` sonucu, taşan işaretli C'nin davranışına **eşdeğer değildir**.
-- **İnline asm'in iki sözleşmesi.** `mov r4, %0` komutu her iki fonksiyonda
-  da aynı ve doğru çalışır. Fark, **derleyiciye verilen sözleşmede**:
-  clobber listesi olmadan GCC r4'ün değiştiğini bilmiyor ve onu saklamıyor —
-  sonuç, çağıranına karşı bir AAPCS ihlali. Derleyici asm metnini **okumaz**.
+- **Leaf ≠ stackless.** `leaf_with_stack` calls no function (no `bl` in any
+  of the three presets), yet allocates stack space with `sub sp`. What forces
+  the array into memory is not a call, but an empty inline asm taking its
+  address (`"r"(buf)` + `"memory"` clobber). *A leaf function calls no other
+  function*; whether it uses the stack is a separate question.
+- **SP need not be aligned to 8 inside a leaf.** `asm_clobber_good` uses only
+  `push {r4}` at `-Og`/`-O2`: 4 bytes, so SP mod 8 = 4 inside the function.
+  This is **legal**, because the function calls nothing — AAPCS's 8-byte
+  rule applies at the call boundary.
+- **Seeing `b` does not mean the contract is broken.** At `-O2`, `tail_call`
+  reaches `helper_ext` via `b.w` instead of `bl`, without saving LR:
+  `helper_ext` returns directly to **the caller** of `tail_call`. This is a
+  **compiler optimization** (`-foptimize-sibling-calls`), not a guarantee.
+  The same function uses `bl` at `-Og`.
+- **`push {r3, lr}` at `-Og`:** `tail_call` stacks r3 although it only needs
+  to save LR. The reason is alignment: `{lr}` alone would be 4 bytes,
+  leaving SP mod 8 = 4 at `bl`. r3 is **padding**. The same idea appears in
+  the harness's `push {r3-r11, lr}`.
+- **`signed_gt` was folded even at `-Og`.** `(x + 1) > x` is assumed always
+  true for signed `int`, because overflow is undefined behavior in C
+  (ISO C11 §6.5 ¶5). We repeat the correction from Lesson 03: assembly's
+  wrapping `ADDS` result is **not equivalent** to overflowing signed C.
+- **Inline asm has two contracts.** The instruction `mov r4, %0` is identical
+  in both functions and executes correctly. The difference is in **the
+  contract given to the compiler**: without a clobber list, GCC does not
+  know r4 changes and does not save it — an AAPCS violation against the
+  caller. The compiler **does not read** the asm text.
 
-### Deney 2 — r9 bu yapılandırmada ne yapıyor?
+### Experiment 2 — What does r9 do in this configuration?
 
-`clobber_r9` satırı: derleyici `"r9"` clobber'ını gördüğünde r9'u üç
-preset'te de **sakladı**. Caller-clobbered bir register için bunu yapmazdı.
+The `clobber_r9` row: seeing the `"r9"` clobber, the compiler **saved** r9
+in all three presets. It would not do so for a caller-clobbered register.
 
-> **ABI:** r9'un rolü platforma özgüdür; callee-saved olması ancak platform
-> onu v6 olarak atarsa geçerlidir.
-> **OBSERVATION:** Bu repo'nun `arm-none-eabi-gcc` yapılandırmasında r9,
-> callee-saved (v6) gibi ele alınıyor. Harness bu yüzden r9'u da denetliyor.
+> **ABI:** r9's role is platform-specific; it is callee-saved only if the
+> platform assigns it the v6 role.
+> **OBSERVATION:** This repository's `arm-none-eabi-gcc` configuration treats
+> r9 as callee-saved (v6). That is why the harness checks r9 too.
 
-### Deney 3 — Bir prototipi değiştir
+### Experiment 3 — Change a prototype
 
-*(MODIFY)* `abi.h` ve `main.c`'de F4'ü
-`probe_3u32_u64(uint32_t a, uint32_t b, uint64_t d)`'ye çevir (iki u32 +
-u64). Önce **tahmin et**: `d` nereye gider? Sonra ölç. (İpucu: kural C.3
-NCRN'yi hangi register'a yuvarlar?) Bitince değişikliği geri al.
+*(MODIFY)* In `abi.h` and `main.c`, change F4 to
+`probe_3u32_u64(uint32_t a, uint32_t b, uint64_t d)` (two u32 + u64).
+**Predict first:** where does `d` go? Then measure. (Hint: which register
+does rule C.3 round NCRN to?) Revert the change when finished.
 
 ---
 
@@ -618,7 +622,7 @@ bad_callee:          @ uint32_t bad_callee(uint32_t a, uint32_t b)
     bx    lr
 ```
 
-Gerçek çıktı (harness bölümü):
+Actual output (harness section):
 
 ```text
 [  CONTROL_MASK] 0x00000000
@@ -632,19 +636,19 @@ Gerçek çıktı (harness bölümü):
 ===== END =====
 ```
 
-Üç preset'te de aynı. **Sonuç doğru** (`7 + 5 = 12`), **sözleşme bozuk**
-(maske bit 0 = r4). Çökme yok, zaman aşımı yok; firmware normal şekilde
-`END`'e ulaşıyor.
+Identical across three presets. **Correct result** (`7 + 5 = 12`), **broken
+contract** (mask bit 0 = r4). No crash or timeout; firmware reaches `END`
+normally.
 
-Neden `main` etkilenmedi? Çünkü harness, bozuk callee'ye güvenmeden kendi
-çağıranının r4–r11'ini geri yüklüyor. GDB'de doğrulandı: `main`'in r4–r11'i
-çağrıdan önce `0x44444444 … 0xBBBBBBBB` olarak işaretlendi; bozuk callee'den
-sonra hepsi aynen geri geldi, SP de (`0x30007fe0`).
+Why was `main` unaffected? The harness restores its own caller's r4–r11
+without trusting the broken callee. Verified in GDB: `main`'s r4–r11 were
+marked `0x44444444 … 0xBBBBBBBB` before the call; after the broken callee,
+all returned unchanged, as did SP (`0x30007fe0`).
 
-Gerçek bir programda bu koruma **yoktur**: `bad_callee`'yi doğrudan C'den
-çağıran bir fonksiyon, r4'te tuttuğu bir değeri kaybederdi — ve bunun görünür
-olup olmaması, o fonksiyonun r4'ü o anda kullanıp kullanmadığına, yani
-**register tahsisine** bağlı olurdu. Harness'in varlık sebebi tam olarak bu.
+A real program has **no such protection**: a function calling `bad_callee`
+directly from C would lose a value kept in r4 — whether this becomes visible
+depends on whether that function uses r4 at the time, hence on **register
+allocation**. This is exactly why the harness exists.
 
 ---
 
@@ -652,18 +656,18 @@ olup olmaması, o fonksiyonun r4'ü o anda kullanıp kullanmadığına, yani
 
 *(DEBUG)*
 
-1. `bad_callee` doğru sonuç veriyor. "Bir fonksiyon doğru sonuç veriyorsa
-   doğrudur" cümlesi neden yanlış?
-2. Harness'in maskesi neden deterministik? GCC register tahsisi onu neden
-   etkileyemiyor?
-3. `bad_callee`'nin `movs r4, #0` satırını `movs r12, #0` yap. Maske ne olur?
-   Neden?
-4. Pozitif kontrolü (`good_callee`) neden **önce** çalıştırıyoruz? Harness'in
-   kendisinde bir hata olsaydı ne görürdük?
-5. Harness `push {r4-r11, lr}` kullansaydı (9 register, 36 byte) `BLX`
-   anında SP ne olurdu? Hangi kontrol bunu yakalardı?
+1. `bad_callee` returns the right result. Why is “a function is correct if it
+   returns the right result” false?
+2. Why is the harness mask deterministic? Why can GCC register allocation
+   not affect it?
+3. Replace `bad_callee`'s `movs r4, #0` with `movs r12, #0`. What mask results?
+   Why?
+4. Why run the positive control (`good_callee`) **first**? What would we see
+   if the harness itself had a bug?
+5. If the harness used `push {r4-r11, lr}` (9 registers, 36 bytes), what
+   would SP be at `BLX`? Which check would catch this?
 
-GDB ile harness'in kendi çağıranını koruduğunu görmek için:
+To see in GDB that the harness protects its own caller:
 
 ```gdb
 (gdb) disassemble fixture_harness      # ikinci "bl abi_check_callee"yi bul
@@ -685,15 +689,15 @@ GDB ile harness'in kendi çağıranını koruduğunu görmek için:
 ### Exercise 01 — Repair an ABI-Broken Assembly Function
 
 [`exercises/01-callee-save/scale_and_sum.S`](exercises/01-callee-save/scale_and_sum.S):
-`helper_scale(a) + b` hesaplıyor ve **doğru sonucu** döndürüyor. Ama
-sözleşmeyi iki yerden bozuyor.
+computes `helper_scale(a) + b` and returns **the right result**, but violates
+the contract in two places.
 
 ```bash
 cmake --build --preset debug --target 09-exercise-callee-save
 ./scripts/run-qemu.sh build/debug/lessons/09-compiler-aapcs/09-exercise-callee-save.elf
 ```
 
-Başlangıç çıktısı (gerçek, üç preset'te aynı karar):
+Starting output (actual, same verdict across three presets):
 
 ```text
 [  CHECK_HARNESS_POSITIVE_CONTROL] PASS
@@ -707,19 +711,19 @@ Başlangıç çıktısı (gerçek, üç preset'te aynı karar):
 ===== END =====
 ```
 
-Yalnızca `.S` dosyasını düzenle. **Doğrulama ölçütü:** üç kontrolün üçü de
-`PASS`, sonuç `36` kalmalı. Ayrıntılar
-[exercise README](exercises/01-callee-save/README.md)'sinde.
+Edit only the `.S` file. **Verification criterion:** all three checks must
+be `PASS`, and the result must remain `36`. See the
+[exercise README](exercises/01-callee-save/README.md) for details.
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-callee-save/`](solutions/01-callee-save/) | `09-solution-callee-save` |
+| Exercise 01 solution | [`solutions/01-callee-save/`](solutions/01-callee-save/) | `09-solution-callee-save` |
 
-Gerçek çıktı (`debug`):
+Actual output (`debug`):
 
 ```text
 [  CHECK_HARNESS_POSITIVE_CONTROL] PASS
@@ -737,25 +741,25 @@ Gerçek çıktı (`debug`):
 
 ## What I Learned
 
-> Bu bölüm senin.
+> This section is yours.
 
-**Caller ve callee'nin sorumluluklarını kendi cümlemle:**
-
-<!-- -->
-
-**Bir register'ın "atlanması" ve içeriğinin neden tanımsız olduğu:**
+**Caller and callee responsibilities in my own words:**
 
 <!-- -->
 
-**Doğru sonuç ≠ doğru sözleşme:**
+**What it means for a register to be “skipped,” and why its contents are unspecified:**
 
 <!-- -->
 
-**Bir `.lst` dosyasında gördüğümü ABI kuralı sanmamak için dikkat ettiğim:**
+**Correct result ≠ correct contract:**
 
 <!-- -->
 
-**Ders 10'a taşıdığım soru:**
+**How I avoid mistaking what I see in a `.lst` file for an ABI rule:**
+
+<!-- -->
+
+**The question I am taking into Lesson 10:**
 
 <!-- -->
 
@@ -763,119 +767,116 @@ Gerçek çıktı (`debug`):
 
 ## Quick Check
 
-1. `r0`–`r3` ne için kullanılır ve değerleri neden bir çağrıdan sonra
-   korunmayabilir?
-2. Caller-saved ve callee-saved: kim neyden sorumlu, neden?
-3. **(Reasoning)** Bir callee kendi sonucu doğru olsa bile neden r4'ü geri
-   yüklemek zorunda?
-4. `r12` (IP) ne için kullanılabilir, kim tarafından — linker dahil?
-5. Başka bir fonksiyonu çağıran bir fonksiyonda LR'ye ne olur, fonksiyon ne
-   yapmalı?
-6. **(Reasoning)** "Public interface'te SP mod 8 = 0" ne demek? `LDRD`
-   hizalamasından ve exception frame hizalamasından farkı ne?
-7. **(Reasoning)** `f(u32 a, u32 b, u32 c, u64 d)` için `d` nereye gider, r3
-   neden atlanır? Atlanan r3'ün içeriği hakkında ne söylenebilir?
-8. `volatile` neyi garanti eder? Garanti **etmediği** üç şey say.
-9. Yaprak fonksiyonu tanımla. Bir yaprak fonksiyon stack kullanabilir mi?
-   `.lst`'ten göster.
-10. **(Reasoning)** Bir fonksiyon `bl helper` + dönüş yerine `b helper` ile
-    bitiyor. ABI bozuk mu?
-11. **(Reasoning)** `-O2` çıktısı bir değeri bir çağrı boyunca r3'te tuttu. Bu
-    bir ABI kuralı mı? Ne mümkün kıldı?
-12. `(x + 1) > x` neden `int` için `return 1`'e katlanabiliyor ama `unsigned`
-    için katlanamıyor?
-13. **(Reasoning)** r4'e yazan inline asm, komutun kendisi sorunsuz çalıştığı
-    halde neden bir clobber bildirmek zorunda?
+1. What are `r0`–`r3` used for, and why might their values not survive a call?
+2. Caller-saved and callee-saved: who is responsible for what, and why?
+3. **(Reasoning)** Why must a callee restore r4 even if its own result is correct?
+4. What can `r12` (IP) be used for, and by whom — including the linker?
+5. What happens to LR in a function that calls another function, and what
+   must the function do?
+6. **(Reasoning)** What does “SP mod 8 = 0 at a public interface” mean?
+   How does it differ from `LDRD` alignment and exception frame alignment?
+7. **(Reasoning)** For `f(u32 a, u32 b, u32 c, u64 d)`, where does `d` go,
+   and why is r3 skipped? What can be said about the skipped r3's contents?
+8. What does `volatile` guarantee? Name three things it **does not** guarantee.
+9. Define a leaf function. Can it use the stack? Show this in the `.lst`.
+10. **(Reasoning)** A function ends with `b helper` instead of `bl helper`
+    followed by a return. Is the ABI violated?
+11. **(Reasoning)** `-O2` output kept a value in r3 across a call. Is that an
+    ABI rule? What made it possible?
+12. Why can `(x + 1) > x` fold to `return 1` for `int`, but not for `unsigned`?
+13. **(Reasoning)** Why must inline asm that writes r4 declare a clobber,
+    even though the instruction itself works correctly?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
 
 ---
 
 ## Takeaway
 
-- **AAPCS bir sözleşmedir**; ayrı derlenmiş kodun birlikte çalışmasını o
-  sağlar ve derleme zamanında kimse karşı tarafı denetlemez.
-- **r0–r3, r12** caller-clobbered; **r4–r8, r10, r11** callee-saved; **r9**
-  platforma bağlı (bu yapılandırmada callee-saved gözlendi).
-- "İlk dört argüman r0–r3'e" bir **kısayoldur**: 64 bit argümanlar çift
-  register'a hizalanır ve bir register **atlanabilir**. Atlanan register'ın
-  içeriği tanımsızdır — ona bakarak karar verme.
-- **SP mod 8 = 0 çağrı sınırında**; yaprak bir fonksiyonun içinde değil.
-- **Doğru sonuç, doğru sözleşme değildir.** Callee-save ihlali zararını
-  başkasının kodunda, sonra gösterir.
-- **`.lst`'te gördüğün bir derleyici gözlemidir, ABI kuralı değil.** Tail call,
-  inlining, ölü yazma eleme — hepsi preset'e ve derleyici sürümüne bağlı.
-- **`volatile` erişimleri korur; atomiklik, sıralama, karşılıklı dışlama
-  vermez.**
+- **AAPCS is a contract** enabling separately compiled code to interoperate;
+  neither side checks the other at compile time.
+- **r0–r3, r12** are caller-clobbered; **r4–r8, r10, r11** are callee-saved;
+  **r9** is platform-dependent (observed as callee-saved in this configuration).
+- “First four arguments in r0–r3” is **shorthand**: 64-bit arguments align
+  to even-numbered registers, and a register **may be skipped**. Its contents
+  are unspecified — do not base a verdict on them.
+- **SP mod 8 = 0 at the call boundary**, not inside a leaf function.
+- **A correct result is not a correct contract.** A callee-save violation
+  causes damage later, in someone else's code.
+- **What you see in `.lst` is a compiler observation, not an ABI rule.**
+  Tail calls, inlining, dead-store elimination — all depend on the preset
+  and compiler version.
+- **`volatile` preserves accesses; it provides neither atomicity, ordering,
+  nor mutual exclusion.**
 
 ---
 
-## `volatile` — kısa ve kesin
+## `volatile` — brief and precise
 
-| `volatile` **yapar** | `volatile` **yapmaz** |
+| `volatile` **does** | `volatile` **does not provide** |
 |---|---|
-| Programın nesneye yaptığı her erişimi korur (`vol_store_twice`: iki `str`) | Atomiklik (read-modify-write hâlâ ayrı load + store) |
-| Nesneye bütün olarak erişir | Karşılıklı dışlama |
-| Değerin bir register'da önbelleklenmesini engeller (`poll_vol`) | Volatile **olmayan** erişimlerin sıralanması; `DMB`/`DSB` eşdeğeri değildir |
-| | Thread güvenliği, cache tutarlılığı |
-| | Herhangi bir ayrıcalık veya bellek koruması (ders 05/06) |
+| Preserve each program access to the object (`vol_store_twice`: two `str`) | Atomicity (read-modify-write still consists of separate load + store) |
+| Access the object as a whole | Mutual exclusion |
+| Prevent caching a value in a register (`poll_vol`) | Ordering of **non-volatile** accesses; it is not equivalent to `DMB`/`DSB` |
+| | Thread safety, cache coherency |
+| | Any privilege or memory protection (Lessons 05/06) |
 
-AAPCS32 (*Volatile Data Types*) ilginç bir **izin** veriyor: derleyici,
-**adresi hiç alınmayan** otomatik (yerel) bir değişkenin `volatile`
-niteliğini — fonksiyon `setjmp()` çağırmıyorsa — **yok sayabilir**. Bu, ABI'nin
-verdiği bir izindir; GCC'nin böyle yaptığı iddiası değildir. Bu yüzden bu
-dersteki fikstürler `volatile` davranışını **global** nesnelerle gösteriyor
-ve `leaf_with_stack` diziyi `volatile` ile değil, adresini alan bir inline
-asm ile bellekte tutuyor.
+AAPCS32 (*Volatile Data Types*) grants an interesting **permission**: a compiler
+may **ignore** the `volatile` qualification of an automatic (local) variable
+**whose address is never taken**, provided the function does not call `setjmp()`.
+This is permission from the ABI, not a claim that GCC does so. This lesson's
+fixtures therefore demonstrate `volatile` with **global** objects, and
+`leaf_with_stack` keeps its array in memory through inline asm taking its
+address, rather than through `volatile`.
 
-Senkronizasyon ders 13'ün konusu.
+Synchronization is the subject of Lesson 13.
 
 ---
 
 ## FAST TRACK / Deep Dive
 
-**FAST TRACK (bu ders):** tamsayı argümanları, 32/64 bit dönüş, caller/callee
-sözleşmesi, çağrı sınırında hizalama, derleyici prolog/epilog'u, üç preset,
-`volatile`, tail call, inline asm clobber'ı.
+**FAST TRACK (this lesson):** integer arguments, 32/64-bit returns, caller/callee
+contract, alignment at call boundaries, compiler prologues/epilogues, three
+presets, `volatile`, tail calls, inline asm clobbers.
 
-**Deep Dive (bilerek dışarıda):** struct argümanları ve struct dönüşü (gizli
-işaretçi, kural A.4), register/stack arası bölünen argümanlar (C.5), variadic
-fonksiyonlar, hard-float ABI ve VFP register'ları (repo soft-float), unwind
-tabloları, r9'un SB/TR olarak kullanıldığı platformlar, GCC extended asm'in
-tüm kısıt dili.
+**Deep Dive (deliberately excluded):** struct arguments and returns (hidden
+pointer, rule A.4), arguments split between registers and stack (C.5), variadic
+functions, hard-float ABI and VFP registers (repository uses soft-float), unwind
+tables, platforms using r9 as SB/TR, and the full GCC extended-asm constraint
+language.
 
 ---
 
 ## Official References
 
 - **AAPCS32** — *Procedure Call Standard for the Arm Architecture*, release
-  2025Q4 (23 Ocak 2026). Bölümler: *Core registers* (register rolleri, r9),
+  2025Q4 (23 January 2026). Sections: *Core registers* (register roles, r9),
   *Universal stack constraints*, *Stack constraints at a public interface*,
   *Subroutine Calls*, *Use of IP by the linker*, *Result Return*,
-  *Parameter Passing* (kurallar A.1–A.4, C.3–C.8), *Volatile Data Types*.
+  *Parameter Passing* (rules A.1–A.4, C.3–C.8), *Volatile Data Types*.
   <https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst>
-- **ISO C11** — §6.5 ¶5 (işaretli taşma: tanımsız davranış), §6.7.3
-  (`volatile`), §5.1.2.3 (program yürütme).
+- **ISO C11** — §6.5 ¶5 (signed overflow: undefined behavior), §6.7.3
+  (`volatile`), §5.1.2.3 (program execution).
 - **GCC manual** — *Options That Control Optimization* (`-Og`, `-O2`, `-Os`,
   `-foptimize-sibling-calls`, `-fipa-ra`), *When is a Volatile Object
   Accessed?*, *Extended Asm* → *Clobbers and Scratch Registers*, *Local
   Register Variables*.
   <https://gcc.gnu.org/onlinedocs/>
-- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — erişim
-  hizalaması, exception girişinde frame hizalaması.
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
+- **Armv8-M Architecture Reference Manual (Arm DDI 0553)** — access alignment,
+  frame alignment on exception entry.
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `QEMU 8.2.2`,
   `mps2-an505 / cortex-m33`, `debug` / `release` / `minsize`.
 
 ---
 
 ## Known Boundaries
 
-- Bütün derleyici gözlemleri GCC 13.2.1 ve bu repo'nun bayraklarına aittir.
-- Probe'lar yalnızca tamsayı argümanlarını ölçüyor (soft-float).
-- r9 davranışı **bu yapılandırmada gözlendi**; AAPCS onu platforma bırakır.
-- Harness yalnızca iki `uint32_t` argüman alan fonksiyonları test edebilir.
-- `volatile` için AAPCS'in otomatik değişken izni ölçülmedi; fikstürler bu
-  izne dayanmayacak şekilde kuruldu.
+- All compiler observations belong to GCC 13.2.1 and this repository's flags.
+- Probes measure only integer arguments (soft-float).
+- r9's behavior was **observed in this configuration**; AAPCS leaves it to the platform.
+- The harness can test only functions taking two `uint32_t` arguments.
+- AAPCS's permission for automatic `volatile` variables was not measured;
+  the fixtures are designed not to depend on it.
 
 ---
 

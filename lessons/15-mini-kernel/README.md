@@ -1,33 +1,35 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 15 — Educational Mini Kernel
 
-`[DEEP]` · **STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+`[DEEP]` · **STATUS: on main; Debug/Release/MinSize CI PASS (11fde900)**
 
-## TEACH — Bir task'ın devam edebilmesi için ne saklanır?
+## TEACH — What must be saved so a task can resume?
 
-İki privileged Thread task'ı ayrı PSP stack'leri kullanır. Handler'lar MSP
-üzerindedir. Donanım basic frame'i (R0–R3, R12, LR, PC, xPSR), PendSV ise
-R4–R11 ve EXC_RETURN'ü saklar. Sabit round-robin seçiminden sonra yeni PSP ile
-exception return yapılır. Bu eğitim çekirdeği FPU task context'i, MPU task
-izolasyonu, unprivileged task veya üretim RTOS garantisi sağlamaz.
+Two privileged Thread tasks use separate PSP stacks. Handlers run on MSP.
+Hardware saves the basic frame (R0–R3, R12, LR, PC, xPSR), while PendSV saves
+R4–R11 and EXC_RETURN. After a fixed round-robin selection, exception return uses
+the new PSP. This educational kernel does not provide FPU task context, MPU task
+isolation, unprivileged tasks, or production RTOS guarantees.
 
-[Context assembly](example/context.S), [çekirdek](example/main.c) ve
-[ilk frame](example/frame.c) birlikte okunmalıdır. Yazılım frame'i 9 word,
-hardware frame'i 8 word'dür. Yazılım SP'si 4 mod 8 olabilir; public exception
-boundary'deki hardware SP 8-byte hizalıdır. Bu farkı kaldırmak için rastgele
-bir padding word eklemek register eşlemesini bozar.
+Read the [context assembly](example/context.S), [kernel](example/main.c), and
+[initial frame](example/frame.c) together. The software frame is 9 words and the
+hardware frame 8 words. The software SP can be 4 mod 8; the hardware SP at the
+public exception boundary is 8-byte aligned. Adding an arbitrary padding word to
+eliminate this difference breaks the register mapping.
 
-## SHOW — Başlangıç ve geçiş sınırları
+## SHOW — Startup and switching boundaries
 
-İlk SVC, C'ye çağrı yapmadan CONTROL.SPSEL/PSP/PSPLIM'i kurar, ilk register
-setini yükler ve MSP'yi stack top'a getirir. Eski main/MSP frame'i kalıcı olarak
-terk edilir. İlk task hardware frame'inden başlar; eski C frame'i PSP ile
-devam ettirilmez. SVC'den sonraki bootstrap koduna dönülmez.
+The first SVC sets up CONTROL.SPSEL/PSP/PSPLIM without calling C, loads the first
+register set, and sets MSP to the stack top. The old main/MSP frame is permanently
+abandoned. The first task starts from its hardware frame; the old C frame is not
+continued using PSP. Execution does not return to the bootstrap code after SVC.
 
-PendSV yalnız 0xFFFFFFFD basic Secure Thread/PSP dönüşünü kabul eder. FPU veya
-başka frame çeşidi sessizce destekleniyor sayılmaz. STM'den **önce** çıkış
-stack sınırları kontrol edilir; PSPLIM, R0 üzerinden yapılan STM için koruma
-değildir. Scheduler'a MSP üzerinde 8-byte hizalı çağrı yapılır. Kısa seçim
-bölümü eski PRIMASK değerini korur; yeni context doğrulanmadan yüklenmez.
+PendSV accepts only the 0xFFFFFFFD basic Secure Thread/PSP return. FPU or other
+frame types are not silently treated as supported. Outgoing stack bounds are
+checked **before** STM; PSPLIM does not protect an STM addressed through R0.
+The scheduler is called on MSP with 8-byte alignment. The short selection section
+preserves the old PRIMASK value; the new context is not loaded before validation.
 
 ## RUN
 
@@ -40,20 +42,20 @@ python tests/development-smoke.py 15
 
 ## OBSERVE
 
-Debug/QEMU çalıştırmasında örnek ve çözümün dokuz CHECK alanı PASS oldu.
-Kaydedilen bir örnek: TASK0_RUNS=719, TASK1_RUNS=1123, TICKS=4,
-SWITCHES=20, ASYNC_SWITCHES=4. Task sayaçları/model zamanlaması değişebilir;
-test bu rastlantısal sayıları sabitlemez.
+In the Debug/QEMU run, the nine CHECK fields in the example and solution were PASS.
+One recorded sample: TASK0_RUNS=719, TASK1_RUNS=1123, TICKS=4,
+SWITCHES=20, ASYNC_SWITCHES=4. Task counters/model timing can vary;
+the test does not fix these incidental numbers.
 
-Task'lar ilk sekiz tur SVC #0 ile yield eder. Sonra yield etmeden busy-loop
-yaparlar: ikinci task'ın ilerleyebilmesi için gerçek SysTick/PendSV preemption
-gerekir. ASYNC_SWITCHES, kaydedilen PC yield dönüş noktası olmadığında sayılır.
-R4–R11'in her birine task'a özgü canary konur. Her task'ın alt/üst stack
-guard'ları, ilerleme, yield ve timer switch'leri bitişte denetlenir.
-Task gözleminde CONTROL/IPSR, PSP aralığı, PSPLIM ve güncel TCB kimliği
-de kontrol edilir; Handler/MSP ayrı sınanır.
+Tasks yield through SVC #0 for the first eight rounds. They then busy-loop without
+yielding: real SysTick/PendSV preemption is required for the second task to progress.
+ASYNC_SWITCHES counts switches where the saved PC is not the yield return point.
+Each of R4–R11 holds a task-specific canary. Each task's lower/upper stack guards,
+progress, yields, and timer switches are checked at completion.
+Task observations also check CONTROL/IPSR, the PSP range, PSPLIM, and the current
+TCB identity; Handler/MSP is tested separately.
 
-GDB'de isteğe bağlı gözlem (bu aşamada kapsamlı GDB kapısı çalıştırılmadı):
+Optional GDB observation (the comprehensive GDB gate was not run at this stage):
 
 ```text
 break PendSV_Handler
@@ -64,50 +66,52 @@ print g_l15_runs
 print g_l15_bad
 ```
 
-Handler girişinde TCB'nin SP'si henüz güncellenmemiş olabilir. TCB dump'ını
-ASM'nin store'undan sonra veya scheduler içinde al. Breakpoint zamanlamayı etkiler.
+At handler entry, the TCB's SP may not yet have been updated. Dump the TCB after
+the assembly store or inside the scheduler. Breakpoints affect timing.
 
 ## MODIFY → BREAK → DEBUG
 
-`15-kernel-broken` yazılım context alanını ayırır ama R4–R11'i yazmaz.
-CHECK_REGISTERS=FAIL olur; task'ların C gözlem çağrısı boyunca IRQ maskelenir.
-Böylece kasıtlı bozuk restore, askıda kalan C pointer'larını bozup rastgele
-çökmek yerine ASM canary kontrolünde görünür. Üretim scheduler'ı için bir
-C çağrısını maskelemek register saklama zorunluluğunu ortadan kaldırmaz.
+`15-kernel-broken` allocates the software context area but does not write R4–R11.
+CHECK_REGISTERS=FAIL; IRQs are masked throughout the tasks' C observation call.
+This makes the intentionally broken restore visible in the assembly canary check
+instead of corrupting live C pointers and crashing unpredictably. Masking a C call
+does not remove a production scheduler's obligation to preserve registers.
 
-[Alıştırmada](exercises/01-initial-frame/README.md) ilk frame oluşturucu eksiktir.
-NULL, PSP kurulmadan reddedilir. [Çözüm](solutions/01-initial-frame/README.md)
-ayrı dosyadadır.
+The initial-frame builder is incomplete in the
+[exercise](exercises/01-initial-frame/README.md). NULL is rejected before PSP is
+set up. The [solution](solutions/01-initial-frame/README.md) is in a separate file.
 
 ## VERIFY
 
-Debug build ve dört QEMU senaryosu çalıştırıldı: örnek/çözüm PASS, eksik starter
-yalnız CHECK_INITIAL_FRAME=FAIL, bozuk save yalnız CHECK_REGISTERS=FAIL.
-Bu testler WCET, adil zaman payı, sonsuz çalışma veya donanım doğrulaması değildir.
-Üç-preset karşılaştırması, geniş negatif set ve bağımsız audit toplu kapıda yapılacak.
+The Debug build and four QEMU scenarios were run: example/solution PASS, incomplete
+starter only CHECK_INITIAL_FRAME=FAIL, broken save only CHECK_REGISTERS=FAIL.
+These tests do not establish WCET, fair time allocation, indefinite execution, or
+hardware validation. The three-preset comparison, broad negative set, and
+independent audit are to be performed at the combined gate.
 
 ## Quick Check
 
-1. Exception entry neden R4–R11'i kurtarmıyor?
-2. PSPLIM neden PendSV'nin STM adresini ayrıca doğrulama gereğini kaldırmıyor?
-3. İlk SVC'nin terk ettiği MSP frame'ine dönmek neden hatadır?
-4. Yield dışında switch olduğunu hangi gözlem ayırır?
+1. Why does exception entry not save R4–R11?
+2. Why does PSPLIM not remove the need to validate PendSV's STM address separately?
+3. Why is returning to the MSP frame abandoned by the first SVC an error?
+4. Which observation distinguishes a switch outside yield?
 
-[Cevaplar](answers/quick-check.md)
+[Answers](answers/quick-check.md)
 
 ## References
 
 - [Cortex-M33 Devices Generic User Guide](https://documentation-service.arm.com/static/5f16e93d20b7cf4bc524af1d): basic frames, PSP/MSP, exception return.
 - [AAPCS32](https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst): callee-saved registers and public stack alignment.
-- [Lesson 04](../04-stack-msp-psp/): fresh C frame sınırı.
-- [Lesson 13](../13-sync-fpu-dsp/): bu çekirdeğin desteklemediği FP frame'leri.
+- [Lesson 04](../04-stack-msp-psp/): the fresh C frame boundary.
+- [Lesson 13](../13-sync-fpu-dsp/): FP frames unsupported by this kernel.
 
 **Previous:** [14](../14-systick-pendsv/) · **Next:** [16](../16-trustzone-advanced/)
 
-## Son toplu kapı
+## Final combined gate
 
-Üç preset clean build/dört QEMU senaryosu PASS; GDB public MSP hizasını, kaydedilen
-ve restore edilen R4–R11/PSP/PSPLIM/EXC_RETURN'ü karşılaştırdı.
-Proje hook'larının default'u no-op/ready'dir. Son sistem aynı ASM'yi NS ve
-unprivileged varyantta kullanır; Secure context aktifken switch ertelenir.
-Önceki Debug-only kaydı tarihsel aşamadır; [Progress](../../docs/PROGRESS.md) güncel sonuçları içerir.
+Three-preset clean builds/four QEMU scenarios PASS; GDB compared public MSP
+alignment and saved/restored R4–R11/PSP/PSPLIM/EXC_RETURN.
+Project hooks default to no-op/ready. The final system uses the same assembly in
+an NS and unprivileged variant; switching is deferred while Secure context is
+active. The earlier Debug-only record describes a historical stage;
+[Progress](../../docs/PROGRESS.md) contains current results.

@@ -1,121 +1,119 @@
-# Lesson 02 — Quick Check Cevapları
+**Language:** English | [Türkçe](quick-check.tr.md)
 
-> Buraya, kendi cevabını **yazdıktan sonra** bak. Hazır cevabı okumak
-> bildiğini sanmanın en hızlı yoludur.
+# Lesson 02 — Quick Check Answers
+
+> Consult this **after writing** your own answer. Reading a ready-made answer is
+> the fastest way to think you know something.
 
 ---
 
-### 1. `CONTROL = 0` ve `IPSR = 0` okudun. Hangi mod, hangi yetki, hangi stack?
+### 1. You read `CONTROL = 0` and `IPSR = 0`. Which mode, privilege, and stack?
 
-Privileged Thread Mode, MSP aktif.
+Privileged Thread Mode, MSP active.
 
-Üç bilgi iki register'dan geliyor:
+Three pieces of information come from two registers:
 
-| Alan | Değer | Anlam |
+| Field | Value | Meaning |
 |---|---|---|
-| `IPSR` | 0 | Thread Mode (sıfırdan farklı olsaydı Handler Mode ve değer exception numarası olurdu) |
+| `IPSR` | 0 | Thread Mode (a nonzero value would mean Handler Mode and give the exception number) |
 | `CONTROL` bit 0 (`nPRIV`) | 0 | Privileged |
-| `CONTROL` bit 1 (`SPSEL`) | 0 | MSP kullanılıyor |
+| `CONTROL` bit 1 (`SPSEL`) | 0 | MSP in use |
 
-**Sorunun ikinci kısmı:** hayır, yalnızca `CONTROL = 0` ile cevaplayamazdın.
-Mod bilgisi `CONTROL`'de **değil**, `IPSR`'dedir. `CONTROL = 0` Handler
-Mode'da da okunabilir — ve o durumda `SPSEL = 0` görsen bile bu bilgi
-gereksizdir, çünkü Handler Mode zaten MSP kullanır ve zaten ayrıcalıklıdır.
+**The question's second part:** no, `CONTROL = 0` alone is insufficient.
+Mode information is **not** in `CONTROL`, but in `IPSR`. `CONTROL = 0` can also
+be read in Handler Mode — where even seeing `SPSEL = 0` adds nothing, because
+Handler Mode already uses MSP and is already privileged.
 
-Kısaca: mod önce `IPSR`'den belirlenir, `CONTROL` ondan sonra yorumlanır.
+Determine mode from `IPSR` first, then interpret `CONTROL`.
 
-İkinci bir düzeltme: `CONTROL`'ün **yalnızca iki alanı yoktur**. `nPRIV`
-(bit 0) ve `SPSEL` (bit 1) bu derste **kapsam içine aldıklarımızdır**;
-mimariye, FP bağlamına ve güvenlik uzantısına göre `FPCA` ve `SFPA` gibi
-başka tanımlı alanlar da bulunur (ders 13 ve 16). Bu yüzden `CONTROL` her
-zaman oku-değiştir-yaz ile güncellenir.
-
----
-
-### 2. Vector table'daki `Reset` girdisi `0x10000205`, sembol `0x10000204`. Bu 1 nereden geliyor?
-
-En düşük bit (bit 0), adresin parçası değil — **Thumb state göstergesidir.**
-
-Cortex-M yalnızca Thumb komut setini çalıştırır. İşlemci bir dallanma
-hedefinin bit 0'ına bakar: 1 ise "Thumb state'e geç" der. Fonksiyon adresleri
-2 byte hizalı olduğu için bit 0 zaten her zaman boştur; mimari bu boş biti
-bayrak olarak kullanır.
-
-Bit 0 = 0 olsaydı: işlemci Arm state'e geçmeye çalışırdı. Cortex-M'de Arm
-state **yoktur**, dolayısıyla bir INVSTATE (UsageFault) koşulu doğar.
-
-Bunun **reset'te** ne ile sonuçlanacağı koşullara bağlıdır. Reset sırasında
-fault yükseltme (escalation) kurallarına göre işlemci genellikle lockup
-durumuna girer; ama "her zaman lockup" demek fazla kesin bir ifadedir —
-sonucu belirleyen, hatanın hangi bağlamda ve hangi öncelik düzeyinde
-oluştuğudur. Kesin kurallar için Armv8-M ARM'ın fault yükseltme bölümüne bak.
-
-Dikkat, bir genelleme tuzağı: "vector table'daki bütün girdiler tek sayıdır"
-**doğru değildir**. Yalnızca **handler adresi taşıyan** girdiler için geçerli.
-İki istisna:
-
-- **`[0]` girdisi bir adres değildir**; reset'te `MSP`'ye yüklenen başlangıç
-  değeridir. Bizim build'imizde `0x30008000` — çift sayı.
-- **Ayrılmış (reserved) girdiler** 0 olabilir ve sıfır tek sayı değildir.
-
-`cm-vectors` çıktısında `[0]`'ın yanında bu not artık yazılı.
+A second correction: `CONTROL` **has more than two fields**. `nPRIV` (bit 0)
+and `SPSEL` (bit 1) are the fields **within this lesson's scope**; other fields
+such as `FPCA` and `SFPA` are defined depending on architecture, FP context,
+and the Security Extension (Lessons 13 and 16). Therefore, always update
+`CONTROL` through read–modify–write.
 
 ---
 
-### 3. `MSP` reset'te `0x30008000`, `main` içinde `0x30007ff8`. Bu 8 byte nereye gitti?
+### 2. The vector table's `Reset` entry is `0x10000205`, the symbol `0x10000204`. Where does the 1 come from?
 
-`Reset_Handler`, `main`'i çağırmadan önce stack'e veri itti (push): dönüş
-adresi ve kullandığı callee-saved register'lar.
+The least-significant bit (bit 0) is not part of the address — it is the
+**Thumb-state indicator**.
 
-Yön: Cortex-M stack'i **full descending** (tam azalan). "Full" = SP her zaman
-son yazılan geçerli veriyi gösterir; "descending" = push işlemi SP'yi
-**azaltır**. Yani stack, RAM'in tepesinden aşağı doğru büyür.
+Cortex-M executes only the Thumb instruction set. The processor examines bit 0
+of a branch target: 1 means "enter Thumb state." Function addresses are 2-byte
+aligned, so bit 0 is otherwise unused; the architecture uses it as a flag.
 
-Bu yüzden linker script'te `__stack_top = ORIGIN(RAM) + LENGTH(RAM)` yazar —
-stack'in başlangıcı RAM'in en üstüdür, tabanı değil.
+If bit 0 = 0, the processor would attempt to enter Arm state. Cortex-M **has no**
+Arm state, producing an INVSTATE (UsageFault) condition.
+
+What this causes **at reset** depends on the conditions. Under reset fault
+escalation rules, the processor generally enters lockup; "always lockup" is too
+categorical — the context and priority at which the fault occurs determine the
+outcome. See the Armv8-M ARM fault-escalation section for the exact rules.
+
+Beware of a generalization: "all vector-table entries are odd" is **incorrect**.
+It applies only to entries **holding handler addresses**. Two exceptions:
+
+- **Entry `[0]` is not an address**; it is the initial value loaded into `MSP`
+  at reset. In our build it is `0x30008000` — even.
+- **Reserved entries** can be 0, and zero is not odd.
+
+The `cm-vectors` output now includes this note beside `[0]`.
 
 ---
 
-### 4. (Reasoning) PSP'ye adres yazdın ama `SPSEL`'i değiştirmedin. `SP` ne gösterir?
+### 3. `MSP` is `0x30008000` at reset and `0x30007ff8` inside `main`. Where did those 8 bytes go?
 
-Hâlâ **MSP**'nin değerini.
+Before calling `main`, `Reset_Handler` pushed data onto the stack: its return
+address and the callee-saved registers it uses.
 
-`SP` (R13) fiziksel olarak tek bir register değil, bir **takma addır**
-(banked register). Hangi fiziksel register'ın `SP` olarak göründüğüne
-`CONTROL.SPSEL` karar verir:
+Direction: the Cortex-M stack is **full descending**. "Full" means SP points to
+the most recently written valid data; "descending" means a push **decreases**
+SP. The stack therefore grows downwards from the top of RAM.
+
+This is why the linker script says `__stack_top = ORIGIN(RAM) + LENGTH(RAM)` —
+the stack starts at the top of RAM, not its bottom.
+
+---
+
+### 4. (Reasoning) You wrote an address to PSP but did not change `SPSEL`. What does `SP` show?
+
+Still the value of **MSP**.
+
+`SP` (R13) is not physically one register but an **alias** (banked register).
+`CONTROL.SPSEL` determines which physical register appears as `SP`:
 
 ```
 SPSEL = 0  ->  SP, MSP'yi gösterir
 SPSEL = 1  ->  SP, PSP'yi gösterir
 ```
 
-`__set_PSP()` sadece PSP'nin içeriğini değiştirir; hangi register'ın aktif
-olduğunu değiştirmez. Değer yazmak ≠ aktif etmek.
+`__set_PSP()` changes only PSP's contents, not which register is active.
+Writing a value ≠ activating it.
 
-Pratik sonucu: bir RTOS'ta task stack'ini kurmak iki ayrı adımdır — önce
-PSP'ye geçerli bir adres yaz, **sonra** SPSEL'i 1 yap. Sırayı ters çevirirsen
-Break It bölümündeki fault'u alırsın.
-
----
-
-### 5. (Reasoning) Thread Mode'da PSP kullanılırken exception oluşursa frame hangi stack'e yazılır?
-
-**PSP'ye** — yani exception anında aktif olan stack'e. Donanım, exception'a
-girerken kesilen kodun kullandığı stack'i kullanır.
-
-Ardından işlemci Handler Mode'a geçer ve `SPSEL`'i temizler, böylece
-handler'ın kendisi **MSP** üzerinde çalışır. Break It deneyindeki gözlem de
-bunu gösteriyor: fault anında `CONTROL = 0` idi, çünkü donanım SPSEL'i sıfırladı.
-
-Neden böyle tasarlanmış? Çünkü kernel/handler kodunun, hatalı bir task'ın
-stack'ine bağımlı olmaması gerekir. Task stack'i taşmışsa veya bozuksa
-handler yine de temiz bir MSP üzerinde çalışmaya devam eder. Bu ayrım,
-ders 15'teki context switch'in ve `EXC_RETURN` değerinin temelidir.
-
-Not: frame'in PSP'ye yazılması, **stacking'in başarılı olacağı anlamına
-gelmez.** PSP geçersizse stacking'in kendisi fault üretir (BusFault `STKERR`).
-Tam olarak bunu Break It bölümünde gördün.
+Practical consequence: setting up a task stack in an RTOS takes two separate
+steps — first write a valid address to PSP, **then** set SPSEL to 1. Reversing
+the order produces the fault in Break It.
 
 ---
 
-[← Ders 02](../README.md) · [Ders 03 →](../../03-c-and-assembly/)
+### 5. (Reasoning) If an exception occurs while Thread Mode uses PSP, which stack receives the frame?
+
+**PSP** — the stack active when the exception occurred. On exception entry,
+hardware uses the stack that the interrupted code was using.
+
+The processor then enters Handler Mode and clears `SPSEL`, so the handler itself
+runs on **MSP**. The Break It observation shows this too: at the fault,
+`CONTROL = 0` because hardware cleared SPSEL.
+
+Why this design? Kernel/handler code must not depend on a faulty task's stack.
+If a task stack overflows or is corrupt, the handler can still run on a clean
+MSP. This separation underpins Lesson 15's context switch and `EXC_RETURN`.
+
+Note: writing the frame to PSP **does not guarantee successful stacking**.
+If PSP is invalid, stacking itself faults (BusFault `STKERR`). This is exactly
+what you saw in Break It.
+
+---
+
+[← Lesson 02](../README.md) · [Lesson 03 →](../../03-c-and-assembly/)
