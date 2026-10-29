@@ -171,7 +171,7 @@ Red mesajlari kategorilidir; hepsi tek bir genel hataya indirgenmez:
 | `DCRS = 0` | DESTEKLENMIYOR | Ek durum baglami (callee register'lari yigilmis) |
 | `ES != S` | DESTEKLENMIYOR | Guvenlik durumlari arasi gecis (ders 16) |
 | CFSR stacking biti | STACKING HATASI | STKOF / STKERR / MSTKERR |
-| Adres hizasi | GECERSIZ FRAME ADRESI | 4'un kati degil |
+| Adres hizasi | GECERSIZ FRAME ADRESI | 8'in kati degil (Cortex-M33 exception frame) |
 | Adres araligi | GECERSIZ FRAME ADRESI | Platform RAM penceresi disinda |
 | Yigilmis xPSR | GECERSIZ FRAME ICERIGI | T biti (bit24) sifir - Cortex-M'de imkansiz |
 | Yigilmis PC | GECERSIZ FRAME ICERIGI | 0, tek sayi, veya kod penceresi disinda |

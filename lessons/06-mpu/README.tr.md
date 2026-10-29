@@ -240,8 +240,9 @@ GDB'den register olarak doğrulayacağız.
 
 `SCB->SHCSR` içindeki bu bit MemManage exception'ını etkinleştirir.
 Etkinleştirilmezse MPU ihlali **HardFault'a yükseltilir** (escalation) ve
-`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılır ama teşhis bir adım
-dolaylı hale gelir. Deney 3 bunu ölçüyor.
+`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılabilir ama teşhis bir adım
+dolaylı hale gelir. Deney 3 bunu **ölçmeyi önerir**; bu derste ölçülmüş
+bir sonuç sunulmuyor.
 
 ### Neden ayrıcalıksız Thread konsola yazmıyor?
 
@@ -505,9 +506,13 @@ script'inde kendi hizalı bölümüne konur.
 
 **Deney 2 — Bölge sınırının tam yerini bul.**
 
-`UNPRIV_LIMIT = 0x3000033F`. Ayrıcalıksız Thread `0x3000033F`'ye yazabilir mi?
-`0x30000340`'a? `mpu_store_word()` ile ikisini de dene ve `LIMIT`'in
-**dahil** olduğunu kendin doğrula.
+`UNPRIV_LIMIT = 0x3000033F` son **izinli byte** adresidir.
+`mpu_store_word()` dört byte'lık `STR` yaptığı için `0x3000033F` üzerinde
+çalıştırılamaz: adres hizasızdır ve erişim bölgeyi aşar. Bunun yerine
+`0x3000033C` (son hizalı, bütünüyle içeride kalan word) ile
+`0x30000340` (ilk dışarıdaki hizalı word) adreslerini ayrı ayrı dene.
+Bu karşılaştırma, `LIMIT`'in **dahil** oluşuyla word erişiminin tüm
+byte'larının izinli olması gereğini birbirine karıştırmaz.
 
 **Deney 3 — `MEMFAULTENA` olmadan ne olur? (Deep Dive)**
 

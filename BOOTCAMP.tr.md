@@ -14,8 +14,10 @@ Bu kutular öğrencinin kişisel çalışma kaydıdır; repository geliştirilin
 otomatik işaretlenmez. Repository teknik teslimi: 16 ders, beş proje ve final
 sensor node uygulandı; yerel üç-preset/QEMU ve kritik GDB kapıları geçti.
 Ders 13 PR #9, Lesson 14–16 PR #10 ile üç preset CI sonrası merge edildi.
-Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS. Güncel
-yayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.tr.md) içindedir.
+Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS.
+Bu satır **tarihsel entegrasyon kontrolünü** anlatır; v1.0.0 sürüm commit'inin
+ölçümü olarak okunmamalıdır. Güncel yayımlama ve uzak doğrulama bağlantıları
+[Progress](docs/PROGRESS.tr.md) içindedir.
 Öğrenci çalışma kutuları teknik teslim adına otomatik doldurulmaz. Güncel teknik durum: [Progress](docs/PROGRESS.tr.md).
 
 ---

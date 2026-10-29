@@ -235,7 +235,8 @@ verify the raw register values it produces in both firmware and GDB.
 
 This bit in `SCB->SHCSR` enables the MemManage exception. Without it, an MPU
 violation **escalates to HardFault** and sets `HFSR.FORCED`; `MMFSR`/`MMFAR`
-are still written, but diagnosis takes an extra step. Experiment 3 measures this.
+may still contain diagnostic information, but diagnosis takes an extra step.
+Experiment 3 **proposes measuring this**; no result is claimed here.
 
 ### Why does unprivileged Thread not write to the console?
 
@@ -497,9 +498,13 @@ Real projects therefore place protected data in its own aligned linker section.
 
 **Experiment 2 — Locate the exact region boundary.**
 
-`UNPRIV_LIMIT = 0x3000033F`. Can unprivileged Thread write `0x3000033F`?
-What about `0x30000340`? Try both with `mpu_store_word()` and verify for
-yourself that `LIMIT` is **inclusive**.
+`UNPRIV_LIMIT = 0x3000033F` is the last **permitted byte** address.
+Because `mpu_store_word()` issues a four-byte `STR`, accessing
+`0x3000033F` with it is unaligned and crosses the MPU boundary.
+Instead, compare aligned word accesses at `0x3000033C` (the last word
+entirely inside the region) and `0x30000340` (the first word outside).
+This distinguishes an **inclusive** `LIMIT` byte boundary from the requirement that
+all four bytes of a word store must be permitted.
 
 **Experiment 3 — What happens without `MEMFAULTENA`? (Deep Dive)**
 

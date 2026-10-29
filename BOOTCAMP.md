@@ -16,8 +16,9 @@ automatically when the repository is developed. Repository technical delivery:
 three-preset/QEMU and critical GDB gates passed.
 Lesson 13 was merged through PR #9 and Lessons 14–16 through PR #10 after
 three-preset CI. Project/final PR #11 was also merged; three-preset CI PASS for
-11fde900 main. Current publication and remote verification links are in
-[Progress](docs/PROGRESS.md). Student study boxes are not filled automatically
+11fde900 main. This is a **historical integration checkpoint**, not a
+measurement attributed to the v1.0.0 release commit. Current publication and
+remote verification links are in [Progress](docs/PROGRESS.md). Student study boxes are not filled automatically
 on behalf of technical delivery. Current technical status: [Progress](docs/PROGRESS.md).
 
 ---
