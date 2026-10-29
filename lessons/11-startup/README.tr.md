@@ -479,8 +479,10 @@ New value = 0
 ```
 
 Sıfırı yazan komut adıyla belli: paylaşılan `Reset_Handler`'ın `.bss`
-döngüsündeki `str.w`. Bu kanıt yereldir (GDB); CI'da GDB yok — CI için
-kalıcı kanıt *Experiment* bölümünde.
+döngüsündeki `str.w`. Bu özel watchpoint gözlemi yerel GDB kanıtıdır.
+Güncel CI GDB kullanır, ancak **bu Ders 11 watchpoint senaryosunun aynısını**
+çalıştırdığı iddia edilmiyor. CI için kalıcı diğer kanıtlar *Experiment*
+bölümündedir.
 
 ### E — SystemInit
 
