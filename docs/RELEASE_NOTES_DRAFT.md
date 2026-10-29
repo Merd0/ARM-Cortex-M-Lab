@@ -2,6 +2,10 @@
 
 # Release notes draft — v1.0.0
 
+> **Archived draft:** The [stable v1.0.0 release](https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0)
+> was published later. The statement below that a release was not yet created
+> describes this draft's historical checkpoint, not the present status.
+
 Proposal: **v1.0.0 — ARM Cortex-M Practical Lab**. This is the first complete
 release proposal for this educational scope; it does not imply a production RTOS
 or hardware certification. The tag and GitHub Release have not been created.
