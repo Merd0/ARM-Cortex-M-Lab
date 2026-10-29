@@ -1243,6 +1243,6 @@
     "turkish": "Original Turkish prose, sequence, examples, evidence and fenced blocks are immutable; only language-switch lines and Markdown navigation destinations change.",
     "english": "Complete technical translation; executable blocks and measured output are copied exactly. Human-readable diagram annotations require individual review.",
     "corrections": "Substantive source issues are reported separately in documentation-review-findings.json, never silently corrected in either language.",
-    "publication": "Local branch only; no push, PR, merge, tag, release or profile changes authorized by this task."
+    "publication": "EN/TR documentation is published for review in Draft PR #13. The original instruction forbade automatic merge, tag and release edits; main and v1.0.0 remain protected until separately approved."
   }
 }
