@@ -46,9 +46,10 @@ Two subtleties:
 - On an **empty stack**, `SP` points **one past** the usable area. That address
   does not belong to the stack and must not be read. Thus "`SP` always points
   to meaningful data" is **false**; it holds only when the stack is nonempty.
-- The area **below** `SP` is allocated, but its contents are undefined: remnants
-  of data previously pushed and popped. Reading a word that has not been
-  `POP`ped therefore does not provide a meaningful value.
+- Memory **below** `SP` but within the reserved stack allocation is
+  **available capacity, not live stack data**. Its contents are undefined and
+  may contain remnants of earlier `PUSH`/`POP` operations. Do not read it
+  as active stack data until a valid push has moved `SP` down.
 
 ### Two stack pointers
 

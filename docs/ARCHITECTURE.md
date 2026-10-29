@@ -80,8 +80,9 @@ The version used and complete file list: [`external/README.md`](../external/READ
 Files are kept unchanged (vendored) so builds do not depend on network access.
 
 **Platform scope**
-This repository currently assumes one security state (Secure) and one target:
-QEMU `mps2-an505` / `cortex-m33`. Clock frequency, NVIC priority-bit count, and
+This repository uses one QEMU target: `mps2-an505` / `cortex-m33`.
+Most lessons run in a single security state; **Lesson 16 and the final
+project** use distinct Secure/Non-secure images and TrustZone transitions. Clock frequency, NVIC priority-bit count, and
 reset VTOR value are TARGET-SPECIFIC contracts, NOT ARCHITECTURAL CONSTANTS;
 their sources are recorded in `platform/mps2-an505/include/platform/board.h`
 and `platform/mps2_an505.h`, with references to QEMU source.
@@ -89,10 +90,11 @@ Physical-board values have not been independently verified.
 
 **Known limit: SAU and `-mcmse`**
 CMSIS-Core exposes `SAU` definitions only when the compiler is invoked with
-`-mcmse` (`__ARM_FEATURE_CMSE == 3`). This repository currently does not use
-`-mcmse`, so `tools/capability-probe` reads SAU_TYPE from its fixed architectural
-address and explicitly states this in the source. `-mcmse` will be enabled
-when secure/non-secure separation is established in Lesson 16.
+`-mcmse` (`__ARM_FEATURE_CMSE == 3`). The general
+`tools/capability-probe` target does not use `-mcmse` and reads SAU_TYPE
+from its fixed architectural address. **Lesson 16** already compiles Secure
+code with `-mcmse` and links separate Secure/Non-secure images; this is not
+a future-only capability.
 
 ## Build flow
 

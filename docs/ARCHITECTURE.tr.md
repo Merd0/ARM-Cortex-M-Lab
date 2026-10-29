@@ -84,8 +84,9 @@ Dosyalar oldugu gibi (vendored) tutulur, degistirilmez. Bunun nedeni build'in
 ag erisimine bagimli olmamasi.
 
 **Platform kapsami**
-Bu repo su an tek guvenlik durumu (Secure) ve tek bir hedef varsayar:
-QEMU `mps2-an505` / `cortex-m33`. Saat frekansi, NVIC oncelik biti sayisi ve
+Bu repo tek bir QEMU hedefini kullanır: `mps2-an505` / `cortex-m33`.
+Çoğu ders tek güvenlik durumunda çalışır; **Ders 16 ve final proje** ise
+ayrı Secure/Non-secure imajları ve TrustZone geçişlerini uygular. Saat frekansi, NVIC oncelik biti sayisi ve
 reset VTOR degeri gibi seyler MIMARI SABIT DEGIL, HEDEFE OZEL sozlesmelerdir;
 kaynaklari `platform/mps2-an505/include/platform/board.h` ve
 `platform/mps2_an505.h` icinde QEMU kaynagina referansla yazilidir.
@@ -93,10 +94,10 @@ Fiziksel kart degerleri bagimsiz olarak dogrulanmamistir.
 
 **Bilinen sinir: SAU ve `-mcmse`**
 CMSIS-Core `SAU` tanimlarini yalnizca derleyici `-mcmse` ile cagrildiginda
-(`__ARM_FEATURE_CMSE == 3`) acar. Bu repo su an `-mcmse` kullanmiyor, bu
-yuzden `tools/capability-probe` SAU_TYPE'i mimari sabit adresinden okur ve
-bunu kaynak icinde acikca belirtir. Ders 16'da secure/non-secure ayrimi
-kurulurken `-mcmse` acilacak.
+(`__ARM_FEATURE_CMSE == 3`) acar. Genel `tools/capability-probe` hedefi
+`-mcmse` kullanmadığı için SAU_TYPE'i mimari sabit adresinden okur.
+**Ders 16** ise Secure kodu `-mcmse` ile derler ve Secure/Non-secure
+imajları ayrı ayrı linkler; bu destek geleceğe ertelenmiş değildir.
 
 ## Build akisi
 
