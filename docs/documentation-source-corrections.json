@@ -69,8 +69,8 @@
       "id": "I18N-003",
       "original": "BOOTCAMP.md",
       "turkish": "BOOTCAMP.tr.md",
-      "old": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS. Güncel\nyayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.tr.md) içindedir.",
-      "new": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS.\nBu satır **tarihsel entegrasyon kontrolünü** anlatır; v1.0.0 sürüm commit'inin\nölçümü olarak okunmamalıdır. Güncel yayımlama ve uzak doğrulama bağlantıları\n[Progress](docs/PROGRESS.tr.md) içindedir."
+      "old": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS. Güncel\nyayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.md) içindedir.",
+      "new": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS.\nBu satır **tarihsel entegrasyon kontrolünü** anlatır; v1.0.0 sürüm commit'inin\nölçümü olarak okunmamalıdır. Güncel yayımlama ve uzak doğrulama bağlantıları\n[Progress](docs/PROGRESS.md) içindedir."
     }
   ]
 }
