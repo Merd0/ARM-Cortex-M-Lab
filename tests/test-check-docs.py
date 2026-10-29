@@ -218,5 +218,51 @@ class DocumentationGateTests(unittest.TestCase):
         self.assertIn("missing/substantially shortened prose", output.getvalue())
 
 
+    def test_registered_source_erratum_must_match_both_languages(self):
+        registered = {
+            "baseline": "fixture",
+            "corrections": [{
+                "id": "I18N-TEST",
+                "original": "README.md",
+                "turkish": "README.tr.md",
+                "old": "budget 32",
+                "new": "budget 33",
+            }],
+        }
+        self.write("docs/documentation-source-corrections.json", json.dumps(registered))
+        self.change("README.tr.md", "budget 32", "budget 33")
+        self.change("README.md", "budget 32", "budget 33")
+        self.assertFalse(self.run_gate()[0])
+
+        # The registered patch is exact: an extra edit must still fail.
+        self.change("README.tr.md", "budget 33", "budget 34")
+        self.rejects("Turkish source changed beyond navigation")
+
+    def test_reviewed_source_erratum_rejects_missing_anchor(self):
+        self.write("docs/documentation-source-corrections.json", json.dumps({
+            "baseline": "fixture",
+            "corrections": [{
+                "id": "I18N-INVALID", "original": "README.md",
+                "turkish": "README.tr.md",
+                "old": "a phrase that is not in the source",
+                "new": "replacement",
+            }],
+        }))
+        self.rejects("source correction anchor missing or ambiguous")
+
+    def test_reviewed_source_erratum_cannot_change_code_output(self):
+        self.write("docs/documentation-source-corrections.json", json.dumps({
+            "baseline": "fixture",
+            "corrections": [{
+                "id": "I18N-FENCED", "original": "README.md",
+                "turkish": "README.tr.md",
+                "old": "[CHECK_FRAME] PASS",
+                "new": "[CHECK_FRAME] FAIL",
+            }],
+        }))
+        self.rejects("source correction altered executable/output block")
+
+
+
 if __name__ == "__main__":
     unittest.main()
