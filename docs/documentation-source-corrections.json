@@ -1,0 +1,34 @@
+{
+  "baseline": "9017f2bc87b410d7e2e2f333237a4d9c570d71df",
+  "policy": "Only these exact, reviewed Turkish prose substitutions may differ from the immutable baseline; no firmware, fenced code or measured output is changed.",
+  "corrections": [
+    {
+      "id": "I18N-004",
+      "turkish": "lessons/04-stack-msp-psp/README.tr.md",
+      "original": "lessons/04-stack-msp-psp/README.md",
+      "old": "- `SP`'nin **altındaki** alan tahsis edilmiştir ama içeriği tanımsızdır:\n  daha önce itilip çıkarılmış verilerin kalıntısıdır. Bu yüzden `POP`\n  edilmemiş bir word'ü okumak anlamlı bir değer vermez.",
+      "new": "- `SP`'nin **altındaki**, ayrılmış stack belleği sınırları içindeki alan\n  **henüz canlı stack verisi olmayan boş kapasitedir**. İçeriği tanımsızdır;\n  geçmiş `PUSH`/`POP` işlemlerinden kalıntılar bulunabilir. `SP` aşağı\n  ilerlemeden bu alanı canlı stack verisi gibi okumak doğru değildir."
+    },
+    {
+      "id": "I18N-005",
+      "turkish": "docs/DEBUGGING.tr.md",
+      "original": "docs/DEBUGGING.md",
+      "old": "| Adres hizasi | GECERSIZ FRAME ADRESI | 4'un kati degil |",
+      "new": "| Adres hizasi | GECERSIZ FRAME ADRESI | 8'in kati degil (Cortex-M33 exception frame) |"
+    },
+    {
+      "id": "I18N-006",
+      "turkish": "lessons/06-mpu/README.tr.md",
+      "original": "lessons/06-mpu/README.md",
+      "old": "`UNPRIV_LIMIT = 0x3000033F`. Ayrıcalıksız Thread `0x3000033F`'ye yazabilir mi?\n`0x30000340`'a? `mpu_store_word()` ile ikisini de dene ve `LIMIT`'in\n**dahil** olduğunu kendin doğrula.",
+      "new": "`UNPRIV_LIMIT = 0x3000033F` son **izinli byte** adresidir.\n`mpu_store_word()` dört byte'lık `STR` yaptığı için `0x3000033F` üzerinde\nçalıştırılamaz: adres hizasızdır ve erişim bölgeyi aşar. Bunun yerine\n`0x3000033C` (son hizalı, bütünüyle içeride kalan word) ile\n`0x30000340` (ilk dışarıdaki hizalı word) adreslerini ayrı ayrı dene.\nBu karşılaştırma, `LIMIT`'in **dahil** oluşuyla word erişiminin tüm\nbyte'larının izinli olması gereğini birbirine karıştırmaz."
+    },
+    {
+      "id": "I18N-008",
+      "turkish": "lessons/11-startup/README.tr.md",
+      "original": "lessons/11-startup/README.md",
+      "old": "Linker'daki bir sayı, donanımı korumaz. Ders 04'te `MSPLIM` açıkça\nprogramlanınca stack taşması yakalanmıştı; bu repo'nun startup'ı bunu\nyapmıyor.",
+      "new": "Linker'daki bir sayı, donanımı korumaz. Ders 04'te PSP görev stack'i\nüzerinde **`PSPLIM`** açıkça programlanarak taşma sınırı gösterilmişti;\nbu, burada bahsedilen **`MSPLIM`** register'ının programlandığı anlamına\ngelmez. Bu repo'nun ortak startup'ı `MSPLIM` programlamıyor."
+    }
+  ]
+}
