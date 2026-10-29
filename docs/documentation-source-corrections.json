@@ -29,6 +29,48 @@
       "original": "lessons/11-startup/README.md",
       "old": "Linker'daki bir sayı, donanımı korumaz. Ders 04'te `MSPLIM` açıkça\nprogramlanınca stack taşması yakalanmıştı; bu repo'nun startup'ı bunu\nyapmıyor.",
       "new": "Linker'daki bir sayı, donanımı korumaz. Ders 04'te PSP görev stack'i\nüzerinde **`PSPLIM`** açıkça programlanarak taşma sınırı gösterilmişti;\nbu, burada bahsedilen **`MSPLIM`** register'ının programlandığı anlamına\ngelmez. Bu repo'nun ortak startup'ı `MSPLIM` programlamıyor."
+    },
+    {
+      "id": "I18N-001",
+      "original": "docs/ARCHITECTURE.md",
+      "turkish": "docs/ARCHITECTURE.tr.md",
+      "old": "Bu repo su an tek guvenlik durumu (Secure) ve tek bir hedef varsayar:\nQEMU `mps2-an505` / `cortex-m33`.",
+      "new": "Bu repo tek bir QEMU hedefini kullanır: `mps2-an505` / `cortex-m33`.\nÇoğu ders tek güvenlik durumunda çalışır; **Ders 16 ve final proje** ise\nayrı Secure/Non-secure imajları ve TrustZone geçişlerini uygular."
+    },
+    {
+      "id": "I18N-001",
+      "original": "docs/ARCHITECTURE.md",
+      "turkish": "docs/ARCHITECTURE.tr.md",
+      "old": "CMSIS-Core `SAU` tanimlarini yalnizca derleyici `-mcmse` ile cagrildiginda\n(`__ARM_FEATURE_CMSE == 3`) acar. Bu repo su an `-mcmse` kullanmiyor, bu\nyuzden `tools/capability-probe` SAU_TYPE'i mimari sabit adresinden okur ve\nbunu kaynak icinde acikca belirtir. Ders 16'da secure/non-secure ayrimi\nkurulurken `-mcmse` acilacak.",
+      "new": "CMSIS-Core `SAU` tanimlarini yalnizca derleyici `-mcmse` ile cagrildiginda\n(`__ARM_FEATURE_CMSE == 3`) acar. Genel `tools/capability-probe` hedefi\n`-mcmse` kullanmadığı için SAU_TYPE'i mimari sabit adresinden okur.\n**Ders 16** ise Secure kodu `-mcmse` ile derler ve Secure/Non-secure\nimajları ayrı ayrı linkler; bu destek geleceğe ertelenmiş değildir."
+    },
+    {
+      "id": "I18N-007",
+      "original": "lessons/06-mpu/README.md",
+      "turkish": "lessons/06-mpu/README.tr.md",
+      "old": "`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılır ama teşhis bir adım\ndolaylı hale gelir. Deney 3 bunu ölçüyor.",
+      "new": "`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılabilir ama teşhis bir adım\ndolaylı hale gelir. Deney 3 bunu **ölçmeyi önerir**; bu derste ölçülmüş\nbir sonuç sunulmuyor."
+    },
+    {
+      "id": "I18N-009",
+      "original": "lessons/11-startup/README.md",
+      "turkish": "lessons/11-startup/README.tr.md",
+      "old": "döngüsündeki `str.w`. Bu kanıt yereldir (GDB); CI'da GDB yok — CI için\nkalıcı kanıt *Experiment* bölümünde.",
+      "new": "döngüsündeki `str.w`. Bu özel watchpoint gözlemi yerel GDB kanıtıdır.\nGüncel CI GDB kullanır, ancak **bu Ders 11 watchpoint senaryosunun aynısını**\nçalıştırdığı iddia edilmiyor. CI için kalıcı diğer kanıtlar *Experiment*\nbölümündedir."
+    },
+    {
+      "id": "I18N-002",
+      "original": "docs/RELEASE_NOTES_DRAFT.md",
+      "turkish": "docs/RELEASE_NOTES_DRAFT.tr.md",
+      "old": "# Release notes taslağı — v1.0.0\n\nÖneri:",
+      "new": "# Release notes taslağı — v1.0.0\n\n> **Arşiv notu:** Bu metin yayımlama öncesi taslaktır. [v1.0.0 kararlı sürümü](https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0)\n> sonradan yayımlandı; aşağıdaki “oluşturulmadı” ifadesi taslağın tarihsel durumudur.\n\nÖneri:"
+    },
+    {
+      "id": "I18N-003",
+      "original": "BOOTCAMP.md",
+      "turkish": "BOOTCAMP.tr.md",
+      "old": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS. Güncel\nyayımlama ve uzak doğrulama bağlantıları [Progress](docs/PROGRESS.tr.md) içindedir.",
+      "new": "Proje/final PR #11 de merge edildi; 11fde900 main için üç preset CI PASS.\nBu satır **tarihsel entegrasyon kontrolünü** anlatır; v1.0.0 sürüm commit'inin\nölçümü olarak okunmamalıdır. Güncel yayımlama ve uzak doğrulama bağlantıları\n[Progress](docs/PROGRESS.tr.md) içindedir."
     }
   ]
 }
