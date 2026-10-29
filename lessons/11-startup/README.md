@@ -337,9 +337,10 @@ therefore writes RAM's last word (`0x30007FFC`), never `0x30008000`.
 | `__stack_limit` | Linker symbol: `__stack_top − 4K` = `0x30007000` | Used only in a link-time `ASSERT` |
 | `MSPLIM` | Hardware register: SP below it causes STKOF UsageFault | **Not programmed**. Measured: `0x00000000` (**QEMU OBSERVATION**) |
 
-A number in the linker does not protect hardware. Lesson 04 caught stack
-overflow after explicitly programming `MSPLIM`; this repository's startup
-does not do that.
+A number in the linker does not protect hardware. Lesson 04 explicitly
+programs **`PSPLIM`** for its PSP task stack to demonstrate a stack limit;
+that is **not** evidence that `MSPLIM` was programmed. The shared startup
+in this repository does not program `MSPLIM`.
 
 ---
 
