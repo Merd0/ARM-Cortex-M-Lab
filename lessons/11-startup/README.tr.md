@@ -339,9 +339,10 @@ yüzden RAM'in son word'üne (`0x30007FFC`) yazar; `0x30008000`'e hiç yazılmaz
 | `__stack_limit` | Linker sembolü: `__stack_top − 4K` = `0x30007000` | Yalnızca bir link-zamanı `ASSERT`'inde kullanılıyor |
 | `MSPLIM` | Donanım register'ı: SP bunun altına inerse STKOF UsageFault | **Programlanmıyor**. Ölçülen: `0x00000000` (**QEMU OBSERVATION**) |
 
-Linker'daki bir sayı, donanımı korumaz. Ders 04'te `MSPLIM` açıkça
-programlanınca stack taşması yakalanmıştı; bu repo'nun startup'ı bunu
-yapmıyor.
+Linker'daki bir sayı, donanımı korumaz. Ders 04'te PSP görev stack'i
+üzerinde **`PSPLIM`** açıkça programlanarak taşma sınırı gösterilmişti;
+bu, burada bahsedilen **`MSPLIM`** register'ının programlandığı anlamına
+gelmez. Bu repo'nun ortak startup'ı `MSPLIM` programlamıyor.
 
 ---
 
