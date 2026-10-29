@@ -479,8 +479,10 @@ New value = 0
 ```
 
 The instruction writing zero is identified: `str.w` in the shared
-`Reset_Handler`'s `.bss` loop. This evidence is local (GDB); CI has no GDB —
-see *Experiment* for permanent CI evidence.
+`Reset_Handler`'s `.bss` loop. This particular watchpoint observation is
+local GDB evidence. Current CI **does run GDB**, but it is not claimed to
+execute this exact Lesson 11 watchpoint scenario; see *Experiment* for the
+other persistent CI evidence.
 
 ### E — SystemInit
 
