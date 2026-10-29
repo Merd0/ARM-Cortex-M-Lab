@@ -1,28 +1,30 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Build the Thread MPU Policy
 
-**Hedef:** Ders 05'teki yazılım sözleşmesini donanım kuralına çevirmek.
+**Goal:** Turn Lesson 05's software contract into a hardware rule.
 
-## Görev
+## Task
 
-`main.c` içindeki `mpu_configure()` fonksiyonunu tamamla. `MAIR` ayarı ve
-`ARM_MPU_Disable()` hazır; geri kalan dört adım senin.
+Complete `mpu_configure()` in `main.c`. `MAIR` configuration and
+`ARM_MPU_Disable()` are provided; the remaining four steps are yours.
 
-| Adım | Ne |
+| Step | What |
 |---|---|
-| 1 | **Region 0 — FLASH:** ayrıcalıksız okuma + çalıştırma, yazma yok |
-| 2 | **Region 1 — Thread bloğu:** ayrıcalıksız okuma + yazma, çalıştırma yok |
-| 3 | MemManage exception'ını etkinleştir |
-| 4 | MPU'yu enable et; ayrıcalıklı erişimler varsayılan haritayı kullansın |
+| 1 | **Region 0 — FLASH:** unprivileged read + execute, no write |
+| 2 | **Region 1 — Thread block:** unprivileged read + write, no execution |
+| 3 | Enable the MemManage exception |
+| 4 | Enable the MPU; let privileged accesses use the default map |
 
-`g_service_counter` için bölge **tanımlama**. Korumanın kaynağı bir bölge
-eklememek: ayrıcalıksız erişim hiçbir bölgeyle eşleşmezse reddedilir.
+**Do not define** a region for `g_service_counter`. Protection comes from
+omitting a region: an unprivileged access matching no region is denied.
 
-Hazır adres sabitleri: `FLASH_BASE_ADDR`, `FLASH_LIMIT_ADDR`, `UNPRIV_BASE`,
+Provided address constants: `FLASH_BASE_ADDR`, `FLASH_LIMIT_ADDR`, `UNPRIV_BASE`,
 `UNPRIV_LIMIT`, `ATTR_IDX_NORMAL`.
 
-## Kullanabileceğin CMSIS API'si
+## Available CMSIS API
 
-Repo'da vendored duran resmi başlık:
+Official header vendored in the repository:
 `external/CMSIS/Core/Include/m-profile/armv8m_mpu.h`
 
 ```c
@@ -35,17 +37,17 @@ MPU_CTRL_PRIVDEFENA_Msk
 SCB_SHCSR_MEMFAULTENA_Msk
 ```
 
-`ARM_MPU_RBAR` parametreleri: `RO = 1` salt-okunur, `NP = 1` ayrıcalıksız
-erişime açık, `XN = 1` çalıştırılamaz.
+`ARM_MPU_RBAR` parameters: `RO = 1` means read-only, `NP = 1` permits
+unprivileged access, `XN = 1` means non-executable.
 
-## ⚠️ Armv7-M örneklerine dikkat
+## ⚠️ Be careful with Armv7-M examples
 
-Armv8-M MPU **base + limit** modelidir. Armv7-M'in "region size" alanı
-**burada yoktur** ve bölgenin kendi boyutuna hizalı olma zorunluluğu da
-yoktur. İnternette bulacağın MPU örneklerinin çoğu Armv7-M içindir ve
-doğrudan uygulanamaz.
+The Armv8-M MPU uses **base + limit**. Armv7-M's “region size” field
+**does not exist here**, nor must a region align to its own size. Most
+online MPU examples are for Armv7-M and cannot be applied directly.
 
-`LIMIT` **dahildir**: bölgenin son byte'ının adresi. Granularite 32 byte.
+`LIMIT` is **inclusive**: the address of the region's last byte.
+Granularity is 32 bytes.
 
 ## Build & Run
 
@@ -54,7 +56,7 @@ cmake --build --preset debug --target 06-exercise-mpu
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-exercise-mpu.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [  CHECK_MPU_ENABLED] FAIL
@@ -68,34 +70,33 @@ Başlangıç çıktısı (gerçek):
 ===== END =====
 ```
 
-MPU kapalı olduğu için firmware sorunsuz çalışıyor ve SVC yolu işliyor — ama
-**koruma yok**. Bu beklenen başlangıç durumudur, bir bug değildir.
+With the MPU disabled, firmware runs normally and SVC works — but
+**there is no protection**. This is the expected initial state, not a bug.
 
-## Doğrulama
+## Verification
 
-Sekiz `CHECK_*` satırının hepsi `PASS` olmalı.
+All eight `CHECK_*` lines must be `PASS`.
 
-`CHECK_FLASH_REGION_RO_EXEC` ve `CHECK_STACK_REGION_RW_XN` kontrolleri
-register'ları geri okuyup `AP`, `XN` ve `EN` bitlerini denetler. Böylece
-politikanın donanıma yazıldığı kontrol edilir.
+`CHECK_FLASH_REGION_RO_EXEC` and `CHECK_STACK_REGION_RW_XN` read back the
+registers and check `AP`, `XN`, and `EN`, verifying that the policy reached
+hardware.
 
-### İhlali de doğrula
+### Verify the violation too
 
-Politikayı uyguladıktan sonra korumayı şu deneyle kontrol et:
+After implementing the policy, check protection with this experiment:
 
 ```bash
 cmake --build --preset debug --target 06-mpu-broken
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-mpu-broken.elf
 ```
 
-Bu hedef (referans politikayla) doğrudan yazma deniyor ve `MemManage`
-alıyor. GDB'de `cm-fault` ile `MMFAR`'ın `COUNTER_ADDR` ile aynı olduğunu
-doğrula.
+This target attempts a direct write using the reference policy and receives
+`MemManage`. In GDB, use `cm-fault` to verify that `MMFAR` equals `COUNTER_ADDR`.
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-thread-mpu-policy/`](../../solutions/01-thread-mpu-policy/)
+Reference solution: [`../../solutions/01-thread-mpu-policy/`](../../solutions/01-thread-mpu-policy/)
 
 ---
 
-[← Ders 06](../../README.md)
+[← Lesson 06](../../README.md)

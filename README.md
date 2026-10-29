@@ -22,10 +22,11 @@ experiments and automated regression tests across three build presets.
 
 The learning method is **TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY**.
 Lessons include working examples, controlled failures, incomplete exercises,
-and separate reference solutions. Code and identifiers are English. Full bilingual documentation is in progress;
-the [coverage manifest](docs/documentation-coverage.json) distinguishes completed
-pairs from drafts and pending translations. Turkish source documents are preserved.
-Use the language switch at the beginning of each completed document.
+and separate reference solutions. Code and identifiers are English. All 91 first-party documents have complete
+English/Turkish pairs, listed in the [coverage manifest](docs/documentation-coverage.json).
+The original Turkish content is preserved. Use the language switch at the beginning
+of each document. Historical source inconsistencies are recorded separately in
+the [review findings](docs/documentation-review-findings.json).
 
 ## Engineering Highlights
 

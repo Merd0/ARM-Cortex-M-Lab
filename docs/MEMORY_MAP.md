@@ -53,30 +53,30 @@ behave like a real MCU and make "region overflow" errors meaningful.
             |    [1] Reset_Handler       |      Secure VTOR points here at reset
             |    ...                     |
             +----------------------------+
-            |  .text     (code)           |
+            |  .text     (code)          |
             +----------------------------+
-            |  .rodata   (constants)      |
+            |  .rodata   (constants)     |
             +----------------------------+
-            |  FLASH copy of .data   |  <-- __etext (LMA)
+            |  FLASH copy of .data       |  <-- __etext (LMA)
             +----------------------------+
-0x10080000  |  (unused)           |      512 KB boundary
+0x10080000  |  (unused)                  |      512 KB boundary
             +----------------------------+
 
 
 0x30000000  +----------------------------+  <-- RAM ORIGIN
-            |  .data  (copied to RAM) |  <-- __data_start .. __data_end
+            |  .data  (copied to RAM)    |  <-- __data_start .. __data_end
             +----------------------------+
-            |  .bss   (zeroed)       |  <-- __bss_start .. __bss_end
+            |  .bss   (zeroed)           |  <-- __bss_start .. __bss_end
             +----------------------------+
-            |  .heap  (currently 0 bytes)     |
+            |  .heap  (currently 0 bytes)|
             +----------------------------+
             |                            |
-            |     FREE SPACE               |
+            |     FREE SPACE             |
             |                            |
             +----------------------------+  <-- __stack_limit
             |  STACK                     |
             |     |                      |      full descending:
-            |     v  grows downward         |      grows as SP decreases
+            |     v  grows downward      |      grows as SP decreases
 0x30008000  +----------------------------+  <-- __stack_top = initial MSP
 ```
 

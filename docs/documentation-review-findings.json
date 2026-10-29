@@ -57,6 +57,51 @@
         "projects/fault-analyzer/diagnostic.c:22",
         "scripts/gdb/cortex-m.gdb:298"
       ]
+    },
+    {
+      "id": "I18N-006",
+      "path": "lessons/06-mpu/README.md",
+      "status": "source-experiment-needs-separate-correction",
+      "english": "Experiment 2 proposes mpu_store_word at the inclusive byte limit 0x3000033F. The helper performs a four-byte STR, so that access is unaligned and extends beyond the permitted region; it cannot isolate the inclusive-limit rule. The original exercise is preserved, not repaired in translation.",
+      "turkish": "Deney 2, dahil son bayt adresi 0x3000033F üzerinde mpu_store_word öneriyor. Yardımcı dört baytlık STR çalıştırdığı için erişim hizasız ve bölge dışına taşan bir erişimdir; dahil limit kuralını tek başına sınayamaz. Özgün alıştırma korunuyor; çeviri içinde onarılmadı.",
+      "evidence": [
+        "lessons/06-mpu/README.tr.md:508",
+        "lessons/06-mpu/example/mpu_probe.S:24"
+      ]
+    },
+    {
+      "id": "I18N-007",
+      "path": "lessons/06-mpu/README.md",
+      "status": "source-internal-observation-wording",
+      "english": "The MEMFAULTENA explanation says Experiment 3 measures escalation, but Experiment 3 and Known Boundaries explicitly state it was not measured in this lesson. Preserve the explicit unmeasured limitation; reconcile the earlier wording separately.",
+      "turkish": "MEMFAULTENA açıklaması Deney 3 bunu ölçüyor diyor; Deney 3 ve Known Boundaries ise bu derste ölçülmediğini açıkça belirtiyor. Ölçülmemiş olma sınırı korunuyor; önceki ifade ayrı bir düzeltmede uzlaştırılmalı.",
+      "evidence": [
+        "lessons/06-mpu/README.tr.md:244",
+        "lessons/06-mpu/README.tr.md:519"
+      ]
+    },
+    {
+      "id": "I18N-008",
+      "path": "lessons/11-startup/README.md",
+      "status": "confirmed-register-reference-mismatch",
+      "english": "The MSPLIM discussion says Lesson 04 explicitly programs MSPLIM. Lesson 04 actually programs PSPLIM for the PSP task stack. Preserve the source reference in translation; correct the register name separately.",
+      "turkish": "MSPLIM bölümü Ders 04 açıkça MSPLIM programlıyor diyor. Ders 04 aslında PSP görev stack alanı için PSPLIM programlıyor. Kaynak atıf çeviride korunuyor; register adı ayrı düzeltilmeli.",
+      "evidence": [
+        "lessons/11-startup/README.tr.md:342",
+        "lessons/04-stack-msp-psp/example/main.c:163"
+      ]
+    },
+    {
+      "id": "I18N-009",
+      "path": "lessons/11-startup/README.md",
+      "status": "historical-ci-description",
+      "english": "The GDB stop D paragraph says CI has no GDB. Current CI installs gdb-multiarch and runs lesson12-check.py, which launches GDB. The earlier Lesson 11 evidence remains historical; revise the CI description separately without claiming its exact GDB scenario is now a CI test.",
+      "turkish": "GDB durak D paragrafı CI ortamında GDB olmadığını söylüyor. Güncel CI gdb-multiarch kuruyor ve GDB başlatan lesson12-check.py dosyasını çalıştırıyor. Önceki Ders 11 kanıtı tarihsel kalıyor; bu deneyin aynısı artık CI testiymiş gibi gösterilmeden CI açıklaması ayrı düzeltilmeli.",
+      "evidence": [
+        "lessons/11-startup/README.tr.md:481",
+        ".github/workflows/ci.yml:26",
+        "tests/lesson12-check.py:141"
+      ]
     }
   ]
 }

@@ -15,7 +15,7 @@ import sys
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
-FENCES = re.compile(r"^(`{3,}|~{3,})[^\n]*\n.*?^\1[^\n]*(?:\n|$)", re.M | re.S)
+FENCES = re.compile(r"^[ ]{0,3}(`{3,}|~{3,})[^\n]*\n.*?^[ ]{0,3}\1[ \t]*(?:\n|$)", re.M | re.S)
 LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 SWITCH = re.compile(r"^\*\*(?:Dil / Language|Language|Dil):\*\*[^\n]*\n\n")
 
@@ -188,8 +188,9 @@ def main():
         number_pattern = r"(?<![\w])\d+(?:[.,]\d+)*(?![\w])"
         if Counter(re.findall(number_pattern, prose(source))) != Counter(re.findall(number_pattern, prose(english))):
             failures.append(f"numerical observation mismatch: {en}")
-        references = lambda text: Counter(m[2] for m in LINK.finditer(text)
-                                          if m[2].startswith(("https://", "http://")))
+        references = lambda text: (Counter(m[2] for m in LINK.finditer(text)
+                                           if m[2].startswith(("https://", "http://")))
+                                   + Counter(re.findall(r"<(https?://[^>\s]+)>", text)))
         if references(source) != references(english):
             failures.append(f"official/external reference changed: {en}")
         source_sections, english_sections = sections(source), sections(english)

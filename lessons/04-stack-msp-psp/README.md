@@ -127,15 +127,15 @@ Live data extends **upwards** from `SP` to the top; below `SP` is available spac
   High address
   0x30000200  <-- TASK_STACK_TOP (ONE PAST the usable area)
               +---------------------+       NOT part of the stack; do not write
-  0x300001FC  | oldest pushed word |  ^
+  0x300001FC  | oldest pushed word  |  ^
               +---------------------+  |
   0x300001F8  |        ...          |  |   LIVE DATA
               +---------------------+  |   (pushed, not yet popped)
-  0x300001F4  | latest pushed word |  v
+  0x300001F4  | latest pushed word  |  v
               +=====================+  <-- SP
-  0x300001F0  |  free / undefined     |
+  0x300001F0  |  free / undefined   |
               +---------------------+      AVAILABLE SPACE
-  0x300001EC  |  free / undefined     |      (grows downward)
+  0x300001EC  |  free / undefined   |      (grows downward)
               +---------------------+
                        ...
   0x30000000  +---------------------+  <-- TASK_STACK_BASE (bottom)

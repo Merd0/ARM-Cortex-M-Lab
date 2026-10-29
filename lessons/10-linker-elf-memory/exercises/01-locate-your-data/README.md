@@ -1,24 +1,27 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Exercise 01 — Locate Your Data
 
-**Hedef:** Map dosyasına bakmadan, yalnızca linker sembollerinden ve nesne
-adreslerinden bellek yerleşimini hesaplamak.
+**Goal:** Calculate memory placement solely from linker symbols and object
+addresses, without consulting the map file.
 
-## Görev
+## Task
 
-[`locate.c`](locate.c) içindeki dört fonksiyonu doldur:
+Implement the four functions in [`locate.c`](locate.c):
 
-| Fonksiyon | Ne döndürmeli |
+| Function | Must return |
 |---|---|
-| `flash_used_bytes()` | FLASH'taki yük görüntüsünün **tamamı** (byte) |
-| `ram_static_bytes()` | RAM'de **statik** olarak kullanılan byte — stack hariç |
-| `data_lma_of(p)` | `p` `.data` içinde bir nesne; onun **ilk değerinin** FLASH adresi |
-| `in_region(p, origin, length)` | `p`, `[origin, origin + length)` içinde mi |
+| `flash_used_bytes()` | **Entire** FLASH load image size in bytes |
+| `ram_static_bytes()` | **Static** RAM usage in bytes, excluding stack |
+| `data_lma_of(p)` | `p` is an object in `.data`; return the FLASH address of its **initial value** |
+| `in_region(p, origin, length)` | Whether `p` lies in `[origin, origin + length)` |
 
-Kullanabileceğin semboller `example/l10.h`'te bildirili; tanımları
-`platform/mps2-an505/linker/mps2-an505-secure.ld`'de.
+Available symbols are declared in `example/l10.h` and defined in
+`platform/mps2-an505/linker/mps2-an505-secure.ld`.
 
-**Kural:** map dosyasından sayı kopyalama. Kodun başka bir build'de de doğru
-kalmalı — referans çözümün sayıları ana örnekten zaten farklı.
+**Rule:** do not copy numbers from the map. Your code must remain correct
+in another build — the reference solution already has different numbers
+from the main example.
 
 ## Build & Run
 
@@ -27,7 +30,7 @@ cmake --build --preset debug --target 10-exercise-linker
 ./scripts/run-qemu.sh build/debug/lessons/10-linker-elf-memory/10-exercise-linker.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [  FLASH_USED_BYTES] 0
@@ -40,37 +43,37 @@ Başlangıç çıktısı (gerçek):
 ===== END =====
 ```
 
-Bu **beklenen başlangıç durumudur**.
+This is the **expected initial state**.
 
-## Doğrulama
+## Verification
 
-Dört kontrol de `PASS`.
+All four checks must be `PASS`.
 
-Kontroller sabit adreslere dayanmıyor:
+Checks do not rely on fixed addresses:
 
-- `CHECK_FLASH_USED` senin sonucunu linker'ın kendi hesapladığı bir sembolle
-  karşılaştırır.
-- `CHECK_LMA_HOLDS_INIT` döndürdüğün adresi **okur** ve orada `g_init`'in ilk
-  değeri (`0xC0DEFACE`) var mı diye bakar — ama yalnızca adres FLASH yük
-  görüntüsünün içindeyse, bitişe en az 4 byte uzaklıktaysa ve 4 byte'a
-  hizalıysa. Aksi halde **okumaz**. Kontrol 32 bit taşmaya karşı güvenli
-  yazıldı (`0xFFFFFFFC` gibi değerler dahil): yanlış bir cevap fault değil
-  FAIL üretir.
+- `CHECK_FLASH_USED` compares your result with a symbol calculated by the linker.
+- `CHECK_LMA_HOLDS_INIT` **reads** your returned address and looks for the
+  initial value of `g_init` (`0xC0DEFACE`) — but only if the address lies
+  inside the FLASH load image, is at least 4 bytes before its end, and is
+  aligned to 4 bytes. Otherwise, it **does not read**. The check is safe
+  against 32-bit overflow, including values such as `0xFFFFFFFC`: a wrong
+  answer produces FAIL, not a fault.
 
-## Cevaplaman gereken sorular
+## Questions to answer
 
-1. FLASH'ta hangi byte'lar var? Yalnızca kod mu?
-2. `.data` FLASH'ta da yer kaplar mı? Neden?
-3. `.bss` FLASH'ta yer kaplar mı?
-4. `__etext` adı neyi ima ediyor, tanımı gerçekte ne? (Linker script'e bak.)
-5. Bir nesnenin RAM'deki `.data` içindeki konumu ile FLASH'taki kopyasındaki
-   konumu arasında nasıl bir ilişki var?
-6. Stack neden `ram_static_bytes()`'a dahil değil?
+1. Which bytes occupy FLASH? Only code?
+2. Does `.data` also occupy FLASH? Why?
+3. Does `.bss` occupy FLASH?
+4. What does the name `__etext` suggest, and what is its actual definition?
+   (Inspect the linker script.)
+5. How does an object's position within RAM `.data` relate to its position
+   in the FLASH copy?
+6. Why is stack excluded from `ram_static_bytes()`?
 
-## Takıldıysan
+## If you are stuck
 
-Referans çözüm: [`../../solutions/01-locate-your-data/`](../../solutions/01-locate-your-data/)
+Reference solution: [`../../solutions/01-locate-your-data/`](../../solutions/01-locate-your-data/)
 
 ---
 
-[← Ders 10](../../README.md)
+[← Lesson 10](../../README.md)

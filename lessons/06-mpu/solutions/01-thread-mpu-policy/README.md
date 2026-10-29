@@ -1,8 +1,10 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — Build the Thread MPU Policy
 
 Exercise: [`../../exercises/01-thread-mpu-policy/`](../../exercises/01-thread-mpu-policy/)
 
-## Çözüm
+## Solution
 
 ```c
 static void mpu_configure(void)
@@ -37,7 +39,7 @@ cmake --build --preset debug --target 06-solution-mpu
 ./scripts/run-qemu.sh build/debug/lessons/06-mpu/06-solution-mpu.elf
 ```
 
-Gerçek çıktı (kontrol satırları):
+Actual output (check lines):
 
 ```text
 [  CHECK_MPU_INITIALLY_DISABLED] PASS
@@ -54,140 +56,138 @@ Gerçek çıktı (kontrol satırları):
 
 ---
 
-## Neden her parça gerekli?
+## Why is each piece necessary?
 
-### Neden FLASH region'ı gerekli?
+### Why is the FLASH region required?
 
-MPU etkinken ayrıcalıksız erişimler için "eşleşme yoksa reddet" kuralı
-geçerlidir — ve bu **komut getirmeyi de** kapsar. FLASH için bir bölge
-tanımlamazsan ayrıcalıksız Thread ilk komutunu bile getiremez ve anında
-`IACCVIOL` alırsın.
+With the MPU enabled, unprivileged accesses follow “no match means deny” —
+including **instruction fetch**. Without a FLASH region, unprivileged Thread
+cannot fetch even its first instruction, immediately causing `IACCVIOL`.
 
-`RO = 1`: kodun kendisini yazmaya karşı korur.
-`XN = 0`: buradan komut getirilebilir — bu bölgenin varlık sebebi.
+`RO = 1`: protects code itself against writes.
+`XN = 0`: permits instruction fetch — why this region exists.
 
-Region 0 ayrıca `.rodata`'yı da kapsıyor (aynı FLASH aralığı), yani
-ayrıcalıksız kod sabit string ve tabloları okuyabiliyor.
+Region 0 also covers `.rodata` (the same FLASH range), letting unprivileged
+code read constant strings and tables.
 
-### Neden task stack region'ı gerekli?
+### Why is the task stack region required?
 
-Aynı kural veri tarafında. Bölge olmazsa Thread kendi stack'ine ilk `push`'u
-yapamaz — ve bu `psp_start()` hedefinin prolog'unda, yani daha ilk anda olur.
+The same rule applies to data. Without a region, Thread cannot perform its
+first `push` to its own stack — in the prologue of the `psp_start()` target,
+right at the beginning.
 
-`RO = 0`, `NP = 1`: oku ve yaz, ayrıcalıksız erişime açık.
+`RO = 0`, `NP = 1`: read/write, open to unprivileged access.
 
-Region 1 hem stack'i hem Thread'in kendi veri alanını (`unpriv_obs_t`)
-kapsıyor. İkisi tek bir 32 byte hizalı blokta duruyor — bölgeler
-`RBAR.BASE`/`RLAR.LIMIT` ile 32 byte granularitede tanımlandığı için
-dağınık nesneleri ayrı ayrı kapsamak bölge israfı olurdu.
+Region 1 covers both the stack and Thread's data area (`unpriv_obs_t`).
+They occupy one 32-byte-aligned block: regions use 32-byte granularity via
+`RBAR.BASE`/`RLAR.LIMIT`, so individually covering scattered objects would
+waste regions.
 
-### Neden stack `XN`?
+### Why is the stack `XN`?
 
-Oradan kod çalıştırmak için meşru bir sebep yok. `XN = 1`, stack taşması veya
-tampon aşımı ile enjekte edilen verinin **çalıştırılmasını** engeller — klasik
-W^X sertleştirmesi. İhlali `MMFSR.IACCVIOL` olarak görünür (`DACCVIOL` değil).
+There is no legitimate reason to execute code there. `XN = 1` prevents
+**executing** data injected through stack or buffer overflow — classic W^X
+hardening. A violation appears as `MMFSR.IACCVIOL`, not `DACCVIOL`.
 
-Region 0 ile birlikte kural tamamlanır: yazılabilir olan çalıştırılamaz,
-çalıştırılabilir olan yazılamaz.
+Together with Region 0, this establishes: writable memory is not executable,
+and executable memory is not writable.
 
-### Neden `g_service_counter` için izin verilmedi?
+### Why was access to `g_service_counter` not granted?
 
-**Koruma bir bölge eklememekten geliyor.** Armv8-M'de MPU etkinken,
-ayrıcalıksız bir erişim eşleşen bölge bulamazsa reddedilir. Sayaç hiçbir
-bölgenin içinde olmadığı için ayrıcalıksız Thread'e kapalı.
+**Protection comes from omitting a region.** With the Armv8-M MPU enabled,
+an unprivileged access without a matching region is denied. The counter
+is outside all regions, so unprivileged Thread cannot access it.
 
-Ölçülen adresler bunu gösteriyor:
+Measured addresses show this:
 
 ```text
 COUNTER_ADDR = 0x30000000
-UNPRIV_BASE  = 0x30000020    <- Region 1 buradan basliyor
+UNPRIV_BASE  = 0x30000020    <- Region 1 starts here
 ```
 
-Ayrı bir "yasak bölge" tanımlamadık — Armv8-M MPU'da "erişimi reddet" diye
-bir bölge türü zaten yoktur. İzin **verilen** bölgeler listelenir, geri kalan
-kapalıdır.
+We did not define a separate “forbidden region” — the Armv8-M MPU has no
+“deny access” region type. **Permitted** regions are listed; the rest is closed.
 
-### Ayrıcalıklı Handler neden erişebiliyor?
+### Why can the privileged Handler access it?
 
-`MPU_CTRL.PRIVDEFENA = 1` sayesinde. Ayrıcalıklı bir erişim hiçbir bölgeyle
-eşleşmezse mimarinin **varsayılan bellek haritası** devreye girer ve erişim
-izinli olur.
+Because `MPU_CTRL.PRIVDEFENA = 1`. If a privileged access matches no region,
+the architecture's **default memory map** applies and permits access.
 
-Ayrıcalıksız erişimlerin böyle bir kurtarma yolu **yoktur**. Bu dersin
-politikası tam olarak bu asimetriye dayanıyor.
+Unprivileged accesses have **no** fallback. This lesson's policy relies on
+precisely that asymmetry.
 
-### `PRIVDEFENA` tam olarak ne yapıyor?
+### What exactly does `PRIVDEFENA` do?
 
 ```text
-PRIVDEFENA = 1   ayricalikli + eslesme yok  -> varsayilan harita (izin)
-PRIVDEFENA = 0   ayricalikli + eslesme yok  -> REDDET
-her durumda      ayricaliksiz + eslesme yok -> REDDET
+PRIVDEFENA = 1   privileged + no match  -> default map (permitted)
+PRIVDEFENA = 0   privileged + no match  -> DENY
+in either case      unprivileged + no match -> DENY
 ```
 
-`0` seçersen ayrıcalıklı kodun kullandığı her adres için de bölge tanımlaman
-gerekir: MSP stack'i, kernel verisi, UART, NVIC... Bu derste MPU'yu enable
-eden `main()` kendi stack'ine erişemez hale gelirdi. Bazı yüksek güvenlikli
-tasarımlar bunu bilerek yapar ama 8 bölge hızla yetmez.
+With `0`, you must define regions for every address used by privileged code
+too: MSP stack, kernel data, UART, NVIC... Here, `main()` would lose access
+to its own stack when enabling the MPU. Some high-security designs do this
+deliberately, but 8 regions quickly become insufficient.
 
-### `MAIR` neden gerekli?
+### Why is `MAIR` required?
 
-`RLAR.AttrIndx` zorunlu bir alandır: her bölge `MAIR0`/`MAIR1` içindeki 8
-attribute girdisinden birini seçmek **zorundadır**. Attribute'suz bölge
-tanımlanamaz.
+`RLAR.AttrIndx` is mandatory: every region **must** select one of the 8
+attribute entries in `MAIR0`/`MAIR1`. A region cannot be defined without
+an attribute.
 
-Attribute, işlemciye o belleğin **ne tür bellek** olduğunu söyler — Normal mi
-Device mi, cacheable mı, shareable mı. Yani MPU yalnızca "kim erişebilir"
-sorusunu değil, "bu bellek nasıl davranır" sorusunu da cevaplar.
+The attribute tells the processor **what kind of memory** this is — Normal
+or Device, cacheable or shareable. Thus, the MPU answers both “who may access”
+and “how this memory behaves.”
 
-Bu derste tek attribute kullanıldı (Normal, WB, non-transient, RA/WA) ve
-`MAIR0 = 0x000000FF` ölçüldü. Cache davranışı bu dersin konusu değil.
+One attribute was used here (Normal, WB, non-transient, RA/WA), with
+`MAIR0 = 0x000000FF` measured. Cache behavior is outside this lesson.
 
-### `RBAR`/`RLAR` nasıl yorumlanıyor?
+### How are `RBAR`/`RLAR` interpreted?
 
-Ölçülen ham değerler ve çözümleri:
+Measured raw values and their decoding:
 
 ```text
 Region 0
 RBAR = 0x10000006   XN=0  AP=11 (RO=1,NP=1)  SH=00  BASE=0x10000000
 RLAR = 0x1007FFE1   EN=1  AttrIndx=0  PXN=0  LIMIT=0x1007FFE0
-                    -> DAHIL son byte: 0x1007FFFF
+                    -> INCLUSIVE last byte: 0x1007FFFF
 
 Region 1
 RBAR = 0x30000023   XN=1  AP=01 (RO=0,NP=1)  SH=00  BASE=0x30000020
 RLAR = 0x30000321   EN=1  AttrIndx=0  PXN=0  LIMIT=0x30000320
-                    -> DAHIL son byte: 0x3000033F
+                    -> INCLUSIVE last byte: 0x3000033F
 ```
 
-Bit yerleşimi:
+Bit layout:
 
 ```text
 RBAR: [31:5] BASE | [4:3] SH | [2:1] AP | [0] XN
 RLAR: [31:5] LIMIT | [4] PXN | [3:1] AttrIndx | [0] EN
 ```
 
-`LIMIT` **dahildir**: son byte'ın adresi. CMSIS başlığının ifadesiyle değer
-"one extended" — alt 5 bit 1 kabul edilir. Bu yüzden `0x1007FFE0` yazıp
-`0x1007FFFF`'e kadar kapsıyorsun.
+`LIMIT` is **inclusive**: the last byte's address. In the CMSIS header's
+terms, it is “one extended” — the low 5 bits are treated as 1. Thus,
+writing `0x1007FFE0` covers addresses through `0x1007FFFF`.
 
-### Neden Armv7-M "region size" örnekleri kullanılamaz?
+### Why cannot Armv7-M “region size” examples be used?
 
 | | Armv7-M (PMSAv7) | Armv8-M (PMSAv8) |
 |---|---|---|
-| Bölge | `base` + kodlanmış **size** (2'nin kuvveti) | `BASE` + `LIMIT` |
-| Hizalama | Bölge kendi boyutuna hizalı olmalı | 32 byte yeter |
-| Alt bölge | `SRD` alanı var | Yok |
-| Bellek türü | `TEX`/`C`/`B`/`S` bölge içinde | `AttrIndx` → `MAIR` |
+| Region | `base` + encoded **size** (power of 2) | `BASE` + `LIMIT` |
+| Alignment | Region must align to its own size | 32 bytes suffice |
+| Subregion | `SRD` field exists | None |
+| Memory type | `TEX`/`C`/`B`/`S` within the region | `AttrIndx` → `MAIR` |
 
-Armv7-M örneklerindeki `SIZE` ve `SRD` alanları Armv8-M'de **yoktur**.
-Kopyalarsan ya derlenmez ya da bambaşka bir bölge programlarsın. Doğru
-kaynak: Armv8-M ARM veya repodaki vendored
+Armv7-M examples' `SIZE` and `SRD` fields **do not exist** in Armv8-M.
+Copying them either fails to compile or programs an entirely different
+region. Use the Armv8-M ARM or the vendored
 `external/CMSIS/Core/Include/m-profile/armv8m_mpu.h`.
 
 ---
 
-## Korumanın işlediğini doğrula
+## Verify that protection works
 
-Politika doğruysa ihlal `MemManage` üretir:
+With the correct policy, a violation causes `MemManage`:
 
 ```text
 IPSR  = 4               MemManage (HardFault degil)
@@ -199,12 +199,12 @@ stacked PC = 0x10000078 = "str r1, [r0, #0]"
 
 ---
 
-## Sınır
+## Boundary
 
-Bu politika iki bölgeden ibaret. Gerçek bir sistemde çevre birimleri,
-paylaşılan tamponlar ve **her görev için ayrı stack bölgesi** gerekir — ve
-bu hedefte toplam 8 bölge var. Politika tasarımı bir bütçe işidir.
+This policy contains only two regions. Real systems need peripherals,
+shared buffers, and **a separate stack region for each task** — with only
+8 regions on this target. Policy design is a budgeting problem.
 
 ---
 
-[← Ders 06](../../README.md)
+[← Lesson 06](../../README.md)

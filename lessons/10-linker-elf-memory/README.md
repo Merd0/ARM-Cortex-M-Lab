@@ -1,8 +1,10 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Lesson 10 — Linker, ELF & Memory
 
-`[STANDARD]` · Day 5 · Tahmini süre: 75–90 dk
+`[STANDARD]` · Day 5 · Estimated time: 75–90 min
 
-> **Öğretim döngüsü:** TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
+> **Teaching cycle:** TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
 
 ---
 
@@ -10,18 +12,18 @@
 
 *(TEACH)*
 
-Ders 09 bir soruyla bitti: `bl helper_scale` komutunun hedef adresini kim
-yazdı? Derleyici yazmadı — derlerken `helper_scale`'in nerede olacağını
-bilmiyordu. Assembler da yazmadı.
+Lesson 09 ended with a question: who wrote the destination address of
+`bl helper_scale`? Not the compiler — it did not know where `helper_scale`
+would be during compilation. Not the assembler either.
 
-Bu ders o soruyu ve devamını cevaplıyor:
+This lesson answers that question and what follows:
 
-> **Ayrı ayrı derlenmiş parçalar nasıl tek bir çalıştırılabilir imaja
-> dönüşüyor, ve kod ile veri Cortex-M belleğine nasıl yerleşiyor?**
+> **How do separately compiled pieces become one executable image, and how
+> are code and data placed in Cortex-M memory?**
 
-"Firmware FLASH'a sığmıyor", "bu değişken neden bu adreste", "`.data` nereden
-kopyalanıyor", "undefined reference" — hepsinin cevabı aynı iki dosyada:
-**linker script** ve **map dosyası**.
+“The firmware does not fit in FLASH,” “why is this variable at this address,”
+“where is `.data` copied from,” “undefined reference” — the answers are in
+the same two files: **the linker script** and **the map file**.
 
 ---
 
@@ -29,85 +31,85 @@ kopyalanıyor", "undefined reference" — hepsinin cevabı aynı iki dosyada:
 
 *(TEACH)*
 
-### Beş etiket
+### Five labels
 
-| Etiket | Anlamı | Örnek |
+| Label | Meaning | Example |
 |---|---|---|
-| **ELF / ABI** | ELF dosya biçimi ve Arm ELF ABI'si (AAELF32) | `R_ARM_THM_CALL` bir BL'yi tarif eder |
-| **LINKER** | GNU ld davranışı | `*(.rodata*)` deseni eşleşen input section'ları toplar |
-| **REPOSITORY DESIGN** | Bu repo'nun linker script'indeki seçimler | `.data > RAM AT > FLASH` |
-| **ARCHITECTURE** | Armv8-M işlemci davranışı | reset'te `vector[0]` → MSP |
-| **OBSERVATION** | bu toolchain'in bu build'de ürettiği | `.data` LMA = `0x100009A8` |
+| **ELF / ABI** | ELF file format and Arm ELF ABI (AAELF32) | `R_ARM_THM_CALL` describes a BL |
+| **LINKER** | GNU ld behavior | `*(.rodata*)` gathers matching input sections |
+| **REPOSITORY DESIGN** | Choices in this repository's linker script | `.data > RAM AT > FLASH` |
+| **ARCHITECTURE** | Armv8-M processor behavior | at reset, `vector[0]` → MSP |
+| **OBSERVATION** | What this toolchain produced in this build | `.data` LMA = `0x100009A8` |
 
-GNU ld'nin davranışı bir Arm mimari kuralı **değildir**.
+GNU ld behavior **is not** an Arm architectural rule.
 
-### Üç katman: section, sembol, relocation
+### Three layers: section, symbol, relocation
 
 ```text
-SECTION      "hangi byte'lar, hangi turden?"      .text  .rodata  .data  .bss
-SEMBOL       "bu adresin adi ne?"                 text_fn  g_init  __data_start
-RELOCATION   "hangi byte'lar SONRA, nasil          R_ARM_THM_CALL -> text_fn
-              yamanacak?"
+SECTION      "which bytes, of which type?"      .text  .rodata  .data  .bss
+SYMBOL       "what is this address named?"                 text_fn  g_init  __data_start
+RELOCATION   "which bytes will be patched LATER,          R_ARM_THM_CALL -> text_fn
+              and how?"
 ```
 
-### Boru hattı
+### Pipeline
 
 ```text
-objects.c  ──gcc──► objects.o   section'lar: .rodata.k_table  .data.g_init  .bss.g_zero ...
-placement.c ──gcc──► placement.o semboller:  text_fn (GLOBAL, tanimli)
-main.c     ──gcc──► main.o      semboller:  text_fn (UNDEFINED)
-                                relocation: "bu BL'yi text_fn'e yama"
-l10_asm.S  ──as───► l10_asm.o   semboller:  asm_fn (GLOBAL), local_helper (LOCAL)
+objects.c  ──gcc──► objects.o   sections: .rodata.k_table  .data.g_init  .bss.g_zero ...
+placement.c ──gcc──► placement.o symbols:  text_fn (GLOBAL, defined)
+main.c     ──gcc──► main.o      symbols:  text_fn (UNDEFINED)
+                                relocation: "patch this BL to text_fn"
+l10_asm.S  ──as───► l10_asm.o   symbols:  asm_fn (GLOBAL), local_helper (LOCAL)
                          │
-                 linker script + tum .o + libgcc
+                 linker script + all .o + libgcc
                          ▼
-                   ld: 1. input section'lari cikis section'larina topla
-                       2. erisilemeyen input section'lari at (--gc-sections)
-                       3. adres ata (VMA ve LMA) - MEMORY bolgelerinin icinde
-                       4. sembolleri coz
-                       5. relocation'lari uygula
+                   ld: 1. collect input sections into output sections
+                       2. discard unreachable input sections (--gc-sections)
+                       3. assign addresses (VMA and LMA) within MEMORY regions
+                       4. resolve symbols
+                       5. apply relocations
                          ▼
                    .elf  +  .map
                          ▼
-          yukleyici (QEMU -kernel) yuklenebilir byte'lari bellege yazar
+          loader (QEMU -kernel) writes loadable bytes into memory
                          ▼
-          Reset_Handler .data'yi LMA -> VMA kopyalar, .bss'i sifirlar (ders 11)
+          Reset_Handler copies .data LMA -> VMA, zeros .bss (Lesson 11)
 ```
 
-### Bir nesne, iki adres: VMA ve LMA
+### One object, two addresses: VMA and LMA
 
 ```text
 FLASH 0x10000000 ┌──────────────┐
                  │ .vectors     │  VMA = LMA
                  │ .text        │  VMA = LMA
                  │ .rodata      │  VMA = LMA
-                 │ .data kopyasi│  <- .data'nin LMA'si (ilk degerler burada)
+                 │ .data copy│  <- .data LMA (initial values here)
                  └──────────────┘
 RAM   0x30000000 ┌──────────────┐
-                 │ .data        │  <- .data'nin VMA'si (kod ona BURADAN erisir)
-                 │ .bss         │  yalnizca VMA; imajda byte YOK
+                 │ .data        │  <- .data VMA (code accesses it HERE)
+                 │ .bss         │  VMA only; NO bytes in the image
                  │     ...      │
-                 │ stack ↓      │  section degil; tepe = __stack_top
+                 │ stack ↓      │  not a section; top = __stack_top
                  └──────────────┘
 ```
 
-- **VMA** (virtual memory address): nesnenin **çalışma sırasında** bulunduğu,
-  kodun ona eriştiği adres.
-- **LMA** (load memory address): nesnenin ilk içeriğinin **imajda** durduğu
-  adres.
+- **VMA** (virtual memory address): where the object resides **at runtime**,
+  the address used by code to access it.
+- **LMA** (load memory address): where the object's initial contents reside
+  **in the image**.
 
-`.text` ve `.rodata` için ikisi aynı. `.data` için farklı: ilk değer FLASH'ta
-durur (FLASH güç kesilince unutmaz), ama değişken RAM'de yaşar (yazılabilir).
-Aradaki köprü startup kodudur.
+They are identical for `.text` and `.rodata`. They differ for `.data`: its
+initial value lives in FLASH, which survives power loss, but the writable
+variable lives in RAM. Startup code bridges the two.
 
-### İki eşitsizlik
+### Two inequalities
 
-- **ELF dosya boyutu ≠ FLASH kullanımı.** ELF dosyası sembol tablosu,
-  section başlıkları ve yüklenmeyen `.debug_*` section'ları da taşır.
-- **FLASH kullanımı ≠ `.text`.** FLASH; vektörleri, kodu, salt-okunur veriyi
-  **ve `.data`'nın ilk değerlerini** tutar.
+- **ELF file size ≠ FLASH usage.** ELF also contains a symbol table, section
+  headers, and non-loaded `.debug_*` sections.
+- **FLASH usage ≠ `.text`.** FLASH holds vectors, code, read-only data,
+  **and initial values for `.data`**.
 
-İkisi de aşağıda bu build'in gerçek sayılarıyla ölçülüyor.
+Both are measured below using this build's actual numbers.
 
 ---
 
@@ -115,19 +117,18 @@ Aradaki köprü startup kodudur.
 
 *(TEACH)*
 
-**Linker bir yayın editörüdür.** Her yazar (derleme birimi) kendi
-bölümlerini ayrı sayfalarda teslim eder, sayfa numarası bilmeden. "Şekil 3'e
-bakınız" yazdığı yerlerde numara boş kalır — bunlar **relocation**'lar.
-Editör:
+**The linker is a publication editor.** Each author (translation unit)
+submits separate pages without knowing page numbers. “See Figure 3” leaves
+a number to fill in — these are **relocations**. The editor:
 
-1. sayfaları türüne göre bölümlere dizer (input section → output section),
-2. kimsenin atıf yapmadığı sayfaları çıkarır (**garbage collection**),
-3. sayfa numaralarını verir (**adres ataması**),
-4. boş kalan "bakınız" numaralarını doldurur (**relocation uygulama**),
-5. içindekiler dizinini basar (**map dosyası**).
+1. Arranges pages into sections by type (input section → output section).
+2. Removes pages nobody references (**garbage collection**).
+3. Assigns page numbers (**address assignment**).
+4. Fills in the missing reference numbers (**applying relocations**).
+5. Prints the table of contents (**map file**).
 
-Kitabın basılı hali (**LMA**) ile okuyucunun masasındaki hali (**VMA**)
-farklı yerlerde olabilir — `.data` tam olarak böyle.
+The printed book (**LMA**) and the copy on the reader's desk (**VMA**) may
+be in different places — exactly the case for `.data`.
 
 ---
 
@@ -137,7 +138,7 @@ farklı yerlerde olabilir — `.data` tam olarak böyle.
 
 ```mermaid
 flowchart LR
-    subgraph OBJ["Nesne dosyaları (.o)"]
+    subgraph OBJ["Object files (.o)"]
         O1["objects.o<br/>.rodata.k_table<br/>.rodata.l10_table<br/>.data.g_init<br/>.bss.g_zero"]
         O2["placement.o<br/>.text.text_fn<br/>.text.unused_function"]
         O3["main.o<br/>.text.main<br/>U text_fn · U g_init"]
@@ -148,7 +149,7 @@ flowchart LR
     LS --> LD
     LD --> ELF["10-linker-elf-memory.elf"]
     LD --> MAP[".map"]
-    LD -. "GC" .-> X["atıldı:<br/>.text.unused_function<br/>.data.g_unused_data<br/>.rodata.k_unused_used"]
+    LD -. "GC" .-> X["discarded:<br/>.text.unused_function<br/>.data.g_unused_data<br/>.rodata.k_unused_used"]
 ```
 
 ---
@@ -157,33 +158,33 @@ flowchart LR
 
 *(SHOW)*
 
-Kaynaklar: [`example/`](example/). Nesneler **bilerek** ayrı derleme
-birimlerinde, böylece `main.o` onlara adıyla bağlanmak zorunda.
+Sources: [`example/`](example/). Objects deliberately live in **separate
+translation units**, forcing `main.o` to link to them by name.
 
-| Dosya | İçerik | Beklenen yerleşim |
+| File | Contents | Expected placement |
 |---|---|---|
 | [`objects.c`](example/objects.c) | `const uint32_t k_table[4]` | `.rodata` |
-| | `k_custom[2]` — `__attribute__((section(".rodata.l10_table")))` | `.rodata` (özel input section) |
+| | `k_custom[2]` — `__attribute__((section(".rodata.l10_table")))` | `.rodata` (custom input section) |
 | | `uint32_t g_init = 0xC0DEFACE` | `.data` |
 | | `uint32_t g_zero` | `.bss` |
-| | `static uint32_t s_calls` (fonksiyon içinde) | `.bss`, LOCAL sembol |
-| | `g_unused_data`, `k_unused_used` (`used`) | GC gözlemi |
+| | `static uint32_t s_calls` (inside a function) | `.bss`, LOCAL symbol |
+| | `g_unused_data`, `k_unused_used` (`used`) | GC observation |
 | [`placement.c`](example/placement.c) | `text_fn()`, `unused_function()` | `.text` / GC |
-| [`l10_asm.S`](example/l10_asm.S) | `asm_fn` (`.global`), `local_helper` (yerel), `asm_word` | `.text`, `.data` |
-| [`main.c`](example/main.c) | Adresleri, linker sembollerini, kontrolleri basar | |
+| [`l10_asm.S`](example/l10_asm.S) | `asm_fn` (`.global`), `local_helper` (local), `asm_word` | `.text`, `.data` |
+| [`main.c`](example/main.c) | Prints addresses, linker symbols, and checks | |
 
-### Linker sembolleri C'den nasıl okunur?
+### How are linker symbols read from C?
 
-Linker script'teki `__data_start = .;` bir **depolama ayırmaz**; yalnızca bir
-**adres**e isim verir. Bu yüzden C'de bir değişken gibi bildirilir ama
-değeri değil, **adresi** kullanılır:
+`__data_start = .;` in the linker script **allocates no storage**; it simply
+names **an address**. C therefore declares it like a variable but uses
+its **address**, not its value:
 
 ```c
 extern uint32_t __data_start;             /* depolama YOK          */
 uint32_t start = (uint32_t)&__data_start; /* anlamli olan: ADRES   */
 ```
 
-Startup kodu da (`platform/.../startup_mps2_an505.c`) aynı kalıbı kullanıyor.
+Startup code (`platform/.../startup_mps2_an505.c`) uses the same pattern.
 
 ---
 
@@ -197,15 +198,15 @@ cmake --build --preset debug --target 10-linker-elf-memory
 ./scripts/run-qemu.sh build/debug/lessons/10-linker-elf-memory/10-linker-elf-memory.elf
 ```
 
-Her hedef için build dizininde dört yan ürün var: `.elf`, `.bin`, `.map`,
-`.lst`. Bu derste en önemlisi `.map`.
+Each target produces four build-directory artifacts: `.elf`, `.bin`, `.map`,
+`.lst`. The most important here is `.map`.
 
-| Hedef | Amaç |
+| Target | Purpose |
 |---|---|
-| `10-linker-elf-memory` | Yerleşimi, sembolleri, VMA/LMA'yı gözle |
-| `10-linker-broken` | **Link edilemez** — `ALL`'a dahil değil, elle derle |
-| `10-exercise-linker` | "Locate Your Data" |
-| `10-solution-linker` | Referans çözüm |
+| `10-linker-elf-memory` | Observe placement, symbols, VMA/LMA |
+| `10-linker-broken` | **Cannot link** — excluded from `ALL`; build manually |
+| `10-exercise-linker` | “Locate Your Data” |
+| `10-solution-linker` | Reference solution |
 
 ---
 
@@ -213,7 +214,7 @@ Her hedef için build dizininde dört yan ürün var: `.elf`, `.bin`, `.map`,
 
 *(RUN)*
 
-Gerçek çıktı (arm-none-eabi-gcc 13.2.1, binutils 2.42, QEMU 8.2.2,
+Actual output (arm-none-eabi-gcc 13.2.1, binutils 2.42, QEMU 8.2.2,
 mps2-an505, `debug`):
 
 ```text
@@ -258,25 +259,24 @@ mps2-an505, `debug`):
 ===== END =====
 ```
 
-On üç kontrolün hepsi `release` ve `minsize`'da da PASS. Adresler build'e
-özeldir; ilişkiler değil.
+All thirteen checks also PASS in `release` and `minsize`. Addresses are
+build-specific; the relationships are not.
 
-Okuma notları:
+Reading notes:
 
-- **`g_init` iki adreste:** RAM'de `0x30000004` (VMA), FLASH'ta `0x100009AC`
-  (LMA). İkisinde de `0xC0DEFACE`. LMA şöyle hesaplandı:
+- **`g_init` at two addresses:** `0x30000004` in RAM (VMA), `0x100009AC`
+  in FLASH (LMA). Both contain `0xC0DEFACE`. LMA was calculated as
   `__etext + (&g_init − &__data_start) = 0x100009A8 + 4`.
-- **`.data` 8 byte:** `asm_word` (asm) + `g_init`. `g_unused_data` yok — GC
-  onu attı.
-- **`.bss` 8 byte:** `s_calls` + `g_zero`. `.bss`, `.data`'nın hemen ardından
-  başlıyor (`__data_end = __bss_start`).
-- **`__flash_load_end = 0x100009B0`** = `__etext` + 8: FLASH yük görüntüsü
-  `.data`'nın kopyasıyla bitiyor.
-- **`text_fn` işaretçisi tek sayı** (`0x10000495`). Aşağıda "Thumb biti"
-  bölümünde.
-- **`k_custom`, `k_table`'dan önce yerleşti** — kaynakta sonra tanımlı olsa da.
-  Sıra, input section'ların nesne dosyasındaki sırasından geliyor
-  (**OBSERVATION**); kaynaktaki tanım sırası bir garanti değil.
+- **`.data` is 8 bytes:** `asm_word` (asm) + `g_init`. No `g_unused_data` —
+  GC discarded it.
+- **`.bss` is 8 bytes:** `s_calls` + `g_zero`. `.bss` starts immediately after
+  `.data` (`__data_end = __bss_start`).
+- **`__flash_load_end = 0x100009B0`** = `__etext` + 8: the FLASH load image
+  ends with the copy of `.data`.
+- **The `text_fn` pointer is odd** (`0x10000495`). See “Thumb bit” below.
+- **`k_custom` was placed before `k_table`**, although defined later in source.
+  The order comes from input-section order in the object file (**OBSERVATION**);
+  source definition order is not a guarantee.
 
 ---
 
@@ -284,36 +284,36 @@ Okuma notları:
 
 *(OBSERVE)*
 
-Paylaşılan script: [`platform/mps2-an505/linker/mps2-an505-secure.ld`](../../platform/mps2-an505/linker/mps2-an505-secure.ld).
-Bu ders onu **değiştirmiyor**, inceliyor. Yalnızca script'te gerçekten olan
-yapılar anlatılıyor.
+Shared script: [`platform/mps2-an505/linker/mps2-an505-secure.ld`](../../platform/mps2-an505/linker/mps2-an505-secure.ld).
+This lesson **examines, not modifies**, it. Only constructs actually present
+in the script are discussed.
 
-| Yapı | Script'te | Ne yapıyor | Kanıt (bu build) |
+| Construct | In the script | What it does | Evidence (this build) |
 |---|---|---|---|
-| `MEMORY` | `FLASH (rx) 0x10000000, 512K` · `RAM (rwx) 0x30000000, 32K` | Bölgeleri tanımlar; taşma link hatası olur | Map: *Memory Configuration* |
-| `ENTRY(Reset_Handler)` | var | ELF başlığındaki giriş noktası | `readelf -h`: `Entry point 0x100004a1`. İşlemci bunu **okumaz** — reset'te vektör tablosunu okur (ders 11) |
-| `SECTIONS` | var | Input section'ları cikis section'larına eşler | — |
-| `.` (location counter) | `__data_start = .;` vb. | O anki adres | Map'te `. = ALIGN (0x4)` satırları |
-| `ALIGN` | `.vectors : ALIGN(512)`, `. = ALIGN(4)` | Adresi yuvarlar | `.vectors` 512'ye hizalı |
-| Wildcard | `*(.text*)`, `*(.rodata*)`, `*(.data*)`, `*(.bss*)` | Eşleşen **input** section'ları toplar | `.rodata.l10_table` → `.rodata` |
-| `KEEP` | `KEEP(*(.vectors))` | Input section'ı GC'ye karşı kök yapar | Aşağıda ölçüldü |
-| `> REGION` | `.text ... > FLASH` | VMA'yı (ve LMA'yı) o bölgeye koyar | `.text` `0x10000040` |
-| `AT > REGION` | `.data ... > RAM AT > FLASH` | VMA RAM, LMA **FLASH bölgesinde tahsis edilerek** | `.data` VMA `0x30000000`, LMA `0x100009A8` |
-| `LOADADDR` | `__etext = LOADADDR(.data)` | Bir section'ın LMA'sı | `__etext = 0x100009A8` |
-| `SIZEOF` | `__flash_load_end = LOADADDR(.data) + SIZEOF(.data)` | Section boyutu | `0x100009B0` |
-| `NOLOAD` | `.bss (NOLOAD)`, `.heap (NOLOAD)` | Yüklenmez | `.bss` tipi `NOBITS` |
-| `ASSERT` | iki tane | Link zamanı güvenlik ağı | Map'te iki `ASSERT` satırı |
-| `/DISCARD/` | `*(.note.GNU-stack) *(.gnu_debuglink) *(.comment)` | Eşleşeni atar | ELF'te `.comment` yok |
+| `MEMORY` | `FLASH (rx) 0x10000000, 512K` · `RAM (rwx) 0x30000000, 32K` | Defines regions; overflow becomes a link error | Map: *Memory Configuration* |
+| `ENTRY(Reset_Handler)` | present | Entry point in the ELF header | `readelf -h`: `Entry point 0x100004a1`. The processor **does not read this**; at reset it reads the vector table (Lesson 11) |
+| `SECTIONS` | present | Maps input sections to output sections | — |
+| `.` (location counter) | `__data_start = .;`, etc. | Current address | Map lines `. = ALIGN (0x4)` |
+| `ALIGN` | `.vectors : ALIGN(512)`, `. = ALIGN(4)` | Rounds the address up | `.vectors` aligned to 512 |
+| Wildcard | `*(.text*)`, `*(.rodata*)`, `*(.data*)`, `*(.bss*)` | Collects matching **input** sections | `.rodata.l10_table` → `.rodata` |
+| `KEEP` | `KEEP(*(.vectors))` | Makes an input section a GC root | Measured below |
+| `> REGION` | `.text ... > FLASH` | Places VMA (and LMA) in that region | `.text` `0x10000040` |
+| `AT > REGION` | `.data ... > RAM AT > FLASH` | VMA in RAM; LMA **allocated within FLASH** | `.data` VMA `0x30000000`, LMA `0x100009A8` |
+| `LOADADDR` | `__etext = LOADADDR(.data)` | A section's LMA | `__etext = 0x100009A8` |
+| `SIZEOF` | `__flash_load_end = LOADADDR(.data) + SIZEOF(.data)` | Section size | `0x100009B0` |
+| `NOLOAD` | `.bss (NOLOAD)`, `.heap (NOLOAD)` | Not loaded | `.bss` has type `NOBITS` |
+| `ASSERT` | two | Link-time safety net | Two `ASSERT` lines in the map |
+| `/DISCARD/` | `*(.note.GNU-stack) *(.gnu_debuglink) *(.comment)` | Discards matches | No `.comment` in ELF |
 
-**`AT(adres)` bu script'te yok** — yalnızca bir yorumda, neden
-kullanılmadığı anlatılıyor. `AT(__etext)` LMA'yı *söyler* ama o byte'ları
-FLASH bölgesinden *düşmez*; eski sürümde bu yüzden taşma sessiz kalıyordu.
-`AT > FLASH` tahsisi gerçekten FLASH'ta yapar. Bu fark
-`tests/build-probes.sh`'teki **I5** probe'unda kalıcı olarak test ediliyor.
+**`AT(adres)` is not used in this script** — a comment only explains why.
+`AT(__etext)` *specifies* the LMA but does not *charge* those bytes to the
+FLASH region; this caused silent overflow in the earlier version.
+`AT > FLASH` really allocates within FLASH. This distinction is permanently
+tested by probe **I5** in `tests/build-probes.sh`.
 
-**`__etext` adı yanıltıcı:** "`.text`'in sonu" gibi okunuyor, ama tanımı
-`LOADADDR(.data)`. `.rodata` ve hizalama `.text`'ten sonra geldiği için bu
-ikisi aynı adres değil. Adına değil tanımına bak.
+**The name `__etext` is misleading:** it sounds like “end of `.text`,” but
+its definition is `LOADADDR(.data)`. Because `.rodata` and alignment follow
+`.text`, these are different addresses. Read the definition, not the name.
 
 ---
 
@@ -331,10 +331,10 @@ set architecture armv8-m.main
 target remote :3333
 ```
 
-### A — Reset_Handler'ın ilk komutu: `.data` henüz kopyalanmadı
+### A — First instruction of Reset_Handler: `.data` has not been copied yet
 
-GDB `-S` ile başlatılmış QEMU'ya bağlandığında işlemci `Reset_Handler`'ın ilk
-komutunda duruyor.
+When GDB connects to QEMU started with `-S`, the processor is stopped at
+the first instruction of `Reset_Handler`.
 
 ```gdb
 (gdb) x/1i $pc
@@ -348,11 +348,11 @@ komutunda duruyor.
 0x100009a8:            0x5a5a5a5a  0xc0deface   <- FLASH (LMA): ilk degerler burada
 ```
 
-**Gözlem:** QEMU `-kernel`, `.data`'nın ilk içeriğini **yalnızca LMA'ya**
-(FLASH) yazdı; RAM'deki kopya boş. Sıra `asm_word`, `g_init` — RAM'deki
-sırayla aynı.
+**Observation:** QEMU `-kernel` wrote `.data`'s initial contents **only to
+LMA** (FLASH); its RAM copy is empty. The order is `asm_word`, `g_init`,
+matching RAM order.
 
-### B — Kopyalama döngüsünden sonra
+### B — After the copy loop
 
 ```gdb
 (gdb) break *0x100004c6        # Reset_Handler icindeki "bl SystemInit"
@@ -366,15 +366,15 @@ sırayla aynı.
 0x30000008 <s_calls.0>: 0x00000000  0x00000000   <- .bss sifir
 ```
 
-**Gözlem:** RAM'deki son durumu **startup kodu** üretti, yükleyici değil.
-Kopyalama ve sıfırlamanın ayrıntıları ders 11'in konusu.
+**Observation:** **Startup code**, not the loader, produced the final RAM
+state. Copying and zeroing details belong to Lesson 11.
 
-> **QEMU notu (OBSERVATION):** QEMU RAM'i başlangıçta sıfırla dolduruyor.
-> Bu yüzden `.bss`'in sıfır olması burada, startup kodunun onu sıfırladığının
-> **kanıtı değil**. Fiziksel donanımda RAM'in başlangıç içeriği
-> tanımsızdır — ders 11 bunu ayrıca ele alacak.
+> **QEMU note (OBSERVATION):** QEMU initially fills RAM with zeros.
+> Therefore, zero `.bss` here **does not prove** startup code zeroed it.
+> Physical hardware has undefined initial RAM contents — Lesson 11 addresses
+> this separately.
 
-### C — `main` içinde semboller
+### C — Symbols inside `main`
 
 ```gdb
 (gdb) break main
@@ -398,10 +398,10 @@ Symbol "g_zero" is static storage at address 0x3000000c.
 
 *(OBSERVE / MODIFY)*
 
-Aşağıdaki çıktıların hepsi `debug` build'inden, **OBSERVATION**. Nesne
-dosyaları: `build/debug/lessons/10-linker-elf-memory/CMakeFiles/10-linker-elf-memory.dir/example/`.
+All following output is from the `debug` build, an **OBSERVATION**.
+Object files: `build/debug/lessons/10-linker-elf-memory/CMakeFiles/10-linker-elf-memory.dir/example/`.
 
-### Deney 1 — Link'ten ÖNCE: `.o` dosyasında çözülmemiş referanslar
+### Experiment 1 — BEFORE linking: unresolved references in `.o`
 
 ```bash
 arm-none-eabi-nm main.c.obj | grep -E " U | T "
@@ -418,9 +418,9 @@ arm-none-eabi-nm main.c.obj | grep -E " U | T "
 00000000 T main
 ```
 
-`U` = **undefined**: `main.o` bu sembolleri kullanıyor ama tanımlamıyor.
-Linker script sembolleri (`__data_start`, `__etext`) de burada `U` — onları
-da linker sağlayacak.
+`U` means **undefined**: `main.o` uses but does not define these symbols.
+Linker-script symbols (`__data_start`, `__etext`) are also `U` here —
+the linker will supply those too.
 
 ```bash
 arm-none-eabi-nm objects.c.obj
@@ -437,121 +437,122 @@ arm-none-eabi-nm l10_asm.S.obj
 00000000 b s_calls.0
 ```
 
-Harfler: `T`/`t` kod, `R` salt-okunur veri, `D` başlatılmış veri, `B`/`b`
-`.bss`, `U` tanımsız. **Büyük harf GLOBAL, küçük harf LOCAL.** `s_calls.0`
-küçük `b`: fonksiyon içindeki `static`, derleyicinin ürettiği yerel bir sembol.
-`local_helper` küçük `t`: `.global` olmadığı için yerel.
+Letters: `T`/`t` code, `R` read-only data, `D` initialized data, `B`/`b`
+`.bss`, `U` undefined. **Uppercase means GLOBAL; lowercase means LOCAL.**
+Lowercase `b` for `s_calls.0`: the function-local `static` becomes a
+compiler-generated local symbol. Lowercase `t` for `local_helper`: local
+because it lacks `.global`.
 
-**`.o` içindeki değerler "adres" değil, çoğu zaman section içi ofsettir.**
-Üç durumu ayır (**ELF**, relocatable nesne):
+**Values in `.o` are often section-relative offsets, not “addresses.”**
+Distinguish three cases (**ELF**, relocatable object):
 
-| Durum | Sembol değeri | Örnek (`readelf -s l10_asm.S.obj`) |
+| Case | Symbol value | Example (`readelf -s l10_asm.S.obj`) |
 |---|---|---|
-| **Tanımsız** (`U`) | Henüz tanımı yok; section indeksi `UND`, değer `0` | `text_fn: 00000000 NOTYPE GLOBAL UND` |
-| **Tanımlı, relocatable nesnede** | Tanımlandığı section'ın **başına göre ofset** | `local_helper: 0000000f FUNC LOCAL Ndx 1 (.text)` |
-| **Son ELF'te** | Section'ın yerleştiği adres + o ofset | `local_helper: 1000004f` |
+| **Undefined** (`U`) | No definition yet; section index `UND`, value `0` | `text_fn: 00000000 NOTYPE GLOBAL UND` |
+| **Defined in a relocatable object** | **Offset from the beginning** of its section | `local_helper: 0000000f FUNC LOCAL Ndx 1 (.text)` |
+| **In final ELF** | Section's placed address + that offset | `local_helper: 1000004f` |
 
-`local_helper` bir **karşı örnek**: `.o`'da değeri `0` değil. `nm` onu `0e`,
-`readelf -s` `0f` gösteriyor (bit 0 Thumb biti — Deney 4). `l10_asm.o`'nun
-`.text` input section'ı ELF'te `0x10000040`'a yerleşti; `0x10000040 + 0x0e =
+`local_helper` is a **counterexample**: its `.o` value is not `0`. `nm`
+shows `0e`, while `readelf -s` shows `0f` (bit 0 is the Thumb bit —
+Experiment 4). The `.text` input section of `l10_asm.o` was placed at
+`0x10000040` in ELF; `0x10000040 + 0x0e =
 0x1000004e`.
 
-Yukarıdaki listelerde çoğu değerin `0` görünmesi bir kural değil, bir yan
-etki: `-ffunction-sections -fdata-sections` her fonksiyonu/nesneyi **kendi**
-input section'ına koyduğu için, her biri kendi section'ının başında (ofset 0)
-duruyor. `l10_asm.S` bir C dosyası değil; iki fonksiyonu **aynı** `.text`
-section'ını paylaşıyor, bu yüzden ikincisi sıfır olmayan bir ofsette.
+Most values above being `0` is a side effect, not a rule:
+`-ffunction-sections -fdata-sections` puts each function/object in **its
+own** input section, so each starts at offset 0 within its section.
+`l10_asm.S` is not C; its two functions share **one** `.text` section,
+so the second has a nonzero offset.
 
-`-g3` ile derlendiği için `nm` ayrıca `wm4.*` adlı `n` sembolleri gösteriyor;
-bunlar makro hata ayıklama bilgisi, göz ardı et.
+Because compilation uses `-g3`, `nm` also shows `n` symbols named `wm4.*`;
+these are macro debugging information and can be ignored.
 
-### Deney 2 — Relocation'lar
+### Experiment 2 — Relocations
 
 ```bash
 arm-none-eabi-readelf -r main.c.obj     # yalnizca .rel.text* bolumlerine bak
 arm-none-eabi-readelf -r l10_asm.S.obj
 ```
 
-Kod section'larındaki (`.rel.text*`) relocation türleri — ölçülen:
+Measured relocation types in code sections (`.rel.text*`):
 
-| Nesne | Tür | Sayı | Örnek |
+| Object | Type | Count | Example |
 |---|---|---|---|
 | `main.o` | `R_ARM_THM_CALL` | 84 | `bl text_fn`, `bl asm_fn`, `bl console_*` |
-| `main.o` | `R_ARM_ABS32` | 58 | literal havuzundaki `&g_init`, `&text_fn`, `&__etext` |
+| `main.o` | `R_ARM_ABS32` | 58 | `&g_init`, `&text_fn`, `&__etext` in literal pools |
 | `l10_asm.o` | `R_ARM_THM_JUMP24` | **1** | `b.w text_fn` |
 
-`l10_asm.o`'nun kod bölümünde **tek bir** relocation var. `bl local_helper`
-için relocation **yok**: hedef aynı dosyada ve aynı section'da, assembler
-mesafeyi kendisi biliyor.
+The code section of `l10_asm.o` has **only one** relocation. There is **no**
+relocation for `bl local_helper`: the target is in the same file and section,
+so the assembler knows the distance itself.
 
-> **Dikkat:** `readelf -r`'ın tam çıktısında `.rel.debug_*` bölümleri de
-> var ve onlar da `R_ARM_ABS32` kullanıyor. Kod relocation'larını sayarken
-> onları ayır.
+> **Caution:** complete `readelf -r` output also contains `.rel.debug_*`
+> sections using `R_ARM_ABS32`. Separate these when counting code relocations.
 
-AAELF32'de (Arm ELF ABI) bu üçü:
+In AAELF32 (Arm ELF ABI), these three are:
 
-| Kod | Ad | Komut | Formül |
+| Code | Name | Instruction | Formula |
 |---|---|---|---|
-| 2 | `R_ARM_ABS32` | 32 bit veri kelimesi | `(S + A) \| T` |
+| 2 | `R_ARM_ABS32` | 32-bit data word | `(S + A) \| T` |
 | 10 | `R_ARM_THM_CALL` | Thumb `BL` | `((S + A) \| T) – P` |
 | 30 | `R_ARM_THM_JUMP24` | Thumb `B.W` | `((S + A) \| T) – P` |
 
-`S` sembolün adresi, `A` addend, `P` yamalanan yerin adresi, `T` hedef bir
-Thumb fonksiyonuysa 1.
+`S` is the symbol address, `A` the addend, `P` the address being patched,
+and `T` is 1 if the target is a Thumb function.
 
-### Deney 3 — Bir `BL` nasıl çözülüyor?
+### Experiment 3 — How is a `BL` resolved?
 
-Link'ten **önce** (`objdump -dr main.c.obj`):
+**Before** linking (`objdump -dr main.c.obj`):
 
 ```text
  2a4:  f7ff fffe   bl   0 <text_fn>
         2a4: R_ARM_THM_CALL  text_fn
 ```
 
-Link'ten **sonra** (`objdump -d 10-linker-elf-memory.elf`):
+**After** linking (`objdump -d 10-linker-elf-memory.elf`):
 
 ```text
 10000334:  f000 f8ae   bl   10000494 <text_fn>
 ```
 
-Ne oldu?
+What happened?
 
-- `.o`'da ofset alanı `f7ff fffe` — yani `-4`. Bu, REL biçiminde komutun
-  içinde saklanan **addend** (`A = −4`); Thumb'da PC okunduğunda komutun
-  4 byte ötesini gösterir.
-- Linker: `P = 0x10000334`, hedef `0x10000494`. AAELF32 formülü
-  `((S + A) | T) – P` sonucu `0x15D` verir; bit 0 Thumb durumu (`T`) ve `BL`
-  onu ofset alanına yazmaz.
-- Yazılan ofset `f000 f8ae` = `0x15C`. Kontrol: `0x10000334 + 4 + 0x15C =
+- In `.o`, the offset field is `f7ff fffe`, or `-4`: the **addend**
+  (`A = −4`) stored inside the instruction in REL format. Reading PC in
+  Thumb gives the address 4 bytes beyond the instruction.
+- Linker: `P = 0x10000334`, target `0x10000494`. The AAELF32 formula
+  `((S + A) | T) – P` yields `0x15D`; bit 0 is Thumb state (`T`), and `BL`
+  does not write it into the offset field.
+- Written offset: `f000 f8ae` = `0x15C`. Check: `0x10000334 + 4 + 0x15C =
   0x10000494`. ✓
 
-`b.w text_fn` (`l10_asm.o`) aynı şekilde `R_ARM_THM_JUMP24` ile çözüldü:
+`b.w text_fn` (`l10_asm.o`) was similarly resolved through `R_ARM_THM_JUMP24`:
 `1000004a: b.w 10000494 <text_fn>`.
 
-### Deney 4 — Thumb biti: dört farklı gösterim
+### Experiment 4 — Thumb bit: four representations
 
-`text_fn` aynı fonksiyon, ama araçlar onu farklı gösteriyor — hepsi doğru:
+`text_fn` is one function, but tools represent it differently — all correctly:
 
-| Nerede | Değer | Neden |
+| Where | Value | Why |
 |---|---|---|
-| Komutun gerçek adresi (`objdump`, `nm`, GDB `x/i`) | `0x10000494` | Komutlar 2 byte'a hizalı; adres çift |
-| ELF sembol değeri (`readelf -s`) | `0x10000495` | AAELF32: Thumb fonksiyon sembolünün değeri bit 0 = 1 taşır |
-| C fonksiyon işaretçisi / literal havuz (`R_ARM_ABS32`) | `0x10000495` | `(S + A) \| T`: bir dallanma hedefi olarak Thumb durumunu taşır |
-| Vektör tablosu `vector[1]` (`Reset_Handler`) | `0x100004a1` | Aynı kural; işlemci bit 0'ı "Thumb" olarak ister |
+| Actual instruction address (`objdump`, `nm`, GDB `x/i`) | `0x10000494` | Instructions align to 2 bytes; the address is even |
+| ELF symbol value (`readelf -s`) | `0x10000495` | AAELF32: a Thumb function symbol's value carries bit 0 = 1 |
+| C function pointer / literal pool (`R_ARM_ABS32`) | `0x10000495` | `(S + A) \| T`: carries Thumb state as a branch target |
+| Vector table `vector[1]` (`Reset_Handler`) | `0x100004a1` | Same rule; the processor requires bit 0 to indicate Thumb |
 
-Yani "fonksiyonlar tek adreslerde durur" **yanlış** olur. Komut her zaman
-çift adreste; tek olan, fonksiyonu **gösteren değer** — bit 0 durum bilgisi.
-(`nm` ile `readelf -s` bu konuda farklı gösterir: `nm` `10000494`,
-`readelf -s` `10000495`.)
+Thus, “functions reside at odd addresses” is **wrong**. The instruction is
+at an even address; the **value identifying the function** is odd — bit 0
+carries state. (`nm` and `readelf -s` differ here: `nm` shows `10000494`,
+`readelf -s` shows `10000495`.)
 
-### Deney 5 — Section'lar ve segment'ler
+### Experiment 5 — Sections and segments
 
 ```bash
 arm-none-eabi-readelf -S -W 10-linker-elf-memory.elf
 arm-none-eabi-readelf -l -W 10-linker-elf-memory.elf
 ```
 
-Section'lar (yüklenebilir olanlar):
+Sections (loadable ones):
 
 ```text
 [Nr] Name      Type      Addr     Off    Size   Flg Al
@@ -562,7 +563,7 @@ Section'lar (yüklenebilir olanlar):
 [ 5] .bss      NOBITS    30000008 002008 000008  WA   4
 ```
 
-Program header'ları (segment'ler):
+Program headers (segments):
 
 ```text
 Type  Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg
@@ -570,29 +571,29 @@ LOAD  0x001000 0x10000000 0x10000000 0x009a8 0x009a8 R E   <- .vectors .text .ro
 LOAD  0x002000 0x30000000 0x100009a8 0x00008 0x00010 RW    <- .data .bss
 ```
 
-**Section** linker'ın görüşü (bağlama görünümü); **segment** yükleyicinin
-görüşü (yükleme görünümü). İkinci segment'e bak:
+A **section** is the linker's view (linking view); a **segment** is the
+loader's view (loading view). Examine the second segment:
 
-- `VirtAddr 0x30000000` = VMA (çalışma görünümü),
-  `PhysAddr 0x100009a8` = LMA (yükleme görünümü).
-- `FileSiz 8` — dosyada yalnızca `.data`'nın 8 byte'ı var.
-- `MemSiz 16` — bellekte `.data` + `.bss` = 16 byte.
+- `VirtAddr 0x30000000` = VMA (runtime view),
+  `PhysAddr 0x100009a8` = LMA (loading view).
+- `FileSiz 8` — only the 8 bytes of `.data` exist in the file.
+- `MemSiz 16` — `.data` + `.bss` occupies 16 bytes in memory.
 
-### Deney 6 — `.bss` ELF'te nasıl duruyor?
+### Experiment 6 — How does `.bss` appear in ELF?
 
-"`.bss` ELF'te yok" demek **yanlış** olur. Ölçülen:
+“`.bss` is absent from ELF” is **wrong**. Measured:
 
-- `.bss`'in bir **section başlığı** var: tipi `NOBITS`, adresi `0x30000008`,
-  boyutu `8`, bayrakları `WA` (yazılabilir, bellekte yer kaplar).
-- **Dosyada byte'ı yok**: `NOBITS`, "içerik yok" demek.
-- Segment'te `MemSiz − FileSiz = 8` olarak görünüyor: yükleyiciye "bu kadar
-  bellek var ama dosyada karşılığı yok" diyor.
-- Çalışma zamanında RAM'de 8 byte kaplıyor.
+- `.bss` has a **section header**: type `NOBITS`, address `0x30000008`,
+  size `8`, flags `WA` (writable, occupies memory).
+- **No content bytes in the file**: `NOBITS` means no contents.
+- The segment shows `MemSiz − FileSiz = 8`: “this much memory has no
+  corresponding file content.”
+- It occupies 8 bytes of RAM at runtime.
 
-Yani `.bss` ELF'te **tarif ediliyor**, ama **içeriği saklanmıyor**. FLASH'ta
-da yer tutmuyor.
+So `.bss` is **described** in ELF, but its **contents are not stored**.
+It occupies no FLASH either.
 
-### Deney 7 — Dosya boyutu, FLASH, RAM: üç ayrı soru
+### Experiment 7 — File size, FLASH, RAM: three separate questions
 
 ```bash
 arm-none-eabi-size 10-linker-elf-memory.elf
@@ -603,15 +604,15 @@ arm-none-eabi-size 10-linker-elf-memory.elf
    2472       8       8    2488     9b8 10-linker-elf-memory.elf
 ```
 
-Berkeley `size`'ın sütunları **section adı değildir**:
+Berkeley `size` columns **are not section names**:
 
-| Sütun | Gerçekte ne topluyor (bu build) |
+| Column | What it actually totals (this build) |
 |---|---|
-| `text` = 2472 | `.vectors` 64 + `.text` 1444 + `.rodata` 964 — salt-okunur **her şey** |
+| `text` = 2472 | `.vectors` 64 + `.text` 1444 + `.rodata` 964 — **everything** read-only |
 | `data` = 8 | `.data` |
 | `bss` = 8 | `.bss` |
 
-Link sırasında `--print-memory-usage` (repo zaten açık):
+At link time, `--print-memory-usage` (already enabled in this repository):
 
 ```text
 Memory region    Used Size  Region Size  %age Used
@@ -619,36 +620,36 @@ Memory region    Used Size  Region Size  %age Used
          RAM:         16 B        32 KB      0.05%
 ```
 
-Üç soru, üç cevap:
+Three questions, three answers:
 
-| Soru | Cevap | Nereden |
+| Question | Answer | Source |
 |---|---|---|
-| ELF dosyası kaç byte? | **94 316** | `ls -l` — debug bilgisi, sembol tablosu dahil |
-| FLASH'ta kaç byte? | **2480** | `text` 2472 + `.data` kopyası 8 = `__flash_load_end − 0x10000000` |
-| RAM'de statik kaç byte? | **16** | `.data` 8 + `.bss` 8 — **stack dahil değil** |
+| How many bytes in the ELF file? | **94 316** | `ls -l`, including debug information and symbol table |
+| How many bytes in FLASH? | **2480** | `text` 2472 + `.data` copy 8 = `__flash_load_end − 0x10000000` |
+| How many static bytes in RAM? | **16** | `.data` 8 + `.bss` 8 — **excluding stack** |
 
-`.data` **iki kez** sayılıyor: FLASH'ta ilk değer, RAM'de değişken. Stack
-ise bir section değil, linker script'te bir muhasebe (`__stack_size = 4K`);
-`--print-memory-usage` onu saymıyor.
+`.data` counts **twice**: initial value in FLASH, variable in RAM. The stack
+is not a section here, but linker-script accounting (`__stack_size = 4K`);
+`--print-memory-usage` does not count it.
 
-Aynı kaynak, farklı preset'ler (**OBSERVATION**):
+Same source, different presets (**OBSERVATION**):
 
-| Preset | ELF dosyası | `text` | `data` | `bss` |
+| Preset | ELF file | `text` | `data` | `bss` |
 |---|---|---|---|---|
 | `debug` (`-Og -g3`) | 94 316 | 2472 | 8 | 8 |
 | `release` (`-O2 -g`) | 31 764 | 2508 | 8 | 8 |
 | `minsize` (`-Os -g`) | 27 964 | 2152 | 8 | 8 |
 
-Dosya boyutunu en çok değiştiren şey hata ayıklama bilgisi (`-g3` makro
-bilgisi dahil); FLASH'a giren kısım çok daha az değişiyor.
+Debug information dominates the file-size difference (`-g3` includes macro
+information); the portion entering FLASH changes far less.
 
-### Deney 8 — Garbage collection ve özel section
+### Experiment 8 — Garbage collection and a custom section
 
-Repo `-ffunction-sections -fdata-sections` ile derliyor: her fonksiyon ve
-nesne **kendi input section'ına** gidiyor. `--gc-sections` hiçbir kökten
-erişilemeyen input section'ları atıyor.
+The repository builds with `-ffunction-sections -fdata-sections`: each
+function and object goes into **its own input section**. `--gc-sections`
+discards input sections unreachable from any root.
 
-Map dosyasının başındaki *Discarded input sections* listesi (ders nesneleri):
+The *Discarded input sections* list at the map's beginning (lesson objects):
 
 ```text
  .rodata.k_unused_used
@@ -656,7 +657,7 @@ Map dosyasının başındaki *Discarded input sections* listesi (ders nesneleri)
  .text.unused_function
 ```
 
-Özel section'ın yerleşimi (map, `.rodata` bölümü):
+Custom-section placement (map, `.rodata`):
 
 ```text
 .rodata         0x100005e4      0x3c4
@@ -666,56 +667,55 @@ Map dosyasının başındaki *Discarded input sections* listesi (ders nesneleri)
                 0x10000984                k_table
 ```
 
-`.rodata.l10_table` linker script'te geçmiyor; mevcut `*(.rodata*)` deseni
-onu yakaladı. **Input section adı** (`.rodata.l10_table`) ile **çıkış
-section'ı** (`.rodata`) farklı şeyler.
+`.rodata.l10_table` does not appear in the linker script; existing
+`*(.rodata*)` matched it. **Input section name** (`.rodata.l10_table`) and
+**output section** (`.rodata`) are different things.
 
-### Deney 9 — `used` ≠ `KEEP`
+### Experiment 9 — `used` ≠ `KEEP`
 
-`k_unused_used` `__attribute__((used))` ile işaretli — ve yine de atıldı
-(yukarıdaki liste).
+`k_unused_used` is marked `__attribute__((used))`, yet was discarded
+(the list above).
 
-| | Kime söyler | Ne der |
+| | Addresses | Says |
 |---|---|---|
-| `__attribute__((used))` | **Derleyiciye** | "Bu tanımı, kullanılmıyor gibi görünse de nesne dosyasına yaz" |
-| `KEEP(...)` | **Linker'a** | "Bu input section'ı GC'de kök say; atma" |
+| `__attribute__((used))` | **Compiler** | “Emit this definition in the object file even if it appears unused” |
+| `KEEP(...)` | **Linker** | “Treat this input section as a GC root; do not discard it” |
 
-Bu toolchain'de (GCC 13.2.1 + binutils 2.42) `used`, linker GC'sini
-**engellemedi**.
+With this toolchain (GCC 13.2.1 + binutils 2.42), `used` **did not prevent**
+linker GC.
 
-Aynı ayrım repo'nun en kritik tablosunda gerçekten ölçüldü. Vektör tablosu
-C'de `__attribute__((section(".vectors"), used))` ile tanımlı; script'te
-`KEEP(*(.vectors))`. Geçici bir kopyada (repo'ya eklenmedi) `KEEP`
-kaldırılıp aynı örnek link edildi:
+The same distinction was measured on the repository's most critical table.
+The vector table is declared in C with `__attribute__((section(".vectors"), used))`,
+and the script uses `KEEP(*(.vectors))`. In a temporary copy, not added to
+the repository, `KEEP` was removed and the same example linked:
 
 | Linker script | `.vectors` | Firmware |
 |---|---|---|
-| `KEEP(*(.vectors))` | 64 byte | Çalışıyor |
-| `*(.vectors)` | **atıldı** (map: *Discarded*) | **Hiç başlamadı** (seri çıktı yok) |
+| `KEEP(*(.vectors))` | 64 bytes | Runs |
+| `*(.vectors)` | **Discarded** (map: *Discarded*) | **Never started** (no serial output) |
 
-Vektör tablosuna hiçbir kod **referans vermiyor** — onu işlemci reset'te
-okuyor. Linker bunu bilemez; `KEEP` onu söyler. `used` tek başına yetmedi.
+No code **references** the vector table — the processor reads it at reset.
+The linker cannot know this; `KEEP` tells it. `used` alone was insufficient.
 
-> GCC'nin bir de `retain` niteliği var (section'a `SHF_GNU_RETAIN` bayrağı);
-> bu derste denenmedi.
+> GCC also has a `retain` attribute (section flag `SHF_GNU_RETAIN`);
+> it was not tested in this lesson.
 
-### Deney 10 — Veneer
+### Experiment 10 — Veneer
 
-Linker, bir dallanma hedefe yetişemiyorsa araya küçük bir kod parçası
-(**veneer**) ekleyebilir. AAELF32, linker'ın ürettiği veneer'ların `r12`
-(IP) ve bayrakları bozabileceğini söyler — ders 09'da AAPCS'in r12'yi neden
-caller-clobbered saydığının bir sebebi bu.
+If a branch cannot reach its target, the linker may insert a small code
+fragment, a **veneer**. AAELF32 permits linker-generated veneers to clobber
+`r12` (IP) and flags — one reason AAPCS makes r12 caller-clobbered in Lesson 09.
 
-Bu build'de **veneer gözlenmedi**. Map'te bir `.vfp11_veneer` satırı var
-ama boyutu **0** (`linker stubs`): bir yer tutucu, gerçek bir veneer değil.
-Görüntünün tamamı 2.5 KB; Thumb-2 `BL`'nin menzili bunun çok ötesinde.
-`grep veneer` ile "veneer var" sonucuna varma — boyutuna bak.
+**No veneer was observed in this build.** The map has a `.vfp11_veneer`
+line, but its size is **0** (`linker stubs`): a placeholder, not an actual
+veneer. The whole image is 2.5 KB, far below Thumb-2 `BL` range.
+Do not infer a veneer merely from `grep veneer`; inspect its size.
 
-### Deney 11 — Değiştir ve gözle
+### Experiment 11 — Modify and observe
 
-*(MODIFY)* `objects.c`'de `g_unused_data`'yı `main.c`'den bir kez oku. Yeniden
-derle. Önce **tahmin et**: map'te ne değişir? `.data` kaç byte olur?
-`__flash_load_end` kaç byte kayar? Sonra ölç. Bitince geri al.
+*(MODIFY)* Read `g_unused_data` from `objects.c` once in `main.c`, then
+rebuild. **Predict first:** what changes in the map? How many bytes in
+`.data`? How far does `__flash_load_end` move? Then measure. Revert afterward.
 
 ---
 
@@ -723,23 +723,23 @@ derle. Önce **tahmin et**: map'te ne değişir? `.data` kaç byte olur?
 
 *(BREAK)*
 
-`10-linker-broken`, ana örnekle aynı — **tek fark**: `l10_asm_broken.S`'te
-`.global asm_fn` satırı yok.
+`10-linker-broken` is identical to the main example with **one difference**:
+`l10_asm_broken.S` omits `.global asm_fn`.
 
 ```bash
 cmake --build --preset debug --target 10-linker-broken
 ```
 
-Gerçek çıktı:
+Actual output:
 
 ```text
 .../example/main.c:95:(.text.main+0x2be): undefined reference to `asm_fn'
 collect2: error: ld returned 1 exit status
 ```
 
-Bu hedef `ALL`'a dahil değil (`EXCLUDE_FROM_ALL`); aksi halde her build
-başarısız olurdu. Hatanın kendisi `tests/build-probes.sh`'te (**L10a**)
-kalıcı olarak doğrulanıyor.
+This target is excluded from `ALL` (`EXCLUDE_FROM_ALL`), otherwise every
+build would fail. The failure itself is permanently verified in
+`tests/build-probes.sh` (**L10a**).
 
 ---
 
@@ -747,7 +747,7 @@ kalıcı olarak doğrulanıyor.
 
 *(DEBUG)*
 
-Sembol **var**. Linker onu göremiyor. Neden?
+The symbol **exists**, but the linker cannot see it. Why?
 
 ```bash
 arm-none-eabi-gcc -mcpu=cortex-m33 -mthumb -c \
@@ -762,18 +762,18 @@ arm-none-eabi-nm /tmp/b.o
          U text_fn
 ```
 
-`asm_fn` nesne dosyasında tanımlı ama **LOCAL**. GAS'ta bir etiket, `.global`
-(veya `.globl`) ile işaretlenmedikçe yereldir; yerel semboller yalnızca kendi
-nesne dosyası içinden görülür. `main.o`'nun `U asm_fn` referansı başka bir
-dosyadaki **GLOBAL** bir tanım arıyor — bulamıyor.
+`asm_fn` is defined in the object file, but **LOCAL**. In GAS, a label is
+local unless marked `.global` (or `.globl`); local symbols are visible only
+inside their own object file. The `U asm_fn` reference in `main.o` seeks
+a **GLOBAL** definition in another file and finds none.
 
-Sorular:
+Questions:
 
-1. `asm_word` neden etkilenmedi?
-2. Hata mesajı neden `main.c:95` diyor, `l10_asm_broken.S` değil?
-3. Hata mesajındaki `.text.main+0x2be` neyi gösteriyor? (İpucu: Deney 2'deki
-   relocation listesi.)
-4. Aynı adı taşıyan iki **GLOBAL** tanım olsaydı hangi hatayı beklerdin?
+1. Why was `asm_word` unaffected?
+2. Why does the error cite `main.c:95`, not `l10_asm_broken.S`?
+3. What does `.text.main+0x2be` in the error identify? (Hint: Experiment 2's
+   relocation list.)
+4. What error would two **GLOBAL** definitions with the same name produce?
 
 ---
 
@@ -783,26 +783,25 @@ Sorular:
 
 ### Exercise 01 — Locate Your Data
 
-Dört fonksiyonu **yalnızca linker sembollerinden ve nesne adreslerinden**
-hesapla:
+Implement four functions using **only linker symbols and object addresses**:
 
 ```text
 exercises/01-locate-your-data/locate.c
 ```
 
-| Fonksiyon | Ne hesaplamalı |
+| Function | What it must calculate |
 |---|---|
-| `flash_used_bytes()` | FLASH'taki yük görüntüsünün tamamı |
-| `ram_static_bytes()` | RAM'de statik olarak kullanılan byte (stack hariç) |
-| `data_lma_of(p)` | `.data` içindeki bir nesnenin ilk değerinin FLASH adresi |
-| `in_region(p, origin, length)` | Adres bir bölgenin içinde mi |
+| `flash_used_bytes()` | The entire FLASH load image |
+| `ram_static_bytes()` | Static bytes used in RAM, excluding stack |
+| `data_lma_of(p)` | FLASH address of the initial value of an object in `.data` |
+| `in_region(p, origin, length)` | Whether an address lies in a region |
 
 ```bash
 cmake --build --preset debug --target 10-exercise-linker
 ./scripts/run-qemu.sh build/debug/lessons/10-linker-elf-memory/10-exercise-linker.elf
 ```
 
-Başlangıç çıktısı (gerçek):
+Initial output (actual):
 
 ```text
 [  FLASH_USED_BYTES] 0
@@ -815,19 +814,19 @@ Başlangıç çıktısı (gerçek):
 ===== END =====
 ```
 
-Bu **beklenen başlangıç durumudur**. Kontroller sabit adreslere dayanmıyor;
-yanlış bir LMA fault değil FAIL üretir. Ayrıntılar
-[exercise README](exercises/01-locate-your-data/README.md)'sinde.
+This is the **expected initial state**. Checks do not rely on fixed addresses;
+a wrong LMA produces FAIL, not a fault. Details are in the
+[exercise README](exercises/01-locate-your-data/README.md).
 
 ---
 
 ## Reference Solution
 
-| Ne | Nerede | Hedef |
+| What | Where | Target |
 |---|---|---|
-| Exercise 01 çözümü | [`solutions/01-locate-your-data/`](solutions/01-locate-your-data/) | `10-solution-linker` |
+| Exercise 01 solution | [`solutions/01-locate-your-data/`](solutions/01-locate-your-data/) | `10-solution-linker` |
 
-Gerçek çıktı (`debug`):
+Actual output (`debug`):
 
 ```text
 [  FLASH_USED_BYTES] 1424
@@ -840,32 +839,32 @@ Gerçek çıktı (`debug`):
 ===== END =====
 ```
 
-Sayılar ana örnekten farklı, çünkü bu farklı bir program (daha az kod,
-`asm_word` yok) — tam da bu yüzden çözüm sabit sayı değil, sembol kullanıyor.
+Numbers differ from the main example because this is a different program
+(less code, no `asm_word`) — exactly why the solution uses symbols, not constants.
 
 ---
 
 ## What I Learned
 
-> Bu bölüm senin.
+> This section is yours.
 
-**Section, sembol ve relocation'ı kendi cümlemle:**
-
-<!-- -->
-
-**VMA ile LMA'nın `.data` için neden farklı olduğu:**
+**Sections, symbols, and relocations in my own words:**
 
 <!-- -->
 
-**`used` ile `KEEP` arasındaki fark:**
+**Why VMA and LMA differ for `.data`:**
 
 <!-- -->
 
-**Map dosyasında ilk bakacağım yer:**
+**The difference between `used` and `KEEP`:**
 
 <!-- -->
 
-**Ders 11'e taşıdığım soru:**
+**Where I will look first in a map file:**
+
+<!-- -->
+
+**The question I am taking into Lesson 11:**
 
 <!-- -->
 
@@ -873,97 +872,91 @@ Sayılar ana örnekten farklı, çünkü bu farklı bir program (daha az kod,
 
 ## Quick Check
 
-1. Bir `.o` dosyası ile bir `.elf` dosyası arasındaki temel fark nedir?
-   `.o`'daki bir sembol değeri neyi ifade eder? Neden birçoğu `0` görünüyor
-   ama `local_helper` `0x0e`?
-2. Sembol ile relocation arasındaki fark ne? `main.o`'daki `U text_fn` ile
-   `R_ARM_THM_CALL text_fn` ne söylüyor?
-3. Section ile segment arasındaki fark ne? Kim hangisini kullanır?
-4. **(Reasoning)** `.data`'nın VMA'sı ve LMA'sı neden farklı? İkisi aynı
-   olsaydı ne olurdu?
-5. `.data > RAM AT > FLASH` ile `.data : AT(__etext) > RAM` arasındaki fark ne?
-   Hangisi FLASH taşmasını yakalar?
-6. **(Reasoning)** "`.bss` ELF'te yok" cümlesi neden yanıltıcı? Ölçülen
-   `FileSiz` ve `MemSiz` ne söylüyor?
-7. Map dosyasında bir sembolün hangi nesne dosyasından geldiğini ve hangi
-   çıkış section'ına girdiğini nasıl bulursun?
-8. `KEEP` neden var? Vektör tablosu için neden gerekli?
-9. **(Reasoning)** `__attribute__((used))` bir section'ı `--gc-sections`'tan
-   korur mu? Bu derste ne ölçüldü?
-10. `-ffunction-sections` olmadan `--gc-sections` ne kadar etkili olurdu?
-11. Linker script'te `MEMORY` ve `SECTIONS` ne iş yapar?
-12. **(Reasoning)** ELF dosyası 94 KB, FLASH kullanımı 2.5 KB. Aradaki fark
-    nerede? FLASH kullanımı neden `.text` boyutundan büyük?
-13. **(Reasoning)** "undefined reference to `asm_fn`" hatası verildi ama
-    `asm_fn` nesne dosyasında tanımlı. Nasıl?
+1. What fundamentally distinguishes `.o` from `.elf`? What does a symbol
+   value in `.o` mean? Why do many show `0`, while `local_helper` is `0x0e`?
+2. How do symbols and relocations differ? What do `U text_fn` and
+   `R_ARM_THM_CALL text_fn` in `main.o` tell you?
+3. How do sections and segments differ? Who uses each?
+4. **(Reasoning)** Why do `.data`'s VMA and LMA differ? What if they were identical?
+5. How do `.data > RAM AT > FLASH` and `.data : AT(__etext) > RAM` differ?
+   Which catches FLASH overflow?
+6. **(Reasoning)** Why is “`.bss` is absent from ELF” misleading? What do
+   measured `FileSiz` and `MemSiz` tell you?
+7. How do you find a symbol's originating object file and output section in the map?
+8. Why does `KEEP` exist? Why is it necessary for the vector table?
+9. **(Reasoning)** Does `__attribute__((used))` protect a section from
+   `--gc-sections`? What was measured here?
+10. Without `-ffunction-sections`, how effective would `--gc-sections` be?
+11. What do `MEMORY` and `SECTIONS` do in a linker script?
+12. **(Reasoning)** The ELF file is 94 KB, FLASH usage 2.5 KB. Where is the
+    difference? Why is FLASH usage larger than `.text`?
+13. **(Reasoning)** “undefined reference to `asm_fn`” appeared, but `asm_fn`
+    is defined in the object file. How?
 
-> Cevaplar: [`answers/quick-check.md`](answers/quick-check.md)
+> Answers: [`answers/quick-check.md`](answers/quick-check.md)
 
 ---
 
 ## Takeaway
 
-- Bir `.o` dosyası **section'lar, semboller ve relocation'lar** taşır;
-  adresler henüz yoktur. Linker onları yerleştirir, sembolleri çözer,
-  relocation'ları uygular.
-- **Input section** (`.rodata.l10_table`) ile **çıkış section'ı** (`.rodata`)
-  farklıdır; linker script'in wildcard'ları onları eşler.
-- **Section** bağlama görünümü, **segment** yükleme görünümüdür.
-- `.data`'nın **iki adresi** var: VMA (RAM, çalışma) ve LMA (FLASH, ilk
-  değer). Bu repo `> RAM AT > FLASH` kullanıyor; köprü startup kodudur.
-- `.bss` ELF'te **tarif edilir** (`NOBITS`, `MemSiz > FileSiz`) ama içeriği
-  saklanmaz; FLASH'ta yer tutmaz.
-- **ELF dosya boyutu, FLASH kullanımı ve RAM kullanımı üç ayrı sorudur.**
-- `--gc-sections` erişilemeyen input section'ları atar; **`used` derleyiciye,
-  `KEEP` linker'a söyler** — bu toolchain'de `used` GC'yi engellemedi.
-- Bir Thumb fonksiyonunu **gösteren değer** tek, **komutun adresi** çifttir.
-- "Undefined reference" çoğu zaman **sembolün var ama görünmez** olduğunu
-  söyler — önce `nm` ile bağlamasına bak.
+- An `.o` file contains **sections, symbols, and relocations**, not final
+  addresses. The linker places them, resolves symbols, and applies relocations.
+- **Input section** (`.rodata.l10_table`) and **output section** (`.rodata`)
+  differ; linker-script wildcards map between them.
+- **Sections** describe linking; **segments** describe loading.
+- `.data` has **two addresses**: VMA (RAM, runtime) and LMA (FLASH, initial
+  value). This repository uses `> RAM AT > FLASH`; startup code bridges them.
+- `.bss` is **described** in ELF (`NOBITS`, `MemSiz > FileSiz`) without stored
+  contents; it occupies no FLASH.
+- **ELF file size, FLASH usage, and RAM usage are three separate questions.**
+- `--gc-sections` discards unreachable input sections; **`used` addresses
+  the compiler, `KEEP` the linker** — `used` did not prevent GC here.
+- A Thumb function's **identifying value** is odd; its **instruction address** is even.
+- “Undefined reference” often means **a symbol exists but is invisible** —
+  inspect its binding with `nm` first.
 
 ---
 
 ## Official References
 
-- **AAELF32** — *ELF for the Arm Architecture*, Arm ABI deposu:
-  relocation türleri tablosu (`R_ARM_ABS32` = 2, `R_ARM_THM_CALL` = 10,
-  `R_ARM_THM_JUMP24` = 30), formül gösterimi (`S`, `A`, `P`, `T`), Thumb
-  fonksiyon sembollerinde bit 0, linker'ın ürettiği veneer'lar ve `r12`.
+- **AAELF32** — *ELF for the Arm Architecture*, Arm ABI repository:
+  relocation table (`R_ARM_ABS32` = 2, `R_ARM_THM_CALL` = 10,
+  `R_ARM_THM_JUMP24` = 30), formula notation (`S`, `A`, `P`, `T`), bit 0
+  of Thumb function symbols, linker-generated veneers, and `r12`.
   <https://github.com/ARM-software/abi-aa/blob/main/aaelf32/aaelf32.rst>
-- **AAPCS32** — *Use of IP by the linker* (ders 09 bağlantısı).
+- **AAPCS32** — *Use of IP by the linker* (connection to Lesson 09).
   <https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst>
 - **GNU ld manual** — *Linker Scripts*: MEMORY, SECTIONS, location counter,
-  input section patterns, `KEEP`, output section region ve LMA (`> region`,
+  input section patterns, `KEEP`, output section region and LMA (`> region`,
   `AT > region`, `AT(addr)`), `NOLOAD`, `LOADADDR`/`SIZEOF`/`ORIGIN`/`LENGTH`,
-  `ASSERT`, `/DISCARD/`, `ENTRY`; komut satırı: `--gc-sections`, `-Map`,
+  `ASSERT`, `/DISCARD/`, `ENTRY`; command line: `--gc-sections`, `-Map`,
   `--print-memory-usage`.
   <https://sourceware.org/binutils/docs/ld/>
-- **GNU binutils manual** — `readelf`, `nm` (sembol harfleri), `objdump -h/-d/-r`,
+- **GNU binutils manual** — `readelf`, `nm` (symbol letters), `objdump -h/-d/-r`,
   `size`.
   <https://sourceware.org/binutils/docs/binutils/>
-- **GCC manual** — `-ffunction-sections`, `-fdata-sections`; `section`,
-  `used`, `retain` nitelikleri.
-- **System V ABI (gABI)** — ELF section'ları (`SHT_NOBITS`, `SHF_ALLOC`),
-  program header'ları (`p_vaddr`, `p_paddr`, `p_filesz`, `p_memsz`).
-- Repo: [`platform/mps2-an505/linker/mps2-an505-secure.ld`](../../platform/mps2-an505/linker/mps2-an505-secure.ld),
+- **GCC manual** — `-ffunction-sections`, `-fdata-sections`; attributes
+  `section`, `used`, `retain`.
+- **System V ABI (gABI)** — ELF sections (`SHT_NOBITS`, `SHF_ALLOC`),
+  program headers (`p_vaddr`, `p_paddr`, `p_filesz`, `p_memsz`).
+- Repository: [`platform/mps2-an505/linker/mps2-an505-secure.ld`](../../platform/mps2-an505/linker/mps2-an505-secure.ld),
   [`platform/mps2-an505/src/startup_mps2_an505.c`](../../platform/mps2-an505/src/startup_mps2_an505.c).
-- Ölçüm ortamı: `arm-none-eabi-gcc 13.2.1`, `binutils 2.42`, `QEMU 8.2.2`,
+- Measurement environment: `arm-none-eabi-gcc 13.2.1`, `binutils 2.42`, `QEMU 8.2.2`,
   `mps2-an505 / cortex-m33`.
 
 ---
 
 ## Known Boundaries
 
-- Tüm adresler, boyutlar, relocation sayıları ve GC sonuçları **bu build'e
-  ve bu toolchain'e ait gözlemlerdir**.
-- QEMU'nun `.data`'yı LMA'ya yüklemesi ve RAM'i sıfırla başlatması bu
-  emülatörde ölçüldü; fiziksel yükleyiciler (debug probe, bootloader) farklı
-  davranabilir.
-- Veneer bu derste gözlenmedi; kavram olarak anlatıldı.
-- `retain` niteliği denenmedi.
-- `KEEP` kaldırma deneyi geçici bir kopyada yapıldı; paylaşılan linker
-  script'e dokunulmadı.
-- Startup kodunun `.data` kopyalama ve `.bss` sıfırlama ayrıntıları ders 11'e
-  bırakıldı.
+- All addresses, sizes, relocation counts, and GC outcomes are **observations
+  from this build and toolchain**.
+- Loading `.data` at LMA and initially zeroing RAM were measured in QEMU;
+  physical loaders (debug probes, bootloaders) may behave differently.
+- No veneer was observed here; it was explained conceptually.
+- The `retain` attribute was not tested.
+- The experiment removing `KEEP` used a temporary copy; the shared linker
+  script was untouched.
+- Details of startup `.data` copying and `.bss` zeroing are left to Lesson 11.
 
 ---
 

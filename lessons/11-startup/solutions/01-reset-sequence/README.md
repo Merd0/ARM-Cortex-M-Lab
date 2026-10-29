@@ -1,10 +1,12 @@
+**Language:** English | [Türkçe](README.tr.md)
+
 # Solution 01 — Complete the Reset Sequence
 
 Exercise: [`../../exercises/01-reset-sequence/`](../../exercises/01-reset-sequence/)
 
-Kod: [`l11_reset.c`](l11_reset.c)
+Code: [`l11_reset.c`](l11_reset.c)
 
-## Gerçek çıktı
+## Actual Output
 
 ```text
 ===== LESSON 11 SOLUTION 01 =====
@@ -19,7 +21,7 @@ Kod: [`l11_reset.c`](l11_reset.c)
 ===== END =====
 ```
 
-`debug`, `release`, `minsize` — üçünde de aynı.
+Identical in all three: `debug`, `release`, `minsize`.
 
 ## 1) `.data`
 
@@ -31,15 +33,15 @@ while (dst < &__data_end) {
 }
 ```
 
-- `__etext` adı "`.text`'in sonu" gibi okunur, ama linker script'teki tanımı
-  `LOADADDR(.data)`: `.data`'nın **yükleme adresi**. Ders 10'da ölçüldü.
-- Linker `.data`'yı FLASH'ta ve RAM'de **aynı iç düzenle** yerleştirir; bu
-  yüzden tek, düz bir kopyalama yetiyor.
-- Burada işaretçi aritmetiği **bilinçli olarak word** birimiyle: `dst++` 4 byte
-  ilerler, `dst < &__data_end` işaretçi karşılaştırması. Bu yalnızca sınırlar
-  4'e hizalı olduğu için doğru; linker script `ALIGN(4)` ile bunu garanti
-  ediyor. (Ders 10'daki byte/eleman tuzağıyla karıştırma: orada **boyut**
-  hesaplanıyordu, burada word word **yürünüyor**.)
+- The name `__etext` suggests “end of `.text`,” but its linker-script
+  definition is `LOADADDR(.data)`: `.data`'s **load address**. Measured in Lesson 10.
+- The linker places `.data` in FLASH and RAM with **the same internal layout**;
+  a single linear copy therefore suffices.
+- Pointer arithmetic here is **deliberately in words**: `dst++` advances
+  4 bytes; `dst < &__data_end` is a pointer comparison. This is correct only
+  because boundaries are aligned to 4, guaranteed by the linker script's
+  `ALIGN(4)`. (Do not confuse this with Lesson 10's byte/element trap:
+  there we calculated a **size**; here we **walk** word by word.)
 
 ## 2) `.bss`
 
@@ -50,34 +52,35 @@ while (dst < &__bss_end) {
 }
 ```
 
-`.bss`'in FLASH'ta bir kopyası yok: tek yapılacak şey sıfır yazmak.
+`.bss` has no FLASH copy: all we need to do is write zeros.
 
-## Sıra
+## Order
 
-`.data` ve `.bss` ayrık aralıklar; birbirlerine dokunmuyorlar. Bu yüzden
-aralarındaki sıra teknik olarak önemli değil. Önemli olan, **ikisinin de**
-C kodundan (`SystemInit`, `main`) **önce** bitmesi:
+`.data` and `.bss` are disjoint ranges; neither touches the other. Their
+relative order therefore does not technically matter. What matters is
+finishing **both before** the C code (`SystemInit`, `main`):
 
-- `SystemInit` bir C fonksiyonu; `.data`/`.bss`'teki bir değişkene dayanabilir.
-- `main` kesinlikle dayanır.
+- `SystemInit` is a C function; it may depend on a variable in `.data`/`.bss`.
+- `main` certainly does.
 
-Bu çözüm paylaşılan startup'la aynı sırayı izliyor: `.data` → `.bss` →
-`SystemInit` → `main`. Bu bir **repo tasarımı**; mimari bir kural değil.
+This solution follows the shared startup's order: `.data` → `.bss` →
+`SystemInit` → `main`. This is **repository design**, not an architectural rule.
 
-## Faz kaydı neden `.bss`'te olduğu halde güvenli?
+## Why Is the Phase Record Safe Despite Being in `.bss`?
 
-`g_l11_phase` `.bss`'te. Değeri Reset_Handler'ın **yerel** bir değişkeninde
-biriktiriliyor ve `g_l11_phase`'e ancak iki döngü ve `SystemInit`'ten
-**sonra** yazılıyor. Böylece ne zehirleme ne `.bss` sıfırlaması onu silebilir —
-eksik bir `.bss` adımı bile (başlangıç ve bozuk hedef).
+`g_l11_phase` is in `.bss`. Its value accumulates in a **local** variable
+in Reset_Handler, and is written to `g_l11_phase` only **after** both loops
+and `SystemInit`. Neither poisoning nor `.bss` zeroing can erase it — even
+with a missing `.bss` step (starter and broken target).
 
-## Zehirleme neden var?
+## Why Poison RAM?
 
-QEMU RAM'i sıfırla başlatıyor. Zehirleme olmasaydı `.bss` adımını unutan bir
-çözüm de `CHECK_BSS_ZERO PASS` alırdı — `tests/build-probes.sh`'teki L11b
-vaka C bunu her build'de ölçüyor. `l11_poison_ram()` bir **eğitim aracı**;
-paylaşılan startup'ta yok ve olmamalı.
+QEMU starts RAM at zero. Without poisoning, a solution missing the `.bss`
+step would also obtain `CHECK_BSS_ZERO PASS` — L11b case C in
+`tests/build-probes.sh` measures this on every build. `l11_poison_ram()`
+is an **educational instrument**; it is absent from shared startup and
+should remain absent.
 
 ---
 
-[← Ders 11](../../README.md)
+[← Lesson 11](../../README.md)

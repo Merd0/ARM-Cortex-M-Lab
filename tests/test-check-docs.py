@@ -117,6 +117,13 @@ class DocumentationGateTests(unittest.TestCase):
             self.assertTrue(GATE.main())
         self.assertIn("inline command/identifier mismatch", output.getvalue())
 
+    def test_indented_fence_is_not_parsed_as_inline_code(self):
+        before = "  ```bash\n  run --preset debug\n  ```\n"
+        after = before.replace("debug", "release")
+        self.assertEqual(GATE.block_contents(before), [before])
+        self.assertEqual(GATE.prose(before), "")
+        self.assertNotEqual(GATE.block_contents(before), GATE.block_contents(after))
+
     def test_hex_value_cannot_change(self):
         self.change("README.md", "PC=0x1000", "PC=0x2000")
         self.rejects("CHECK/hex value mismatch")
@@ -159,6 +166,10 @@ class DocumentationGateTests(unittest.TestCase):
 
     def test_changed_official_reference_is_rejected(self):
         self.change("README.md", "[Experiment](#experiment)", "[Arm](https://example.org/wrong)")
+        self.rejects("official/external reference changed")
+
+    def test_changed_official_autolink_is_rejected(self):
+        self.change("README.md", "[Experiment](#experiment)", "<https://example.org/wrong>")
         self.rejects("official/external reference changed")
 
     def test_section_comparison_detects_swapped_commands(self):
