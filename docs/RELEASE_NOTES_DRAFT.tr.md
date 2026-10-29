@@ -2,6 +2,9 @@
 
 # Release notes taslağı — v1.0.0
 
+> **Arşiv notu:** Bu metin yayımlama öncesi taslaktır. [v1.0.0 kararlı sürümü](https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0)
+> sonradan yayımlandı; aşağıdaki “oluşturulmadı” ifadesi taslağın tarihsel durumudur.
+
 Öneri: **v1.0.0 — ARM Cortex-M Practical Lab**. Bu eğitim kapsamının ilk tam
 sürüm önerisidir; production RTOS veya donanım sertifikası anlamına gelmez.
 Tag ve GitHub Release oluşturulmadı. Kesin hedef SHA, denetim düzeltmeleri
