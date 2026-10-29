@@ -169,7 +169,7 @@ Rejection messages have categories; they are not collapsed into a single generic
 | `DCRS = 0` | DESTEKLENMIYOR | Additional state context (callee registers stacked) |
 | `ES != S` | DESTEKLENMIYOR | Transition between security states (Lesson 16) |
 | CFSR stacking bit | STACKING HATASI | STKOF / STKERR / MSTKERR |
-| Address alignment | GECERSIZ FRAME ADRESI | Not a multiple of 4 |
+| Address alignment | GECERSIZ FRAME ADRESI | Not a multiple of 8 (Cortex-M33 exception frame) |
 | Address range | GECERSIZ FRAME ADRESI | Outside the platform RAM window |
 | Stacked xPSR | GECERSIZ FRAME ICERIGI | T bit (bit24) zero - impossible on Cortex-M |
 | Stacked PC | GECERSIZ FRAME ICERIGI | 0, odd, or outside the code window |
