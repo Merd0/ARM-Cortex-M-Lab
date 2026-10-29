@@ -235,7 +235,8 @@ verify the raw register values it produces in both firmware and GDB.
 
 This bit in `SCB->SHCSR` enables the MemManage exception. Without it, an MPU
 violation **escalates to HardFault** and sets `HFSR.FORCED`; `MMFSR`/`MMFAR`
-are still written, but diagnosis takes an extra step. Experiment 3 measures this.
+may still contain diagnostic information, but diagnosis takes an extra step.
+Experiment 3 **proposes measuring this**; no result is claimed here.
 
 ### Why does unprivileged Thread not write to the console?
 
