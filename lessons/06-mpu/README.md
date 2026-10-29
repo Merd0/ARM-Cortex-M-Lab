@@ -503,7 +503,7 @@ Because `mpu_store_word()` issues a four-byte `STR`, accessing
 `0x3000033F` with it is unaligned and crosses the MPU boundary.
 Instead, compare aligned word accesses at `0x3000033C` (the last word
 entirely inside the region) and `0x30000340` (the first word outside).
-This distinguishes an **inclusive** byte limit from the requirement that
+This distinguishes an **inclusive** `LIMIT` byte boundary from the requirement that
 all four bytes of a word store must be permitted.
 
 **Experiment 3 — What happens without `MEMFAULTENA`? (Deep Dive)**
