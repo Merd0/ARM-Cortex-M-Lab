@@ -48,9 +48,10 @@ bölgesidir. Cortex-M'de **full-descending** olarak tanımlıdır:
 - **Boş stack'te** `SP`, kullanılabilir alanın **bir ötesini** gösterir. O
   adres stack'e ait değildir ve okunmamalıdır. Yani "`SP` her zaman anlamlı
   bir veri gösterir" **yanlıştır**; yalnızca stack boş değilken doğrudur.
-- `SP`'nin **altındaki** alan tahsis edilmiştir ama içeriği tanımsızdır:
-  daha önce itilip çıkarılmış verilerin kalıntısıdır. Bu yüzden `POP`
-  edilmemiş bir word'ü okumak anlamlı bir değer vermez.
+- `SP`'nin **altındaki**, ayrılmış stack belleği sınırları içindeki alan
+  **henüz canlı stack verisi olmayan boş kapasitedir**. İçeriği tanımsızdır;
+  geçmiş `PUSH`/`POP` işlemlerinden kalıntılar bulunabilir. `SP` aşağı
+  ilerlemeden bu alanı canlı stack verisi gibi okumak doğru değildir.
 
 ### İki stack pointer
 
