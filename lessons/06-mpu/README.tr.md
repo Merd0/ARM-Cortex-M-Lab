@@ -240,8 +240,9 @@ GDB'den register olarak doğrulayacağız.
 
 `SCB->SHCSR` içindeki bu bit MemManage exception'ını etkinleştirir.
 Etkinleştirilmezse MPU ihlali **HardFault'a yükseltilir** (escalation) ve
-`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılır ama teşhis bir adım
-dolaylı hale gelir. Deney 3 bunu ölçüyor.
+`HFSR.FORCED` set olur; `MMFSR`/`MMFAR` yine yazılabilir ama teşhis bir adım
+dolaylı hale gelir. Deney 3 bunu **ölçmeyi önerir**; bu derste ölçülmüş
+bir sonuç sunulmuyor.
 
 ### Neden ayrıcalıksız Thread konsola yazmıyor?
 
