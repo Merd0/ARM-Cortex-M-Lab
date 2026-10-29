@@ -120,6 +120,22 @@ def main():
     failures = []
     completed = 0
     paths = set()
+    # Exact source repairs are independently reviewable. The baseline's original
+    # SHA-256 is always checked first, then only registered text substitutions
+    # may be applied. This is NOT a bypass of Turkish-source preservation.
+    corrections_file = ROOT / "docs/documentation-source-corrections.json"
+    corrections = json.loads(corrections_file.read_text(encoding="utf-8")) if corrections_file.is_file() else {"corrections": []}
+    if corrections.get("baseline") and corrections["baseline"] != data["baseline"]:
+        failures.append("correction registry baseline mismatch")
+    approved = {}
+    for fix in corrections["corrections"]:
+        if not all(isinstance(fix.get(key), str) and fix[key] for key in ("id", "original", "turkish", "old", "new")):
+            failures.append("invalid correction registry entry")
+            continue
+        if fix["old"] == fix["new"]:
+            failures.append(f"no-op source correction: {fix['id']}")
+        approved.setdefault((fix["original"], fix["turkish"]), []).append(fix)
+    used_corrections = set()
     paired_paths = {r[k] for r in data["documents"] for k in ("english", "turkish")}
     for path in markdown_inventory():
         if path not in paired_paths and not path.startswith("external/CMSIS/"):
@@ -134,6 +150,19 @@ def main():
         if hashlib.sha256(source_bytes).hexdigest() != row["source_sha256"]:
             failures.append(f"source digest mismatch: {en}")
         source = source_bytes.decode("utf-8").replace("\r\n", "\n")
+        for fix in approved.get((row["original"], tr), []):
+            used_corrections.add(fix["id"])
+            if source.count(fix["old"]) != 1:
+                failures.append(f"source correction anchor missing or ambiguous: {fix['id']} {tr}")
+                continue
+            corrected = source.replace(fix["old"], fix["new"], 1)
+            if block_contents(source) != block_contents(corrected):
+                failures.append(f"source correction altered executable/output block: {fix['id']} {tr}")
+                continue
+            if [level for level, _ in sections(source)] != [level for level, _ in sections(corrected)]:
+                failures.append(f"source correction altered section hierarchy: {fix['id']} {tr}")
+                continue
+            source = corrected
         if not (ROOT / tr).is_file():
             failures.append(f"missing preserved Turkish source: {tr}")
         elif preserved_prose(source) != preserved_prose((ROOT / tr).read_text(encoding="utf-8")):
@@ -208,6 +237,9 @@ def main():
                 if len(before_body) > 80 and len(after_body) < len(before_body) * 0.30:
                     failures.append(f"section {index} missing/substantially shortened prose: {en}")
         completed += 1
+    for fix in corrections["corrections"]:
+        if fix.get("id") not in used_corrections:
+            failures.append(f"unmapped source correction: {fix.get('id')}")
     print(f"{completed}/{len(data['documents'])} translated pairs checked")
     print("Turkish preservation, source hashes, switches, blocks, headings, CHECK/hex values, navigation/anchors")
     for failure in failures:
