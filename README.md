@@ -1,33 +1,51 @@
-# ARM Cortex-M — Practical Learning Lab
+# ARM Cortex-M Lab
 
-Cortex-M33 mimarisini **çalıştırarak, debug ederek ve bilerek bozarak**
-öğrenmek için kurulmuş bir laboratuvar. Her konu QEMU'da çalışan bir
-firmware'e ve GDB'de gözlemlenebilir bir davranışa karşılık gelir.
+Cortex-M33 için bare-metal C ve Assembly laboratuvarı. Firmware’i QEMU’da çalıştır, GDB ile işlemci davranışını izle ve kontrollü hatalarla teşhis pratiği yap. Hedef platform Cortex-M33 / QEMU `mps2-an505`.
 
-Fiziksel geliştirme kartı gerekmez. Target: **Cortex-M33 / QEMU `mps2-an505`**.
+**16 ders · 5 entegrasyon projesi · 1 TrustZone finali**
 
----
+[Ders planı](BOOTCAMP.md) · [Secure Real-Time Sensor Node](final-project/secure-real-time-sensor-node/) · [v1.0.0 CI kanıtı](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40545977241)
 
-## Bu repo ne?
+> **English overview.** A hands-on Cortex-M33 lab with 16 lessons, five integration projects, and a TrustZone sensor-node capstone. Bare-metal C and Assembly experiments run on QEMU with GDB and automated checks across three build presets.
 
-Repo üç amaçla kullanılıyor:
+## Dersler, projeler ve final
 
-1. **Kişisel Cortex-M laboratuvarı** — her kavram için ölçülmüş, gözlemlenmiş
-   bir deney.
-2. **Uygulamalı eğitim kaynağı** — daha önce Cortex-M görmemiş bir geliştirici
-   de takip edebilsin diye yazıldı.
-3. **Portfolyo projesi** — uygulama, hata teşhisi ve doğrulama çalışmalarının kaydı.
+| Katman | İçerik |
+|---|---|
+| [16 ders](lessons/) | Register ve stack deneylerinden exception, MPU, context switch ve TrustZone’a uzanan adım adım laboratuvarlar. |
+| [5 entegrasyon projesi](projects/) | Birden fazla dersin mekanizmalarını tek bir firmware probleminde birleştiren uygulamalar. |
+| [Secure Real-Time Sensor Node](final-project/secure-real-time-sensor-node/) | Secure ve Non-secure firmware imajlarıyla çalışan uçtan uca sensör sistemi. |
 
-Her ders şu döngüyü izler:
+## Secure Real-Time Sensor Node
 
-```text
-TEACH → SHOW → RUN → OBSERVE → MODIFY → BREAK → DEBUG → VERIFY
+Üç ayrıcalıksız Non-secure görev sentetik sensör örneklerini toplar, işler ve UART üzerinden loglar. Ayrıcalıklı Non-secure çekirdek SVC ile servis sunar, PendSV ile görev değiştirir ve MPU ile görev stack’lerini ayırır. İşleme hattı, sınırlı DSP/FPU kalibrasyonu için TrustZone geçidini kullanır.
+
+Normal Debug senaryosunda `PRODUCED=PROCESSED=LOGGED=32`. Test, işlenen sonucu bağımsız bir hesapla karşılaştırır. Negatif senaryolardan biri başka görevin stack’ine erişimin engellendiğini kontrol eder.
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+python3 tests/system-smoke.py --group final
 ```
 
-Yani bir konu sadece anlatılmaz: çalıştırılır, debugger'da görülür,
-kontrollü şekilde bozulur ve hata teşhis edilir.
+[Final mimarisi, çıktı ve negatif senaryolar](final-project/secure-real-time-sensor-node/)
 
----
+## v1.0.0 doğrulaması
+
+[`2b2e1dc` CI çalıştırmasında](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40545977241) **Debug, Release ve MinSize** başarılı. Aşağıdaki sonuçlar her preset için ayrı raporlanmıştır.
+
+| Kontrol | Sonuç |
+|---|---:|
+| QEMU smoke ve regresyon kontrolleri | 566 |
+| Build probe | 47 |
+| GDB entegrasyon oturumu | 13 |
+| Beş entegrasyon projesinin senaryoları | 15 |
+| Final sistem senaryoları | 7 |
+| Göreli Markdown bağlantısı | 402 |
+
+GDB kontrolleri, geçerli SG girişine dönüşü ve SG+4 adresinin reddini kapsar. Kapsam QEMU simülasyonudur. Sensör girdileri sentetiktir. Fiziksel kart, deadline ve WCET doğrulaması kapsam dışıdır.
+
+[Sürüm notları](https://github.com/Merd0/ARM-Cortex-M-Lab/releases/tag/v1.0.0) · [CI tanımı](.github/workflows/ci.yml) · [Yerel mühendislik denetimi](docs/ENGINEERING_AUDIT.md)
 
 ## Ne öğretiyor?
 
@@ -39,40 +57,6 @@ kontrollü şekilde bozulur ve hata teşhis edilir.
 | **Build** | Compiler, optimizasyon, AAPCS, linker script, ELF, map file, startup |
 | **Debug** | GDB ile teşhis akışı, disassembly, watchpoint, fault analizi |
 | **Gerçek zamanlı** | SysTick, PendSV, context switching, eğitim amaçlı mini kernel |
-
----
-
-## Mimari
-
-```mermaid
-flowchart TB
-    subgraph LEARN["Öğrenme katmanı"]
-        LS["lessons/<br/>16 ders"]
-        PR["projects/<br/>birleştirici projeler"]
-        FP["final-project/"]
-    end
-
-    subgraph SW["Yazılım katmanı"]
-        CM["common/<br/>console · tiny libc"]
-        PL["platform/mps2-an505/<br/>startup · UART · linker script"]
-        CMSIS["external/CMSIS/<br/>resmi CMSIS-Core (baseline)"]
-        CO["core/<br/>cm33_teaching.h — eğitim amaçlı<br/>minimal register tanımları"]
-    end
-
-    subgraph TOOL["Araç katmanı"]
-        CMK["CMake + Ninja<br/>arm-none-eabi"]
-        QEMU["QEMU<br/>mps2-an505"]
-        GDB["GDB<br/>cortex-m.gdb"]
-    end
-
-    LEARN --> CM --> PL --> CMSIS
-    LS -.->|register'ın kendisi konuysa| CO
-    LEARN -.-> CMK
-    CMK --> QEMU
-    QEMU <--> GDB
-```
-
-Katmanların neden böyle ayrıldığı: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ---
 
@@ -127,9 +111,6 @@ arm-none-eabi-gdb -x scripts/gdb/cortex-m.gdb \
 yazmadan, hedefin kendini nasıl tanıttığını okuyarak başlar.
 Ardından [`lessons/02-programmer-model/`](lessons/02-programmer-model/).
 
-Günlük plan: [BOOTCAMP.md](BOOTCAMP.md) — giriş noktası orasıdır ve
-`lessons/01` ile başlar.
-
 ---
 
 ## Target
@@ -155,90 +136,19 @@ Profiling dersi bu nedenle alternatif ölçüm yöntemlerini kullanır.
 
 ---
 
-## Progress
+## Beş entegrasyon projesi
 
-Bu bölüm mevcut ilerlemeyi gösterir. Yalnızca tamamlanan ve doğrulanan
-çalışmalar işaretlenmiştir; diğer maddeler açık bırakılmıştır.
+| Proje | Birleştirdiği mekanizmalar |
+|---|---|
+| [Protected Application](projects/protected-application/) | PSP, ayrıcalıksız Thread Mode, MPU, SVC ve fault handling |
+| [Fault Analyzer](projects/fault-analyzer/) | Exception frame çözümleme ve CFSR/HFSR analizi |
+| [From Reset to Main](projects/from-reset-to-main/) | Vector table, startup ve linker script |
+| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi ve derleyici optimizasyonu |
+| [Educational Mini Kernel](projects/mini-kernel/) | SysTick, PendSV, SVC ve context switch |
 
-2026-10-24 teknik teslim: 16 ders, beş birleştirici proje ve çalışan Secure
-Sensor Node uygulandı. Debug/Release/MinSize clean build, geniş regresyonlar
-ve kritik GDB kapıları yerelde PASS. Lesson 13, üç preset CI sonrası
-[PR #9](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/9) ile merge edildi.
-Lesson 14–16 da [PR #10](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/10)
-ile üç preset CI sonrası merge edildi. Beş proje ve final entegrasyonu
-[PR #11](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/11) ile main üzerinde.
-`11fde900835d4443a55d0e7da64438ea4da4c690` için
-[merge sonrası üç preset CI](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40105930630) PASS.
-Son iç denetim düzeltmeleri [PR #12](https://github.com/Merd0/ARM-Cortex-M-Lab/pull/12) ile izlenir. Teknik kayıt: [Engineering Audit](docs/ENGINEERING_AUDIT.md).
-Yerel ve CI doğrulaması, bağımsız üçüncü taraf audit veya gerçek kart
-doğrulaması olarak sunulmaz.
-Aşamalı teslim sırası: [Roadmap](docs/ROADMAP.md).
+[Lesson 15](lessons/15-mini-kernel/) context switch mekanizmasını ders düzeyinde inceler. Educational Mini Kernel, bu mekanizmayı SysTick ve SVC ile birleştiren uygulamadır.
 
-### Altyapı
-
-- [x] Build sistemi (CMake + Ninja + arm-none-eabi)
-- [x] MPS2-AN505 platform portu (startup, linker script, UART)
-- [x] QEMU'da çalışan firmware
-- [x] GDB bağlantısı + Cortex-M yardımcı komutları
-- [x] Target capability probe (ölçülmüş)
-- [x] Dokümantasyon temeli
-
-### Temeller
-
-- [x] Cortex-M family & processor selection
-- [x] Programmer model & registers
-- [x] C ↔ Assembly
-- [x] Stack / MSP / PSP
-
-### Mimari
-
-- [x] Privilege & SVC
-- [x] MPU
-- [x] Exceptions & NVIC
-- [x] Faults (birleştirici Fault Analyzer projesi aşağıda ayrı izlenir)
-
-### Yazılım Geliştirme
-
-- [x] Compiler & AAPCS
-- [x] Linker / ELF / memory layout
-- [x] Startup from scratch
-- [x] Debugging & DWT
-
-### İleri Konular
-
-- [x] Synchronization / FPU / DSP (Lesson 13: PR #9 merge, üç preset CI PASS)
-- [x] SysTick & PendSV (üç preset QEMU/GDB ve main CI PASS)
-- [x] Mini kernel & context switching (üç preset QEMU/GDB ve main CI PASS)
-- [x] TrustZone & advanced features (iki imaj / gateway / ihlal deneyi; main CI PASS)
-
-### Projeler
-
-- [x] Protected Application (main üç preset CI PASS)
-- [x] Fault Analyzer (main üç preset CI PASS)
-- [x] From Reset to Main (main üç preset CI PASS)
-- [x] Performance Profiler (main üç preset CI PASS)
-- [x] Educational Mini Kernel (main üç preset CI PASS)
-- [x] Final Project (main üç preset CI PASS)
-
-Projeler/final için üç preset CI sonucu yukarıdaki main commit'ine aittir.
-Denetim tesliminin yerel testleri, PR #12 CI ve merge kayıtlarından ayrı kaydedilir.
-
-Ayrıntılı takip: [`docs/PROGRESS.md`](docs/PROGRESS.md)
-
----
-
-## Major Projects
-
-Birden fazla dersin konularını birleştiren projeler; her birinin ayrı README'si var:
-
-| Proje | Birleştirdiği konular | Durum |
-|---|---|---|
-| [Protected Application](projects/protected-application/) | PSP + unprivileged Thread Mode + MPU + SVC + fault handling | Main üç-preset CI PASS |
-| [Fault Analyzer](projects/fault-analyzer/) | Exception frame decode + CFSR/HFSR analizi | Main üç-preset CI PASS |
-| [From Reset to Main](projects/from-reset-to-main/) | Vector table + startup + linker script | Main üç-preset CI PASS |
-| [Performance Profiler](projects/performance-profiler/) | Ölçüm metodolojisi + compiler optimizasyonu | Main üç-preset CI PASS |
-| [Mini Kernel](projects/mini-kernel/) | SysTick + PendSV + SVC + context switch | Main üç-preset CI PASS |
-| [Final Project](final-project/) | Hepsinin entegrasyonu | Main üç-preset CI PASS |
+[Teslim geçmişi](docs/PROGRESS.md) · [Yol haritası](docs/ROADMAP.md)
 
 ---
 
@@ -290,7 +200,7 @@ tests/          smoke test
 
 ## Dil politikası
 
-Kod, tanımlayıcılar ve dosya isimleri **İngilizce**. Anlatım ağırlıklı
+Kod, tanımlayıcılar ve dosya isimleri **İngilizce**. Teknik anlatım ağırlıklı
 **Türkçe**, teknik terimler İngilizce korunur ve ilk kullanımda kısa Türkçe
 karşılığı verilir:
 
