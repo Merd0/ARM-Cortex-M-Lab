@@ -1,6 +1,6 @@
 # Final Project
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: v1.0.0 · [Debug, Release ve MinSize CI PASS (`2b2e1dc`)](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40545977241)**
 
 Tek bir proje: [`secure-real-time-sensor-node/`](secure-real-time-sensor-node/)
 
