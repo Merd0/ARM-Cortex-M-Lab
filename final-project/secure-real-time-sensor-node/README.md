@@ -1,6 +1,6 @@
 # Final — Secure Real-Time Sensor Node
 
-**STATUS: main üzerinde; Debug/Release/MinSize CI PASS (11fde900)**
+**STATUS: v1.0.0 · [Debug, Release ve MinSize CI PASS (`2b2e1dc`)](https://github.com/Merd0/ARM-Cortex-M-Lab/actions/runs/40545977241)**
 
 Çalışan sistem: üç unprivileged Non-secure task sentetik sensör verisini toplar,
 işler ve UART telemetry üretir. Privileged Non-secure kernel queue'ları, MPU'yu
